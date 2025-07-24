@@ -34,10 +34,45 @@ MODEL_NAME=gpt-3.5-turbo
 .venv/bin/python test_args.py
 ```
 
-### 4. 运行SVEN
+### 4. 运行智能SVEN系统
 ```bash
-# 一键运行
+# 🆕 智能版本（推荐）- 包含结果分析和自动优化
+./run_intelligent_sven.sh
+
+# 或传统版本
 ./run_sven.sh
+```
+
+## 🧠 新功能：智能分析与优化
+
+### 智能系统特性
+- ✅ **结果追踪**: 完整记录每个prompt的变化和性能
+- ✅ **统计分析**: LLM驱动的性能模式识别
+- ✅ **智能优化**: 基于分析结果自动生成优化策略
+- ✅ **自适应进化**: 动态调整进化参数
+- ✅ **可视化报告**: 丰富的图表和分析报告
+
+### 使用智能系统
+```bash
+# 交互式运行（推荐）
+./run_intelligent_sven.sh
+
+# 直接运行
+.venv/bin/python run_intelligent_vulnerability_detection.py \
+    --dataset sven \
+    --evo_mode de \
+    --popsize 10 \
+    --budget 5 \
+    --sample_num 50
+```
+
+### 分析结果
+```bash
+# 生成可视化报告
+.venv/bin/python visualization_analyzer.py ./outputs/intelligent_vul_detection/sven/
+
+# 查看生成的文件
+ls ./outputs/intelligent_vul_detection/sven/
 ```
 
 ## 📋 自定义运行
