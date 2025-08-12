@@ -129,6 +129,9 @@ def create_detailed_config():
         "track_every_evaluation": True,
         "save_intermediate_results": True,
         "export_top_k": 10,
+
+        # 启用CWE大类模式
+        "use_cwe_major": True,
     }
     
     return config
@@ -168,6 +171,8 @@ def create_custom_initial_prompts():
 def run_evolution_with_tracking(config: dict, sample_data_dir: str):
     """运行带有详细追踪的进化过程"""
     print(f"🧬 开始Prompt进化实验: {config['experiment_id']}")
+    if config.get('use_cwe_major'):
+        print("🔎 已启用 CWE 大类模式：固定要求模型只输出大类（或Benign）作为评估依据")
     
     # 创建自定义工作流程
     workflow = VulnerabilityDetectionWorkflow(config)
@@ -480,6 +485,7 @@ def main():
         print(f"   种群大小: {config['population_size']}")
         print(f"   迭代次数: {config['max_generations']}")
         print(f"   LLM模型: {config['llm_type']}")
+        print(f"   CWE大类模式: {config.get('use_cwe_major', False)}")
         print()
         
         # 3. 运行进化实验

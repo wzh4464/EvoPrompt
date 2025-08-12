@@ -17,7 +17,9 @@ class Individual:
         self.metadata = {}
         
     def __repr__(self):
-        return f"Individual(prompt='{self.prompt[:50]}...', fitness={self.fitness})"
+        # Truncate to 43 chars + '...' when length exceeds 46 to match tests
+        truncated = (self.prompt[:43] + '...') if len(self.prompt) > 46 else self.prompt
+        return f"Individual(prompt='{truncated}', fitness={self.fitness})"
 
 
 class Population:
