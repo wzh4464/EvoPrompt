@@ -31,7 +31,7 @@ load_env_vars()
 API_BASE = os.getenv("API_BASE_URL", "https://newapi.pockgo.com/v1")
 API_KEY = os.getenv("API_KEY", "")
 BACKUP_API_BASE = os.getenv("BACKUP_API_BASE_URL", "https://newapi.aicohere.org/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+MODEL_NAME = os.getenv("MODEL_NAME", "kimi-k2-0711-preview")
 
 
 class SVENLLMClient:
@@ -69,7 +69,7 @@ class SVENLLMClient:
                 response = self.session.post(
                     f"{api_base}/chat/completions",
                     json=data,
-                    timeout=30
+                    timeout=300
                 )
                 response.raise_for_status()
                 

@@ -1,19 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./run_vul.sh)",
-      "Bash(chmod:*)",
-      "Bash(ls:*)",
-      "Bash(ln:*)",
-      "Bash(mkdir:*)",
-      "Bash(.venv/bin/python:*)",
-      "Bash(rm:*)",
-      "Bash(mv:*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Bash(*)",
       "Bash(uv run:*)",
-      "Bash(find:*)",
-      "Bash(true)",
-      "Bash(cp:*)"
-    ],
-    "deny": []
+      "Bash(rm:*)",
+      "Bash(find:*)"
+    ]
   }
 }

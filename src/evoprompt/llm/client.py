@@ -8,6 +8,12 @@ import logging
 import os
 from pathlib import Path
 
+try:
+    from openai import OpenAI
+    HAS_OPENAI = True
+except ImportError:
+    HAS_OPENAI = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,16 +67,18 @@ class SVENLLMClient(LLMClient):
         api_key: Optional[str] = None,
         model_name: Optional[str] = None,
         max_retries: int = 3,
-        retry_delay: float = 1.0
+        retry_delay: float = 1.0,
+        max_concurrency: int = 16
     ):
         # Get configuration from environment or parameters
-        self.api_base = api_base or os.getenv("API_BASE_URL", "https://newapi.pockgo.com/v1")
+        self.api_base = api_base or os.getenv("API_BASE_URL", "https://api.chatanywhere.tech/v1")
         self.api_key = api_key or os.getenv("API_KEY", "")
         self.model_name = model_name or os.getenv("MODEL_NAME", "gpt-3.5-turbo")
         self.backup_api_base = os.getenv("BACKUP_API_BASE_URL", "https://newapi.aicohere.org/v1")
         
         self.max_retries = max_retries
         self.retry_delay = retry_delay
+        self.max_concurrency = max_concurrency
         
         if not self.api_key:
             raise ValueError("API_KEY not found. Please set it in .env file or environment variable.")
@@ -85,6 +93,7 @@ class SVENLLMClient(LLMClient):
         logger.info(f"Initialized SVEN LLM Client with model: {self.model_name}")
         logger.info(f"Primary API: {self.api_base}")
         logger.info(f"Backup API: {self.backup_api_base}")
+        logger.info(f"Max concurrency: {self.max_concurrency}")
     
     def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = 1000) -> str:
         """Make API request with fallback support."""
@@ -125,6 +134,136 @@ class SVENLLMClient(LLMClient):
                 time.sleep(self.retry_delay * (2 ** attempt))
         
         raise Exception("All API endpoints and retries exhausted")
+    
+    def generate(self, prompt: str, **kwargs) -> str:
+        """Generate text from a single prompt."""
+        messages = [{"role": "user", "content": prompt}]
+        
+        # Extract parameters
+        temperature = kwargs.get("temperature", 0.1)
+        max_tokens = kwargs.get("max_tokens", 1000)
+        task = kwargs.get("task", False)
+        
+        result = self._make_request(messages, temperature, max_tokens)
+        
+        # Task-oriented truncation (like SVEN)
+        if task:
+            result = result.split("\n\n")[0]
+        
+        return result
+    
+    def batch_generate(self, prompts: List[str], **kwargs) -> List[str]:
+        """Generate text for multiple prompts with automatic async optimization."""
+        # Check if we should use async for better performance
+        use_async = kwargs.get("use_async", len(prompts) > 5)  # Use async for larger batches
+        
+        if use_async:
+            # Use async client for better performance
+            try:
+                from .async_client import sven_llm_query_sync
+                max_concurrency = kwargs.get("max_concurrency", self.max_concurrency)
+                logger.info(f"Using async processing with concurrency {max_concurrency} for {len(prompts)} prompts")
+                return sven_llm_query_sync(prompts, max_concurrency=max_concurrency, **kwargs)
+            except ImportError:
+                logger.warning("Async client not available, falling back to sequential processing")
+        
+        # Original sequential implementation
+        results = []
+        delay = kwargs.get("delay", 0.1 if not use_async else 0)  # No delay for async fallback
+        
+        logger.info(f"Using sequential processing for {len(prompts)} prompts")
+        
+        for i, prompt in enumerate(prompts):
+            try:
+                result = self.generate(prompt, **kwargs)
+                results.append(result)
+                
+                # Progress indicator
+                if (i + 1) % 10 == 0:
+                    logger.info(f"Processed {i + 1}/{len(prompts)} queries")
+                
+                # Rate limiting (skip for async)
+                if delay > 0:
+                    time.sleep(delay)
+                    
+            except Exception as e:
+                logger.error(f"Query {i+1} failed: {e}")
+                results.append("error")
+        
+        return results
+    
+    def paraphrase(self, sentence: Union[str, List[str]], temperature: float = 0.7) -> Union[str, List[str]]:
+        """Paraphrase sentences while keeping semantic meaning."""
+        if isinstance(sentence, list):
+            prompts = [
+                f"Generate a variation of the following instruction while keeping the semantic meaning.\nInput: {s}\nOutput:"
+                for s in sentence
+            ]
+            return self.batch_generate(prompts, temperature=temperature)
+        else:
+            prompt = f"Generate a variation of the following instruction while keeping the semantic meaning.\nInput: {sentence}\nOutput:"
+            return self.generate(prompt, temperature=temperature)
+
+
+class OpenAICompatibleClient(LLMClient):
+    """OpenAI-compatible client for ModelScope and other services."""
+    
+    def __init__(
+        self,
+        api_base: Optional[str] = None,
+        api_key: Optional[str] = None, 
+        model_name: Optional[str] = None,
+        max_retries: int = 3,
+        retry_delay: float = 1.0
+    ):
+        if not HAS_OPENAI:
+            raise ImportError("OpenAI library not installed. Install with: pip install openai")
+            
+        # Get configuration from environment or parameters
+        self.api_base = api_base or os.getenv("API_BASE_URL", "https://api.chatanywhere.tech/v1")
+        self.api_key = api_key or os.getenv("API_KEY", "")
+        self.model_name = model_name or os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+        
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
+        
+        if not self.api_key:
+            raise ValueError("API_KEY not found. Please set it in .env file or environment variable.")
+        
+        # Initialize OpenAI client
+        self.client = OpenAI(
+            base_url=self.api_base,
+            api_key=self.api_key
+        )
+        
+        logger.info(f"Initialized OpenAI-compatible client with model: {self.model_name}")
+        logger.info(f"API Base: {self.api_base}")
+    
+    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = 1000) -> str:
+        """Make API request using OpenAI client."""
+        for attempt in range(self.max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    stream=False  # Non-streaming for simplicity
+                )
+                
+                content = response.choices[0].message.content.strip()
+                logger.debug(f"Successful API call (attempt {attempt + 1})")
+                return content
+                
+            except Exception as e:
+                logger.warning(f"API call failed (attempt {attempt + 1}): {e}")
+                if attempt == self.max_retries - 1:
+                    raise Exception(f"All API attempts failed. Last error: {e}")
+                
+                # Exponential backoff
+                time.sleep(self.retry_delay * (2 ** attempt))
+        
+        raise Exception("All API attempts exhausted")
     
     def generate(self, prompt: str, **kwargs) -> str:
         """Generate text from a single prompt."""
@@ -277,24 +416,29 @@ class LocalLLMClient(LLMClient):
 
 def create_llm_client(llm_type: str = None, **kwargs) -> LLMClient:
     """Factory function to create LLM clients."""
-    # Default to SVEN-compatible client
-    if llm_type is None or llm_type in ["sven", "default"]:
+    # Use OpenAI-compatible client as default (ModelScope)
+    if llm_type is None or llm_type in ["openai", "modelscope", "default"]:
+        return OpenAICompatibleClient(**kwargs)
+    elif llm_type in ["sven"]:
         return SVENLLMClient(**kwargs)
-    elif llm_type.startswith("gpt-") or llm_type.startswith("text-davinci") or llm_type.startswith("kimi"):
-        # Use SVEN client for all API-based models
+    elif llm_type.startswith("gpt-") or llm_type.startswith("text-davinci") or llm_type.startswith("Qwen/"):
+        # Use OpenAI client for OpenAI and Qwen models
+        return OpenAICompatibleClient(model_name=llm_type, **kwargs)
+    elif llm_type.startswith("kimi"):
+        # Use SVEN client for kimi models (requires different API format)
         return SVENLLMClient(model_name=llm_type, **kwargs)
     else:
         # Use local client for local models
         return LocalLLMClient(model_name=llm_type, **kwargs)
 
 
-# Compatibility functions for SVEN integration
-def sven_llm_init(api_base: str = None, api_key: str = None, model_name: str = None) -> SVENLLMClient:
-    """Initialize SVEN-style LLM client (compatibility function)."""
-    return SVENLLMClient(api_base, api_key, model_name)
+# Compatibility functions for SVEN integration - now uses OpenAI client as default
+def sven_llm_init(api_base: str = None, api_key: str = None, model_name: str = None):
+    """Initialize SVEN-style LLM client (compatibility function) - now uses ModelScope."""
+    return OpenAICompatibleClient(api_base, api_key, model_name)
 
 
-def sven_llm_query(data: Union[str, List[str]], client: SVENLLMClient, task: bool = False, 
+def sven_llm_query(data: Union[str, List[str]], client: LLMClient, task: bool = False, 
                   temperature: float = 0.1, **kwargs) -> Union[str, List[str]]:
     """
     SVEN-style LLM query function (compatibility function).
@@ -317,7 +461,7 @@ def sven_llm_query(data: Union[str, List[str]], client: SVENLLMClient, task: boo
         return client.generate(data, **kwargs)
 
 
-# Main entry point - use SVEN-compatible client as default
+# Main entry point - use OpenAI-compatible client as default  
 def create_default_client():
-    """Create default SVEN-compatible LLM client."""
-    return SVENLLMClient()
+    """Create default OpenAI-compatible LLM client (ModelScope)."""
+    return OpenAICompatibleClient()
