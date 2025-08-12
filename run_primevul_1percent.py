@@ -18,6 +18,7 @@ from evoprompt.workflows import VulnerabilityDetectionWorkflow
 from evoprompt.core.prompt_tracker import PromptTracker
 from evoprompt.algorithms.differential import DifferentialEvolution
 from evoprompt.algorithms.genetic import GeneticAlgorithm
+from evoprompt.algorithms.base import Population, Individual
 
 
 def setup_logging():
@@ -282,7 +283,7 @@ def run_evolution_with_tracking(config: dict, sample_data_dir: str):
                             trial = trial_individuals[0]
                             
                             # 评估试验向量
-                            result = evaluator.evaluate(trial.prompt, generation)
+                            result = evaluator.evaluate(trial.prompt)
                             trial.fitness = result.score
                             
                             # 记录新个体
