@@ -114,7 +114,6 @@ New combined prompt:"""
         try:
             response = llm_client.generate(
                 crossover_prompt,
-                max_tokens=200,
                 temperature=0.7
             )
             
@@ -148,7 +147,6 @@ Improved prompt:"""
         try:
             response = llm_client.generate(
                 mutation_prompt,
-                max_tokens=200,
                 temperature=0.8
             )
             

@@ -95,14 +95,15 @@ class SVENLLMClient(LLMClient):
         logger.info(f"Backup API: {self.backup_api_base}")
         logger.info(f"Max concurrency: {self.max_concurrency}")
     
-    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = 1000) -> str:
+    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = None) -> str:
         """Make API request with fallback support."""
         data = {
             "model": self.model_name,
             "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
+            "temperature": temperature
         }
+        if max_tokens is not None:
+            data["max_tokens"] = max_tokens
         
         # Try primary API first, then backup API
         apis_to_try = [self.api_base, self.backup_api_base]
@@ -141,7 +142,7 @@ class SVENLLMClient(LLMClient):
         
         # Extract parameters
         temperature = kwargs.get("temperature", 0.1)
-        max_tokens = kwargs.get("max_tokens", 1000)
+        max_tokens = kwargs.get("max_tokens", None)
         task = kwargs.get("task", False)
         
         result = self._make_request(messages, temperature, max_tokens)
@@ -153,7 +154,10 @@ class SVENLLMClient(LLMClient):
         return result
     
     def batch_generate(self, prompts: List[str], **kwargs) -> List[str]:
-        """Generate text for multiple prompts with automatic async optimization."""
+        """Generate text for multiple prompts with automatic async optimization and batch processing."""
+        batch_size = kwargs.get("batch_size", 8)  # Default batch size is 8
+        concurrent = kwargs.get("concurrent", False)  # Default concurrent is False
+        
         # Check if we should use async for better performance
         use_async = kwargs.get("use_async", len(prompts) > 5)  # Use async for larger batches
         
@@ -167,28 +171,101 @@ class SVENLLMClient(LLMClient):
             except ImportError:
                 logger.warning("Async client not available, falling back to sequential processing")
         
-        # Original sequential implementation
+        # Sequential implementation with batch processing
         results = []
         delay = kwargs.get("delay", 0.1 if not use_async else 0)  # No delay for async fallback
+        total_prompts = len(prompts)
         
-        logger.info(f"Using sequential processing for {len(prompts)} prompts")
+        concurrent_text = "并发" if concurrent else "顺序"
+        logger.info(f"Using {concurrent_text} batch processing for {total_prompts} prompts (batch size: {batch_size})")
         
-        for i, prompt in enumerate(prompts):
-            try:
-                result = self.generate(prompt, **kwargs)
-                results.append(result)
+        # Process in batches
+        for batch_start in range(0, total_prompts, batch_size):
+            batch_end = min(batch_start + batch_size, total_prompts)
+            batch_prompts = prompts[batch_start:batch_end]
+            
+            logger.info(f"Processing batch {batch_start//batch_size + 1}/{(total_prompts + batch_size - 1)//batch_size}: prompts {batch_start+1}-{batch_end}")
+            
+            if concurrent and len(batch_prompts) > 1:
+                # 并发处理模式
+                logger.info(f"  🚀 并发处理 {len(batch_prompts)} 个请求")
+                batch_results = self._process_batch_concurrent(batch_prompts, **kwargs)
+            else:
+                # 顺序处理模式
+                if concurrent:
+                    logger.info(f"  🔄 单个请求，使用顺序处理")
+                batch_results = []
+                for i, prompt in enumerate(batch_prompts):
+                    try:
+                        result = self.generate(prompt, **kwargs)
+                        batch_results.append(result)
+                        
+                        # Progress indicator
+                        global_idx = batch_start + i + 1
+                        if global_idx % 10 == 0:
+                            logger.info(f"Processed {global_idx}/{total_prompts} queries")
+                        
+                        # Rate limiting (skip for concurrent)
+                        if delay > 0 and not concurrent:
+                            time.sleep(delay)
+                            
+                    except Exception as e:
+                        logger.error(f"Query {batch_start + i + 1} failed: {e}")
+                        batch_results.append("error")
+            
+            results.extend(batch_results)
+            
+            # Brief rest between batches (only for sequential)
+            if batch_end < total_prompts and delay > 0 and not concurrent:
+                logger.info(f"Batch {batch_start//batch_size + 1} completed, brief rest...")
+                time.sleep(delay * 2)
+        
+        return results
+    
+    def _process_batch_concurrent(self, prompts: List[str], **kwargs) -> List[str]:
+        """并发处理一个批次的请求"""
+        import threading
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
+        def query_with_retry(prompt):
+            """带重试的单次查询"""
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    return self.generate(prompt, **kwargs)
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        logger.warning(f"    ⚠️ 请求失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                        return "error"
+                    time.sleep(0.5 * (attempt + 1))  # 递增延时
+        
+        results = ["error"] * len(prompts)  # 预分配结果数组
+        
+        # 使用线程池并发处理
+        with ThreadPoolExecutor(max_workers=min(len(prompts), 8)) as executor:
+            # 提交所有任务
+            future_to_index = {
+                executor.submit(query_with_retry, prompt): i 
+                for i, prompt in enumerate(prompts)
+            }
+            
+            # 收集结果
+            completed = 0
+            for future in as_completed(future_to_index):
+                index = future_to_index[future]
+                try:
+                    result = future.result(timeout=30)  # 30秒超时
+                    results[index] = result
+                except Exception as e:
+                    logger.error(f"    ❌ 并发请求 {index + 1} 异常: {e}")
+                    results[index] = "error"
                 
-                # Progress indicator
-                if (i + 1) % 10 == 0:
-                    logger.info(f"Processed {i + 1}/{len(prompts)} queries")
-                
-                # Rate limiting (skip for async)
-                if delay > 0:
-                    time.sleep(delay)
-                    
-            except Exception as e:
-                logger.error(f"Query {i+1} failed: {e}")
-                results.append("error")
+                completed += 1
+                if completed % 4 == 0 or completed == len(prompts):
+                    logger.info(f"    📊 并发进度: {completed}/{len(prompts)}")
+        
+        success_count = sum(1 for r in results if r != "error")
+        logger.info(f"    ✅ 并发批次完成: {success_count}/{len(prompts)} 成功")
         
         return results
     
@@ -239,17 +316,20 @@ class OpenAICompatibleClient(LLMClient):
         logger.info(f"Initialized OpenAI-compatible client with model: {self.model_name}")
         logger.info(f"API Base: {self.api_base}")
     
-    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = 1000) -> str:
+    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = None) -> str:
         """Make API request using OpenAI client."""
         for attempt in range(self.max_retries):
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    stream=False  # Non-streaming for simplicity
-                )
+                params = {
+                    "model": self.model_name,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "stream": False  # Non-streaming for simplicity
+                }
+                if max_tokens is not None:
+                    params["max_tokens"] = max_tokens
+                    
+                response = self.client.chat.completions.create(**params)
                 
                 content = response.choices[0].message.content.strip()
                 logger.debug(f"Successful API call (attempt {attempt + 1})")
@@ -271,7 +351,7 @@ class OpenAICompatibleClient(LLMClient):
         
         # Extract parameters
         temperature = kwargs.get("temperature", 0.1)
-        max_tokens = kwargs.get("max_tokens", 1000)
+        max_tokens = kwargs.get("max_tokens", None)
         task = kwargs.get("task", False)
         
         result = self._make_request(messages, temperature, max_tokens)
@@ -283,26 +363,103 @@ class OpenAICompatibleClient(LLMClient):
         return result
     
     def batch_generate(self, prompts: List[str], **kwargs) -> List[str]:
-        """Generate text for multiple prompts."""
+        """Generate text for multiple prompts with batch processing and concurrent support."""
         results = []
         delay = kwargs.get("delay", 0.1)
+        batch_size = kwargs.get("batch_size", 8)  # Default batch size is 8
+        concurrent = kwargs.get("concurrent", False)  # Default concurrent is False
+        total_prompts = len(prompts)
         
-        for i, prompt in enumerate(prompts):
-            try:
-                result = self.generate(prompt, **kwargs)
-                results.append(result)
+        concurrent_text = "并发" if concurrent else "顺序"
+        logger.info(f"Using {concurrent_text} batch processing for {total_prompts} prompts (batch size: {batch_size})")
+        
+        # Process in batches
+        for batch_start in range(0, total_prompts, batch_size):
+            batch_end = min(batch_start + batch_size, total_prompts)
+            batch_prompts = prompts[batch_start:batch_end]
+            
+            logger.info(f"Processing batch {batch_start//batch_size + 1}/{(total_prompts + batch_size - 1)//batch_size}: prompts {batch_start+1}-{batch_end}")
+            
+            if concurrent and len(batch_prompts) > 1:
+                # 并发处理模式
+                logger.info(f"  🚀 并发处理 {len(batch_prompts)} 个请求")
+                batch_results = self._process_batch_concurrent(batch_prompts, **kwargs)
+            else:
+                # 顺序处理模式
+                if concurrent:
+                    logger.info(f"  🔄 单个请求，使用顺序处理")
+                batch_results = []
+                for i, prompt in enumerate(batch_prompts):
+                    try:
+                        result = self.generate(prompt, **kwargs)
+                        batch_results.append(result)
+                        
+                        # Progress indicator
+                        global_idx = batch_start + i + 1
+                        if global_idx % 10 == 0:
+                            logger.info(f"Processed {global_idx}/{total_prompts} queries")
+                        
+                        # Rate limiting (skip for concurrent)
+                        if delay > 0 and not concurrent:
+                            time.sleep(delay)
+                            
+                    except Exception as e:
+                        logger.error(f"Query {batch_start + i + 1} failed: {e}")
+                        batch_results.append("error")
+            
+            results.extend(batch_results)
+            
+            # Brief rest between batches (only for sequential)
+            if batch_end < total_prompts and delay > 0 and not concurrent:
+                logger.info(f"Batch {batch_start//batch_size + 1} completed, brief rest...")
+                time.sleep(delay * 2)
+        
+        return results
+    
+    def _process_batch_concurrent(self, prompts: List[str], **kwargs) -> List[str]:
+        """并发处理一个批次的请求"""
+        import threading
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
+        def query_with_retry(prompt):
+            """带重试的单次查询"""
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    return self.generate(prompt, **kwargs)
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        logger.warning(f"    ⚠️ 请求失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                        return "error"
+                    time.sleep(0.5 * (attempt + 1))  # 递增延时
+        
+        results = ["error"] * len(prompts)  # 预分配结果数组
+        
+        # 使用线程池并发处理
+        with ThreadPoolExecutor(max_workers=min(len(prompts), 8)) as executor:
+            # 提交所有任务
+            future_to_index = {
+                executor.submit(query_with_retry, prompt): i 
+                for i, prompt in enumerate(prompts)
+            }
+            
+            # 收集结果
+            completed = 0
+            for future in as_completed(future_to_index):
+                index = future_to_index[future]
+                try:
+                    result = future.result(timeout=30)  # 30秒超时
+                    results[index] = result
+                except Exception as e:
+                    logger.error(f"    ❌ 并发请求 {index + 1} 异常: {e}")
+                    results[index] = "error"
                 
-                # Progress indicator
-                if (i + 1) % 10 == 0:
-                    logger.info(f"Processed {i + 1}/{len(prompts)} queries")
-                
-                # Rate limiting
-                if delay > 0:
-                    time.sleep(delay)
-                    
-            except Exception as e:
-                logger.error(f"Query {i+1} failed: {e}")
-                results.append("error")
+                completed += 1
+                if completed % 4 == 0 or completed == len(prompts):
+                    logger.info(f"    📊 并发进度: {completed}/{len(prompts)}")
+        
+        success_count = sum(1 for r in results if r != "error")
+        logger.info(f"    ✅ 并发批次完成: {success_count}/{len(prompts)} 成功")
         
         return results
     
@@ -439,7 +596,7 @@ def sven_llm_init(api_base: str = None, api_key: str = None, model_name: str = N
 
 
 def sven_llm_query(data: Union[str, List[str]], client: LLMClient, task: bool = False, 
-                  temperature: float = 0.1, **kwargs) -> Union[str, List[str]]:
+                  temperature: float = 0.1, batch_size: int = 8, **kwargs) -> Union[str, List[str]]:
     """
     SVEN-style LLM query function (compatibility function).
     
@@ -448,12 +605,13 @@ def sven_llm_query(data: Union[str, List[str]], client: LLMClient, task: bool = 
         client: SVEN LLM client
         task: Whether task-oriented (will truncate multi-paragraph responses)
         temperature: Temperature parameter
+        batch_size: Batch size for processing, default 8
         **kwargs: Other parameters
     
     Returns:
         Single response or list of responses
     """
-    kwargs.update({"task": task, "temperature": temperature})
+    kwargs.update({"task": task, "temperature": temperature, "batch_size": batch_size})
     
     if isinstance(data, list):
         return client.batch_generate(data, **kwargs)

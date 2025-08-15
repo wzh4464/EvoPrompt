@@ -67,7 +67,6 @@ Mutant prompt:"""
         try:
             response = llm_client.generate(
                 de_prompt,
-                max_tokens=250,
                 temperature=0.6
             )
             
@@ -96,7 +95,6 @@ Improved prompt:"""
         try:
             response = llm_client.generate(
                 mutation_prompt,
-                max_tokens=200,
                 temperature=0.5
             )
             

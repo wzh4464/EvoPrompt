@@ -1,0 +1,8 @@
+Analyze the following code for potential security vulnerabilities. Respond with 'vulnerable' if you find any security issues, or 'benign' if the code appears safe.
+You are a cybersecurity expert. Examine this code carefully and determine if it contains any vulnerabilities such as buffer overflows, injection attacks, or memory corruption issues. Answer 'vulnerable' or 'benign'.
+Review this code for security flaws. Look for common vulnerability patterns like improper input validation, unsafe memory operations, or logic errors. Classify as 'vulnerable' or 'benign'.
+As a security analyst, assess this code for potential weaknesses. Consider attack vectors like code injection, privilege escalation, or denial of service. Respond with 'vulnerable' or 'benign'.
+Check this code for security vulnerabilities including but not limited to: buffer overflows, SQL injection, cross-site scripting, path traversal, or race conditions. Answer 'vulnerable' or 'benign'.
+Examine this code from a security perspective. Look for coding patterns that might lead to exploitable vulnerabilities. Determine if the code is 'vulnerable' or 'benign'.
+You are conducting a security code review. Analyze this code for any security weaknesses that could be exploited by an attacker. Classify as 'vulnerable' or 'benign'.
+Perform a vulnerability assessment on this code. Check for security issues like memory safety violations, input validation problems, or cryptographic weaknesses. Answer 'vulnerable' or 'benign'.
