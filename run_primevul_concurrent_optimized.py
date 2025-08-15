@@ -108,7 +108,6 @@ def create_optimized_config():
         
         # LLM配置
         "llm_type": "gpt-3.5-turbo",
-        "max_tokens": 150,
         "temperature": 0.7,
         
         # 评估配置
@@ -666,7 +665,7 @@ Generate only the improved prompt, nothing else:
 """
     
     try:
-        response = llm_client.generate(mutation_instruction, temperature=0.8, max_tokens=200)
+        response = llm_client.generate(mutation_instruction, temperature=0.8)
         # 确保包含{input}占位符
         if '{input}' not in response:
             response = response + "\n\nCode: {input}\n\nSecurity assessment:"
@@ -838,7 +837,6 @@ Improved prompt:
                     improved_prompts = llm_client.batch_generate(
                         improvement_instructions,
                         temperature=0.7,
-                        max_tokens=250,
                         batch_size=llm_batch_size,
                         concurrent=enable_concurrent
                     )
@@ -950,7 +948,7 @@ Improved prompt:
 """
                     
                     try:
-                        improved_prompt = llm_client.generate(feedback_instruction, temperature=0.7, max_tokens=250)
+                        improved_prompt = llm_client.generate(feedback_instruction, temperature=0.7)
                         if '{input}' in improved_prompt and len(improved_prompt.strip()) > 50:
                             current_prompt = improved_prompt.strip()
                             improvements_count += 1

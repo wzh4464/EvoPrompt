@@ -52,14 +52,15 @@ class SVENLLMClient:
             "Content-Type": "application/json"
         })
     
-    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = 1000) -> str:
+    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = None) -> str:
         """发送API请求"""
         data = {
             "model": self.model_name,
             "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
+            "temperature": temperature
         }
+        if max_tokens is not None:
+            data["max_tokens"] = max_tokens
         
         # 尝试主API，失败则尝试备用API
         apis_to_try = [self.api_base, self.backup_api_base]
@@ -84,12 +85,12 @@ class SVENLLMClient:
         
         raise Exception("No API endpoints available")
     
-    def query_single(self, prompt: str, temperature: float = 0.1, max_tokens: int = 1000) -> str:
+    def query_single(self, prompt: str, temperature: float = 0.1, max_tokens: int = None) -> str:
         """单次查询"""
         messages = [{"role": "user", "content": prompt}]
         return self._make_request(messages, temperature, max_tokens)
     
-    def query_batch(self, prompts: List[str], temperature: float = 0.1, max_tokens: int = 1000, 
+    def query_batch(self, prompts: List[str], temperature: float = 0.1, max_tokens: int = None, 
                    delay: float = 0.1, batch_size: int = 8, concurrent: bool = False) -> List[str]:
         """批量查询，支持分批处理和并发选项"""
         results = []

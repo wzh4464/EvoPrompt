@@ -101,16 +101,17 @@ class AsyncLLMClient:
         
         return self._session
     
-    async def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = 1000) -> str:
+    async def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = None) -> str:
         """Make async API request with fallback support."""
         session = await self._get_session()
         
         data = {
             "model": self.model_name,
             "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
+            "temperature": temperature
         }
+        if max_tokens is not None:
+            data["max_tokens"] = max_tokens
         
         # Try primary API first, then backup API
         apis_to_try = [self.api_base, self.backup_api_base]
@@ -153,7 +154,7 @@ class AsyncLLMClient:
         
         # Extract parameters
         temperature = kwargs.get("temperature", 0.1)
-        max_tokens = kwargs.get("max_tokens", 1000)
+        max_tokens = kwargs.get("max_tokens", None)
         task = kwargs.get("task", False)
         
         # Use semaphore to control concurrency
