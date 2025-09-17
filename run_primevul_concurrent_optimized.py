@@ -101,6 +101,11 @@ def create_optimized_config():
         "force_async": True,          # 强制使用异步处理
         "batch_evaluation": True,     # 批量评估优化
         
+        # LLM批处理配置
+        "llm_batch_size": 8,          # LLM API调用的批处理大小
+        "enable_batch_processing": True, # 启用批处理优化
+        "enable_concurrent": True,    # 启用批次内并发处理
+        
         # LLM配置
         "llm_type": "gpt-3.5-turbo",
         "max_tokens": 150,
@@ -424,11 +429,12 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
     with open(config_file, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
     
-    # 创建LLM客户端
+    # 创建LLM客户端 - 支持并发批处理
     from evoprompt.llm.client import create_default_client
     llm_client = create_default_client()
     if hasattr(llm_client, 'max_concurrency'):
         llm_client.max_concurrency = config['max_concurrency']
+    print(f"🤖 使用LLM客户端，支持并发批处理 (concurrent={config['enable_concurrent']})")
     
     # 创建初始prompts
     initial_prompts = create_diverse_initial_prompts()
@@ -480,7 +486,7 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
         for i, individual in enumerate(population.individuals):
             individual.fitness = evaluate_on_dataset(
                 individual.prompt, dev_dataset, llm_client, f"initial_{i}", 
-                sample_tracker, generation=0
+                sample_tracker, generation=0, config=config
             )
         
         print(f"   初始适应度: {[f'{ind.fitness:.3f}' for ind in population.individuals]}")
@@ -537,7 +543,7 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
                         trial_individual = Individual(improved_prompt)
                         trial_individual.fitness = evaluate_on_dataset(
                             improved_prompt, dev_dataset, llm_client, 
-                            f"gen{generation}_trial_{i}", sample_tracker, generation
+                            f"gen{generation}_trial_{i}", sample_tracker, generation, config
                         )
                         
                         # 记录试验个体
@@ -674,89 +680,255 @@ def sample_wise_feedback_training(initial_prompt: str, train_samples,
                                 llm_client, sample_tracker: SampleWiseTracker,
                                 config: dict, generation: int, prompt_id: str,
                                 batch_idx: int) -> str:
-    """使用训练样本进行样本级反馈训练"""
+    """使用训练样本进行样本级反馈训练（支持批处理）"""
     current_prompt = initial_prompt
     batch_size = config.get('feedback_batch_size', 10)
+    enable_batch = config.get('enable_batch_processing', False)
+    llm_batch_size = config.get('llm_batch_size', 8)
+    enable_concurrent = config.get('enable_concurrent', True)
     
     # 随机选择一批训练样本
     selected_samples = random.sample(train_samples, min(batch_size, len(train_samples)))
     
     print(f"     📝 样本级反馈训练: {len(selected_samples)} 个样本")
+    if enable_batch:
+        concurrent_text = "并发" if enable_concurrent else "顺序"
+        print(f"     🚀 使用批处理模式，LLM batch_size={llm_batch_size} ({concurrent_text})")
     
     improvements_count = 0
     
-    for sample_idx, sample in enumerate(selected_samples):
+    if enable_batch and len(selected_samples) > 1:
+        # 批处理模式：先批量预测所有样本
         try:
-            # 使用当前prompt预测
-            code = sample.input_text
-            ground_truth_binary = int(sample.target)
+            # 准备批量预测数据
+            batch_queries = []
+            sample_metadata = []
             
-            # 从样本的CWE代码获取真实的CWE大类
-            cwe_codes = sample.metadata.get('cwe', [])
-            if ground_truth_binary == 1 and cwe_codes:
-                # 有漏洞的样本，映射到CWE大类
-                ground_truth_category = map_cwe_to_major(cwe_codes)
-            else:
-                # 无漏洞的样本
-                ground_truth_category = "Benign"
-            
-            query = current_prompt.format(input=code)
-            prediction_text = llm_client.generate(query, temperature=0.1, max_tokens=20)
-            
-            # 规范化模型输出到CWE大类
-            predicted_category = canonicalize_category(prediction_text)
-            if predicted_category is None:
-                # 如果无法解析，根据是否包含vulnerability相关词汇来判断
-                if any(word in prediction_text.lower() for word in ['vulnerable', 'vulnerability', 'vuln', 'exploit']):
-                    predicted_category = "Other"  # 默认为Other类别
+            for sample_idx, sample in enumerate(selected_samples):
+                code = sample.input_text
+                ground_truth_binary = int(sample.target)
+                
+                # 从样本的CWE代码获取真实的CWE大类
+                cwe_codes = sample.metadata.get('cwe', [])
+                if ground_truth_binary == 1 and cwe_codes:
+                    ground_truth_category = map_cwe_to_major(cwe_codes)
                 else:
-                    predicted_category = "Benign"
+                    ground_truth_category = "Benign"
+                
+                query = current_prompt.format(input=code)
+                batch_queries.append(query)
+                sample_metadata.append({
+                    'sample_idx': sample_idx,
+                    'sample': sample,
+                    'code': code,
+                    'ground_truth_binary': ground_truth_binary,
+                    'ground_truth_category': ground_truth_category,
+                    'cwe_codes': cwe_codes
+                })
             
-            correct = (predicted_category == ground_truth_category)
-            
-            # 转换Sample对象为字典格式
-            sample_data = {
-                'func': sample.input_text,
-                'target': int(sample.target),
-                'project': sample.metadata.get('project', ''),
-                'cwe': sample.metadata.get('cwe', []),
-                'cve': sample.metadata.get('cve', 'None'),
-                'cve_desc': sample.metadata.get('cve_desc', 'None'),
-                'func_hash': sample.metadata.get('func_hash', ''),
-                'file_name': sample.metadata.get('file_name', ''),
-                'ground_truth_category': ground_truth_category,  # 新增：真实CWE大类
-                'predicted_category': predicted_category         # 新增：预测CWE大类
-            }
-            
-            # 记录样本结果
-            sample_tracker.log_sample_result(
-                prompt_id=f"{prompt_id}_feedback_{batch_idx}",
-                sample_idx=sample_idx,
-                sample_data=sample_data,
-                prediction=prediction_text,
-                ground_truth=ground_truth_binary,  # 保持原有的二分类ground_truth用于兼容
-                correct=correct,
-                generation=generation,
-                feedback_applied=True
+            # 批量调用LLM进行预测
+            prediction_texts = llm_client.batch_generate(
+                batch_queries, 
+                temperature=0.1, 
+                max_tokens=20,
+                batch_size=llm_batch_size,
+                concurrent=enable_concurrent
             )
             
-            # 如果预测错误，尝试改进prompt
-            if not correct:
-                # 构建CWE相关的反馈信息
-                cwe_info = ""
-                if sample_data.get('cwe') and sample_data['cwe']:
-                    cwe_list = ", ".join(sample_data['cwe'])
-                    cwe_info = f"\nCWE Categories: {cwe_list}"
+            # 处理批量预测结果
+            incorrect_samples = []  # 收集需要改进的样本
+            
+            for metadata, prediction_text in zip(sample_metadata, prediction_texts):
+                if prediction_text == "error":
+                    print(f"       ⚠️ 样本 {metadata['sample_idx']+1}: 预测失败")
+                    continue
                 
-                cve_info = ""
-                if sample_data.get('cve') and sample_data['cve'] != 'None':
-                    cve_info = f"\nCVE ID: {sample_data['cve']}"
+                # 规范化模型输出到CWE大类
+                predicted_category = canonicalize_category(prediction_text)
+                if predicted_category is None:
+                    if any(word in prediction_text.lower() for word in ['vulnerable', 'vulnerability', 'vuln', 'exploit']):
+                        predicted_category = "Other"
+                    else:
+                        predicted_category = "Benign"
                 
-                project_info = ""
-                if sample_data.get('project'):
-                    project_info = f"\nProject: {sample_data['project']}"
+                correct = (predicted_category == metadata['ground_truth_category'])
                 
-                feedback_instruction = f"""
+                # 记录样本结果
+                sample_data = {
+                    'func': metadata['sample'].input_text,
+                    'target': metadata['ground_truth_binary'],
+                    'project': metadata['sample'].metadata.get('project', ''),
+                    'cwe': metadata['cwe_codes'],
+                    'cve': metadata['sample'].metadata.get('cve', 'None'),
+                    'cve_desc': metadata['sample'].metadata.get('cve_desc', 'None'),
+                    'func_hash': metadata['sample'].metadata.get('func_hash', ''),
+                    'file_name': metadata['sample'].metadata.get('file_name', ''),
+                    'ground_truth_category': metadata['ground_truth_category'],
+                    'predicted_category': predicted_category
+                }
+                
+                sample_tracker.log_sample_result(
+                    prompt_id=f"{prompt_id}_feedback_{batch_idx}",
+                    sample_idx=metadata['sample_idx'],
+                    sample_data=sample_data,
+                    prediction=prediction_text,
+                    ground_truth=metadata['ground_truth_binary'],
+                    correct=correct,
+                    generation=generation,
+                    feedback_applied=True
+                )
+                
+                # 收集错误的样本用于改进
+                if not correct:
+                    incorrect_samples.append({
+                        'metadata': metadata,
+                        'prediction_text': prediction_text,
+                        'predicted_category': predicted_category,
+                        'sample_data': sample_data
+                    })
+                else:
+                    print(f"       ✅ 样本 {metadata['sample_idx']+1}: 预测正确")
+            
+            # 批量生成改进指令（对于错误的样本）
+            if incorrect_samples:
+                improvement_instructions = []
+                
+                for item in incorrect_samples:
+                    metadata = item['metadata']
+                    sample_data = item['sample_data']
+                    
+                    # 构建反馈信息
+                    cwe_info = ""
+                    if sample_data.get('cwe') and sample_data['cwe']:
+                        cwe_list = ", ".join(sample_data['cwe'])
+                        cwe_info = f"\nCWE Categories: {cwe_list}"
+                    
+                    cve_info = ""
+                    if sample_data.get('cve') and sample_data['cve'] != 'None':
+                        cve_info = f"\nCVE ID: {sample_data['cve']}"
+                    
+                    project_info = ""
+                    if sample_data.get('project'):
+                        project_info = f"\nProject: {sample_data['project']}"
+                    
+                    feedback_instruction = f"""
+The current prompt made an incorrect CWE major category classification. Please improve it based on the specific vulnerability information.
+
+Current Prompt:
+{current_prompt}
+
+Code Sample:
+{metadata['code'][:500]}...
+
+Ground Truth Category: {metadata['ground_truth_category']}
+Predicted Category: {item['predicted_category']}{project_info}{cwe_info}{cve_info}
+
+Create an improved prompt that would correctly classify this sample into the correct CWE major category. Focus on:
+1. The specific CWE categories: {metadata['ground_truth_category']} characteristics
+2. The vulnerability patterns that distinguish {metadata['ground_truth_category']} from other categories
+3. Common {metadata['ground_truth_category']} issues in {sample_data.get('project', 'this type of')} code
+4. Ensure the prompt can distinguish between all CWE major categories: {", ".join(CWE_MAJOR_CATEGORIES)}
+
+Improved prompt:
+"""
+                    improvement_instructions.append(feedback_instruction)
+                
+                # 批量生成改进的prompt
+                try:
+                    improved_prompts = llm_client.batch_generate(
+                        improvement_instructions,
+                        temperature=0.7,
+                        max_tokens=250,
+                        batch_size=llm_batch_size,
+                        concurrent=enable_concurrent
+                    )
+                    
+                    # 选择最好的改进（这里简单选择第一个成功的）
+                    for i, improved_prompt in enumerate(improved_prompts):
+                        if improved_prompt != "error" and '{input}' in improved_prompt and len(improved_prompt.strip()) > 50:
+                            current_prompt = improved_prompt.strip()
+                            improvements_count += 1
+                            print(f"       ⚡ 批量改进成功，应用改进 {i+1}")
+                            break  # 使用第一个有效的改进
+                    
+                except Exception as e:
+                    print(f"       ⚠️ 批量改进失败: {e}")
+                    
+        except Exception as e:
+            print(f"     ❌ 批处理模式失败: {e}，回退到单个处理模式")
+            enable_batch = False
+    
+    if not enable_batch:
+        # 单个处理模式（原有逻辑）
+        for sample_idx, sample in enumerate(selected_samples):
+            try:
+                # 使用当前prompt预测
+                code = sample.input_text
+                ground_truth_binary = int(sample.target)
+                
+                # 从样本的CWE代码获取真实的CWE大类
+                cwe_codes = sample.metadata.get('cwe', [])
+                if ground_truth_binary == 1 and cwe_codes:
+                    ground_truth_category = map_cwe_to_major(cwe_codes)
+                else:
+                    ground_truth_category = "Benign"
+                
+                query = current_prompt.format(input=code)
+                prediction_text = llm_client.generate(query, temperature=0.1, max_tokens=20)
+                
+                # 规范化模型输出到CWE大类
+                predicted_category = canonicalize_category(prediction_text)
+                if predicted_category is None:
+                    if any(word in prediction_text.lower() for word in ['vulnerable', 'vulnerability', 'vuln', 'exploit']):
+                        predicted_category = "Other"
+                    else:
+                        predicted_category = "Benign"
+                
+                correct = (predicted_category == ground_truth_category)
+                
+                # 转换Sample对象为字典格式
+                sample_data = {
+                    'func': sample.input_text,
+                    'target': int(sample.target),
+                    'project': sample.metadata.get('project', ''),
+                    'cwe': sample.metadata.get('cwe', []),
+                    'cve': sample.metadata.get('cve', 'None'),
+                    'cve_desc': sample.metadata.get('cve_desc', 'None'),
+                    'func_hash': sample.metadata.get('func_hash', ''),
+                    'file_name': sample.metadata.get('file_name', ''),
+                    'ground_truth_category': ground_truth_category,
+                    'predicted_category': predicted_category
+                }
+                
+                # 记录样本结果
+                sample_tracker.log_sample_result(
+                    prompt_id=f"{prompt_id}_feedback_{batch_idx}",
+                    sample_idx=sample_idx,
+                    sample_data=sample_data,
+                    prediction=prediction_text,
+                    ground_truth=ground_truth_binary,
+                    correct=correct,
+                    generation=generation,
+                    feedback_applied=True
+                )
+                
+                # 如果预测错误，尝试改进prompt
+                if not correct:
+                    # 构建CWE相关的反馈信息
+                    cwe_info = ""
+                    if sample_data.get('cwe') and sample_data['cwe']:
+                        cwe_list = ", ".join(sample_data['cwe'])
+                        cwe_info = f"\nCWE Categories: {cwe_list}"
+                    
+                    cve_info = ""
+                    if sample_data.get('cve') and sample_data['cve'] != 'None':
+                        cve_info = f"\nCVE ID: {sample_data['cve']}"
+                    
+                    project_info = ""
+                    if sample_data.get('project'):
+                        project_info = f"\nProject: {sample_data['project']}"
+                    
+                    feedback_instruction = f"""
 The current prompt made an incorrect CWE major category classification. Please improve it based on the specific vulnerability information.
 
 Current Prompt:
@@ -776,90 +948,185 @@ Create an improved prompt that would correctly classify this sample into the cor
 
 Improved prompt:
 """
-                
-                try:
-                    improved_prompt = llm_client.generate(feedback_instruction, temperature=0.7, max_tokens=250)
-                    if '{input}' in improved_prompt and len(improved_prompt.strip()) > 50:
-                        current_prompt = improved_prompt.strip()
-                        improvements_count += 1
-                        print(f"       ⚡ 样本 {sample_idx+1}: prompt已改进")
-                except Exception as e:
-                    print(f"       ⚠️ 样本 {sample_idx+1}: 改进失败 - {e}")
-            else:
-                print(f"       ✅ 样本 {sample_idx+1}: 预测正确")
-                
-        except Exception as e:
-            print(f"       ❌ 样本 {sample_idx+1}: 处理失败 - {e}")
+                    
+                    try:
+                        improved_prompt = llm_client.generate(feedback_instruction, temperature=0.7, max_tokens=250)
+                        if '{input}' in improved_prompt and len(improved_prompt.strip()) > 50:
+                            current_prompt = improved_prompt.strip()
+                            improvements_count += 1
+                            print(f"       ⚡ 样本 {sample_idx+1}: prompt已改进")
+                    except Exception as e:
+                        print(f"       ⚠️ 样本 {sample_idx+1}: 改进失败 - {e}")
+                else:
+                    print(f"       ✅ 样本 {sample_idx+1}: 预测正确")
+                    
+            except Exception as e:
+                print(f"       ❌ 样本 {sample_idx+1}: 处理失败 - {e}")
     
     print(f"     📈 反馈训练完成: {improvements_count}/{len(selected_samples)} 个样本触发改进")
     return current_prompt
 
 
 def evaluate_on_dataset(prompt: str, dataset, llm_client, prompt_id: str,
-                       sample_tracker: SampleWiseTracker, generation: int) -> float:
-    """在数据集上评估prompt性能（支持CWE大类多分类）"""
+                       sample_tracker: SampleWiseTracker, generation: int, 
+                       config: dict = None) -> float:
+    """在数据集上评估prompt性能（支持CWE大类多分类和批处理）"""
     correct = 0
     samples = dataset.get_samples()
     total = len(samples)
     
-    for idx, sample in enumerate(samples):
-        try:
+    # 检查是否启用批处理
+    enable_batch = config.get('enable_batch_processing', False) if config else False
+    batch_size = config.get('llm_batch_size', 8) if config else 8
+    enable_concurrent = config.get('enable_concurrent', True) if config else True
+    
+    if enable_batch and total > 1:
+        # 批处理模式
+        print(f"     🚀 启用批处理评估: {total} 个样本, batch_size={batch_size}")
+        
+        # 准备批处理数据
+        batch_queries = []
+        batch_samples = []
+        batch_metadata = []
+        
+        for idx, sample in enumerate(samples):
             code = sample.input_text
             ground_truth_binary = int(sample.target)
             
             # 从样本的CWE代码获取真实的CWE大类
             cwe_codes = sample.metadata.get('cwe', [])
             if ground_truth_binary == 1 and cwe_codes:
-                # 有漏洞的样本，映射到CWE大类
                 ground_truth_category = map_cwe_to_major(cwe_codes)
             else:
-                # 无漏洞的样本
                 ground_truth_category = "Benign"
             
             query = prompt.format(input=code)
-            prediction_text = llm_client.generate(query, temperature=0.1, max_tokens=20)
-            
-            # 规范化模型输出到CWE大类
-            predicted_category = canonicalize_category(prediction_text)
-            if predicted_category is None:
-                # 如果无法解析，根据是否包含vulnerability相关词汇来判断
-                if any(word in prediction_text.lower() for word in ['vulnerable', 'vulnerability', 'vuln', 'exploit']):
-                    predicted_category = "Other"  # 默认为Other类别
-                else:
-                    predicted_category = "Benign"
-            
-            is_correct = (predicted_category == ground_truth_category)
-            
-            if is_correct:
-                correct += 1
-            
-            # 记录评估结果 - 将Sample对象转换为字典格式
-            sample_data = {
-                'func': sample.input_text,
-                'target': int(sample.target),
-                'project': sample.metadata.get('project', ''),
-                'cwe': sample.metadata.get('cwe', []),
-                'cve': sample.metadata.get('cve', 'None'),
-                'cve_desc': sample.metadata.get('cve_desc', 'None'),
-                'func_hash': sample.metadata.get('func_hash', ''),
-                'file_name': sample.metadata.get('file_name', ''),
-                'ground_truth_category': ground_truth_category,  # 新增：真实CWE大类
-                'predicted_category': predicted_category         # 新增：预测CWE大类
-            }
-            
-            sample_tracker.log_sample_result(
-                prompt_id=prompt_id,
-                sample_idx=idx,
-                sample_data=sample_data,
-                prediction=prediction_text,
-                ground_truth=ground_truth_binary,  # 保持原有的二分类ground_truth用于兼容
-                correct=is_correct,
-                generation=generation,
-                feedback_applied=False
+            batch_queries.append(query)
+            batch_samples.append(sample)
+            batch_metadata.append({
+                'idx': idx,
+                'ground_truth_binary': ground_truth_binary,
+                'ground_truth_category': ground_truth_category
+            })
+        
+        # 批量调用LLM
+        try:
+            prediction_texts = llm_client.batch_generate(
+                batch_queries, 
+                temperature=0.1, 
+                max_tokens=20,
+                batch_size=batch_size,
+                concurrent=enable_concurrent
             )
             
+            # 处理批处理结果
+            for idx, (sample, metadata, prediction_text) in enumerate(zip(batch_samples, batch_metadata, prediction_texts)):
+                if prediction_text == "error":
+                    print(f"     ⚠️ 样本 {metadata['idx']} 预测失败")
+                    continue
+                    
+                # 规范化模型输出到CWE大类
+                predicted_category = canonicalize_category(prediction_text)
+                if predicted_category is None:
+                    if any(word in prediction_text.lower() for word in ['vulnerable', 'vulnerability', 'vuln', 'exploit']):
+                        predicted_category = "Other"
+                    else:
+                        predicted_category = "Benign"
+                
+                is_correct = (predicted_category == metadata['ground_truth_category'])
+                
+                if is_correct:
+                    correct += 1
+                
+                # 记录评估结果
+                sample_data = {
+                    'func': sample.input_text,
+                    'target': metadata['ground_truth_binary'],
+                    'project': sample.metadata.get('project', ''),
+                    'cwe': sample.metadata.get('cwe', []),
+                    'cve': sample.metadata.get('cve', 'None'),
+                    'cve_desc': sample.metadata.get('cve_desc', 'None'),
+                    'func_hash': sample.metadata.get('func_hash', ''),
+                    'file_name': sample.metadata.get('file_name', ''),
+                    'ground_truth_category': metadata['ground_truth_category'],
+                    'predicted_category': predicted_category
+                }
+                
+                sample_tracker.log_sample_result(
+                    prompt_id=prompt_id,
+                    sample_idx=metadata['idx'],
+                    sample_data=sample_data,
+                    prediction=prediction_text,
+                    ground_truth=metadata['ground_truth_binary'],
+                    correct=is_correct,
+                    generation=generation,
+                    feedback_applied=False
+                )
+                
         except Exception as e:
-            print(f"     ⚠️ 样本 {idx} 评估失败: {e}")
+            print(f"     ❌ 批处理评估失败: {e}")
+            # 回退到单个处理模式
+            enable_batch = False
+    
+    if not enable_batch:
+        # 单个处理模式（原有逻辑）
+        print(f"     🔄 使用单个处理评估: {total} 个样本")
+        
+        for idx, sample in enumerate(samples):
+            try:
+                code = sample.input_text
+                ground_truth_binary = int(sample.target)
+                
+                # 从样本的CWE代码获取真实的CWE大类
+                cwe_codes = sample.metadata.get('cwe', [])
+                if ground_truth_binary == 1 and cwe_codes:
+                    ground_truth_category = map_cwe_to_major(cwe_codes)
+                else:
+                    ground_truth_category = "Benign"
+                
+                query = prompt.format(input=code)
+                prediction_text = llm_client.generate(query, temperature=0.1, max_tokens=20)
+                
+                # 规范化模型输出到CWE大类
+                predicted_category = canonicalize_category(prediction_text)
+                if predicted_category is None:
+                    if any(word in prediction_text.lower() for word in ['vulnerable', 'vulnerability', 'vuln', 'exploit']):
+                        predicted_category = "Other"
+                    else:
+                        predicted_category = "Benign"
+                
+                is_correct = (predicted_category == ground_truth_category)
+                
+                if is_correct:
+                    correct += 1
+                
+                # 记录评估结果
+                sample_data = {
+                    'func': sample.input_text,
+                    'target': int(sample.target),
+                    'project': sample.metadata.get('project', ''),
+                    'cwe': sample.metadata.get('cwe', []),
+                    'cve': sample.metadata.get('cve', 'None'),
+                    'cve_desc': sample.metadata.get('cve_desc', 'None'),
+                    'func_hash': sample.metadata.get('func_hash', ''),
+                    'file_name': sample.metadata.get('file_name', ''),
+                    'ground_truth_category': ground_truth_category,
+                    'predicted_category': predicted_category
+                }
+                
+                sample_tracker.log_sample_result(
+                    prompt_id=prompt_id,
+                    sample_idx=idx,
+                    sample_data=sample_data,
+                    prediction=prediction_text,
+                    ground_truth=ground_truth_binary,
+                    correct=is_correct,
+                    generation=generation,
+                    feedback_applied=False
+                )
+                
+            except Exception as e:
+                print(f"     ⚠️ 样本 {idx} 评估失败: {e}")
     
     accuracy = correct / total if total > 0 else 0
     print(f"     📊 CWE大类评估完成: {correct}/{total} = {accuracy:.4f}")
@@ -914,6 +1181,9 @@ def main():
         print(f"   样本级反馈: {config['sample_wise_feedback']}")
         print(f"   反馈批大小: {config['feedback_batch_size']}")
         print(f"   记录所有样本: {config['record_all_samples']}")
+        print(f"   LLM批处理: {config['enable_batch_processing']}")
+        print(f"   LLM批大小: {config['llm_batch_size']}")
+        print(f"   批次内并发: {config['enable_concurrent']}")
         
         # 3. 运行样本级反馈进化
         results, exp_dir = run_concurrent_evolution_with_feedback(config, sample_output_dir)

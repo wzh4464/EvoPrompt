@@ -290,6 +290,7 @@ async def sven_llm_query_async(
 def sven_llm_query_sync(
     data: Union[str, List[str]], 
     max_concurrency: int = 16,
+    batch_size: int = 8,
     task: bool = False, 
     temperature: float = 0.1, 
     **kwargs
