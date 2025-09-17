@@ -7,7 +7,9 @@
       "Bash(*)",
       "Bash(uv run:*)",
       "Bash(rm:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(timeout:*)"
     ]
   }
 }

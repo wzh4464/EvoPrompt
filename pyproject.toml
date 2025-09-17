@@ -30,6 +30,7 @@ dependencies = [
     "accelerate>=0.21.0",
     "backoff>=2.2.1",
     "datasets>=2.13.1",
+    "dotenv>=0.9.9",
     "jsonlines>=3.1.0",
     "matplotlib>=3.9.4",
     "numpy>=1.23.3",
