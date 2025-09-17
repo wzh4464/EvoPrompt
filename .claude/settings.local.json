@@ -7,7 +7,12 @@
       "Bash(ln:*)",
       "Bash(mkdir:*)",
       "Bash(.venv/bin/python:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(uv run:*)",
+      "Bash(find:*)",
+      "Bash(true)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

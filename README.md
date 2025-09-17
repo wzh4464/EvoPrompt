@@ -1,179 +1,191 @@
-# 🧬 EvoPrompt
+# EvoPrompt: Evolutionary Prompt Optimization for Vulnerability Detection
 
-This is the official implementation of the paper [Connecting Large Language Models with Evolutionary Algorithms Yields Powerful Prompt Optimizers](https://openreview.net/pdf?id=ZG3RaNIsO8), accepted by ICLR'2024. 
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 📃 Abstract
+EvoPrompt is a modern prompt evolution framework specifically designed for vulnerability detection tasks. It uses evolutionary algorithms to automatically optimize prompts for better performance on security code analysis.
 
-Large Language Models (LLMs) excel in various tasks, but they rely on carefully crafted prompts that often demand substantial human effort. To automate this process, in this paper, we propose a novel framework for discrete prompt optimization, called EvoPrompt, which borrows the idea of evolutionary algorithms (EAs) as they exhibit good performance and fast convergence. To enable EAs to work on discrete prompts, which are natural language expressions that need to be coherent and human-readable, we connect LLMs with EAs. This approach allows us to simultaneously leverage the powerful language processing capabilities of LLMs and the efficient optimization performance of EAs. Specifically, abstaining from any gradients or parameters, EvoPrompt starts from a population of prompts and iteratively generates new prompts with LLMs based on the evolutionary operators, improving the population based on the development set. We optimize prompts for both closed- and open-source LLMs including GPT-3.5 and Alpaca, on 31 datasets covering language understanding, generation tasks, as well as BIG-Bench Hard (BBH) tasks. EvoPrompt significantly outperforms human-engineered prompts and existing methods for automatic prompt generation (e.g., up to 25% on BBH). Furthermore, EvoPrompt demonstrates that connecting LLMs with EAs creates synergies, which could inspire further research on the combination of LLMs and conventional algorithms.
+## 🎯 Focus Areas
+
+- **Vulnerability Detection**: Primary focus on code security analysis
+- **SVEN Dataset**: Support for CWE-based vulnerability classification
+- **Primevul Dataset**: Large-scale vulnerability detection dataset support
+
+## ✨ Key Features
+
+- **Modern Architecture**: Built with modern Python packaging (pyproject.toml, src layout)
+- **SVEN Integration**: Compatible with SVEN submodule API calls
+- **Evolutionary Algorithms**: Genetic Algorithm (GA) and Differential Evolution (DE)
+- **Real-time Tracking**: Complete prompt evolution tracking and analysis
+- **Balanced Sampling**: Smart data sampling for imbalanced datasets
 
 ## 🚀 Quick Start
 
-### ⚙️ Preparation
-
-1. **Environmental** settings: `pip install -r requirements.txt`
-2. **Data** download: The test data for the language understanding task can be found [here](https://nlp.cs.princeton.edu/projects/lm-bff/datasets.tar). Put the test file in the folder `./data/cls/{dataset_name}`. For datasets of BBH, download from the repo [CoT-hub](https://github.com/FranxYao/chain-of-thought-hub/tree/main/BBH/data) and put them in the folder `BBH/data/{dataset_name}`.
-3. **OpenAI API key** required: add your OpenAI API key and other related settings in the file `auth.yaml`
-
-### ♻ Evolution
-
-We instanciate two evolutionary algorithms, GA (genetic algorithm) and DE (diffenrential evolution) to evolve upon the initial population. Evolve your prompts using the following commands:
-
-Customize the parameter `--llm_type` to use `text-davinci-003`, `gpt-3.5-turbo`, `gpt-4`.
+### Installation
 
 ```bash
-# understanding task on Alpaca
-bash scripts/cls/run_ga_alpaca.sh  # Genetic algorithm
-bash scripts/cls/run_de_alpaca.sh  # Differential evolution
+# Clone the repository
+git clone <repository-url>
+cd EvoPrompt
 
-# simplification task on Alpaca
-bash scripts/sim/run_de_alpaca.sh
-bash scripts/sim/run_ga_alpaca.sh
-
-# summarization task on Alpaca
-bash scripts/sum/run_de_alpaca.sh
-bash scripts/sum/run_ga_alpaca.sh
-
-# for BBH tasks
-cd BBH
-bash scripts/run_de_cot.sh  # DE 
-bash scripts/run_ga_cot.sh  # GA
+# Install with uv (recommended)
+uv sync
 ```
 
-### 🤔 Inference
+### Configuration
 
-To evaluate a single instruction, run the following, set the argument `--content` to evaluate a performance of a specific prompt
+Create a `.env` file with your API configuration:
+
+```env
+API_BASE_URL=https://newapi.pockgo.com/v1
+API_KEY=your-api-key-here
+BACKUP_API_BASE_URL=https://newapi.aicohere.org/v1
+MODEL_NAME=kimi-k2-code
+```
+
+### Basic Usage
 
 ```bash
-bash scripts/cls/eval_single_alpaca.sh  # understanding task on alpaca
-bash scripts/sim/eval_single_alpaca.sh  # simplification
-bash scripts/sum/eval_single_alpaca.sh  # summarization
+# Run SVEN vulnerability detection
+uv run python sven_llm_client.py
 
-# BBH
-cd BBH
-bash scripts/eval.sh  # few-shot evaluation
+# Run Primevul 1% sampling demo
+uv run python demo_primevul_1percent.py
+
+# Run full Primevul evolution
+uv run python run_primevul_1percent.py
 ```
 
-### 📌 Notes
+## 📊 Supported Datasets
 
-Note that we have two language models used in our framework, one is for evolution (argument `--llm_type`), the other for the task implementation (`--language_model`).
+### SVEN Dataset
+- **CWE Types**: 9 common vulnerability types
+- **Format**: JSONL with function context
+- **Location**: `data/vul_detection/sven/`
 
-#### 💡Tips for Usage
+### Primevul Dataset  
+- **Scale**: 24,000+ vulnerability samples
+- **Format**: JSONL with code analysis
+- **Location**: `data/primevul/primevul/`
 
-The number of iteration and the population size effect the performance of EvoPrompt. There exists a trade-off between the cost and the performance. For relative simple tasks, a size of 10 and 10 iterative steps are enough, or even less. While for complex tasks, a larger population with diversity is required.
+## 🧬 Evolutionary Algorithms
 
-#### 🔢 Arguments
+### Differential Evolution (DE)
+- Continuous optimization approach
+- Good for fine-tuning prompts
+- Configurable mutation and crossover rates
 
-You may need to set the following arguments to customize your own configuration.
+### Genetic Algorithm (GA)
+- Population-based optimization
+- Diverse prompt generation
+- Tournament selection and crossover
 
-- `task`: the task category, such as `sim` (simplification), `cls`(classification), `sum`(summarization). If you need to extend this to other tasks, you may override the metric to evaluate
-- `dataset`: the dataset you want to evolve prompt on
-- `dev_file`: the path of the devlopment set
-- `language model`: the model used for task implementation
-- `llm_type`: the LLM used to evolve prompts
-- `position`: this argument mainly indicates whether to use demonstration (zero-shot or few-shot)
-- `sample_num`: the size of dev set, mainly used for generation task where there is no need to set the `dev_file`
-- `prompt_num`: number of examples for few-shot demonstrations
+## 📁 Project Structure
 
-## 📎 Framework
+```
+EvoPrompt/
+├── src/evoprompt/           # Modern package structure
+│   ├── algorithms/          # Evolutionary algorithms
+│   ├── core/               # Core functionality
+│   ├── data/               # Data processing
+│   ├── llm/                # SVEN-compatible LLM client
+│   └── workflows/          # Vulnerability detection workflow
+├── data/                   # Datasets
+│   ├── vul_detection/      # Processed vulnerability data
+│   └── primevul/           # Primevul dataset
+├── sven/                   # SVEN submodule
+├── demo_primevul_1percent.py # Demo script
+└── run_primevul_1percent.py  # Production script
+```
 
-For the pipeline of EvoPrompt, there are mainly three steps as follows, while for each of them algorthms, there exists slight differences to instantiate.
+## 🔧 API Usage
 
-- **Initialization**: We apply prompts generated manually written or generated by GPT as the initial population. (see in the `prompts.txt` and `prompts_auto.txt` under the path of each dataset)
-- **Evolution** (mutation and crossover): For templates used for DE and GA, see the file `./data/templates_ga` and `./data/templates_de`. We use a demonstration including one example of the algorithm implementation to get precise and expected prompt following the steps of evolution. To avoid the LLMs copying the demonstration,the demonstration of the task is different from the task of implementation.
-
-- **Evaluation and update**: After each iteration, we need select which prompts should be maintained in the population to update. For GA, we maintain top-$N$ prompts in each iteration while for DE, we replace the old prompt if the newly generated is better.
-
-### 🧬 Genetic Algorithm
-
-- **Selection strategy**: in each iteration, we need to select parents for mutation and crossover, as donors to child prompts. Set the argument `sel_mode` to apply different strategy. There are three choices: `["wheel", "random", "tour"]`, we use `wheel` by default.
-- **Update**: After generating a population with the same size of the original population, $N$, we select top-$N$ as the new population.
-
-### 🧬 Differential Evolution
-
-- **Design in DE**: We apply different DE templates for ablations. Specify the argument `template` to use different settings.
-  - Eliminate Prompt 3: `--template v2`
-  - Prompt 3 (random): add the argument `--donor_random`
-  - Prompt 3 (best): `--template v1` (default setting)
-  - Different part: `--template v3`
-- **Update**: Different from GA, in each iteration for each prompt `p`, several donor prompts are used for the new prompt `p'`, if `p'` is better than `p`, `p` will be replaced by `p'`. Otherwise, it will be maintained.
-
-## 🌳 Code Strucutre
+### SVEN-Compatible Client
 
 ```python
-.
-├── args.py
-├── auth.yaml
-├── BBH  # code for BBH tasks
-├── data  # dataset, templates used
-│   ├── cls
-│   ├── sim
-│   ├── sum
-│   ├── template_de.py  # templates of prompt evolution by DE
-│   ├── template_ga.py  # templates of prompt evolution by GA
-│   ├── template_v2.json  # templates for task implementation
-│   └── templates.py  # wrapper
-├── dataset.py  # dataset class
-├── evaluator.py  # evaluators on different tasks
-├── evoluter.py  # DE, GA, APE
-├── evolution.py  # DE, GA, APE
-├── get_result.py
-├── infer.py  # main file for inference
-├── llm_client.py  # LLM query
-├── metrics.py  # metric calculation
-├── requirements.txt
-├── run.py  # main file for evolution
-├── scripts  # scripts to run the code
-└── utils.py  # auxiliary functions
+from evoprompt import sven_llm_init, sven_llm_query
+
+# Initialize client
+client = sven_llm_init()
+
+# Single query
+result = sven_llm_query("Analyze this code for vulnerabilities", client, task=True)
+
+# Batch queries
+results = sven_llm_query(["query1", "query2"], client, task=True)
 ```
 
-## 🧩 Possible Extension
+### Vulnerability Detection Workflow
 
-- **Aggregation**: Based on the final population of high quality, ensembling strategies can be effectively applied upon the prompts.
-- **More fine-grained metrics**: to select prompt maintained in the population, we need to evaluate the performance on dev set. However, for understanding tasks, metrics such as accuracy or F1 are coarse-grained, sometimes it's not accurate anough to select which to keep in the population since the performances of them are the same.
-- **More complex tasks** are left to explore.
+```python
+from evoprompt import VulnerabilityDetectionWorkflow
 
-
-## ☕️ Citation
-
-If you find this repository helpful, please consider citing our paper:
-
-```
-@inproceedings{
-guo2024connecting,
-title={Connecting Large Language Models with Evolutionary Algorithms Yields Powerful Prompt Optimizers},
-author={Qingyan Guo and Rui Wang and Junliang Guo and Bei Li and Kaitao Song and Xu Tan and Guoqing Liu and Jiang Bian and Yujiu Yang},
-booktitle={The Twelfth International Conference on Learning Representations},
-year={2024},
-url={https://openreview.net/forum?id=ZG3RaNIsO8}
+# Configure experiment
+config = {
+    "algorithm": "de",
+    "population_size": 10,
+    "max_generations": 5,
+    "llm_type": "sven"
 }
+
+# Run evolution
+workflow = VulnerabilityDetectionWorkflow(config)
+results = workflow.run()
 ```
 
-## Acknowledgements
+## 📈 Performance Tracking
 
-Our codebase is based on the following repos. Thanks for open-sourcing!
+EvoPrompt provides comprehensive tracking of the evolution process:
 
-- [CoT-hub](https://github.com/FranxYao/chain-of-thought-hub)
-- [APE](https://github.com/keirp/automatic_prompt_engineer)
-- [LM-BFF](https://github.com/princeton-nlp/LM-BFF)
+- **Real-time Logging**: All prompt updates recorded in `prompt_evolution.jsonl`
+- **Best Prompts**: History of best-performing prompts
+- **Fitness Tracking**: Complete fitness evolution over generations
+- **LLM Call History**: All API calls logged for analysis
 
-## Contributing
+## 🧪 Example Results
 
-This project welcomes contributions and suggestions. Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+### Primevul 1% Demo Results
+- **Total Samples**: 100 (balanced: 50 benign + 50 vulnerable)
+- **Evolution Generations**: 4
+- **LLM Calls**: 924
+- **Output Files**: 5 detailed tracking files
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+## 🔄 Development Commands
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+```bash
+# All Python commands use uv run
+uv run python script_name.py
 
-## Trademarks
+# Run tests
+uv run pytest tests/
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
-trademarks or logos is subject to and must follow
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+# Check code quality
+uv run ruff check src/
+uv run mypy src/
+```
+
+## 📋 Requirements
+
+- Python 3.11+
+- uv package manager
+- API access (configured in .env)
+
+## 🤝 Contributing
+
+1. Focus on vulnerability detection improvements
+2. Maintain SVEN compatibility
+3. Follow modern Python practices
+4. Add comprehensive tests
+
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+## 🔗 Related Projects
+
+- **SVEN**: Vulnerability detection submodule
+- **Primevul**: Large-scale vulnerability dataset
+
+---
+
+**Note**: This project is specifically focused on vulnerability detection. For other NLP tasks, consider using general-purpose prompt optimization frameworks.
