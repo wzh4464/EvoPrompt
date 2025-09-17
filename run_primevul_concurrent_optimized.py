@@ -117,6 +117,9 @@ def create_optimized_config():
         "save_intermediate_results": True,
         "export_top_k": 15,
         "save_sample_results": True,  # 保存样本级结果
+
+        # 启用CWE大类模式
+        "use_cwe_major": True,
     }
     
     return config
@@ -323,6 +326,8 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
     print(f"⚡ 开始样本级反馈的高并发Prompt进化实验: {config['experiment_id']}")
     print(f"🔥 使用 {config['max_concurrency']} 个并发连接")
     print(f"📊 样本级反馈: 每批 {config['feedback_batch_size']} 个样本")
+    if config.get('use_cwe_major'):
+        print("🔎 已启用 CWE 大类模式：固定要求模型只输出大类（或Benign）作为评估依据")
     
     # 创建实验目录
     exp_dir = Path(config['output_dir']) / config['experiment_id']
@@ -384,6 +389,7 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
     print(f"   种群大小: {config['population_size']}")
     print(f"   最大代数: {config['max_generations']}")
     print(f"   反馈批大小: {config['feedback_batch_size']}")
+    print(f"   CWE大类模式: {config.get('use_cwe_major', False)}")
     
     # 创建进化算法
     algorithm = DifferentialEvolution({
