@@ -22,6 +22,9 @@ from evoprompt.core.prompt_tracker import PromptTracker
 from evoprompt.algorithms.differential import DifferentialEvolution
 from evoprompt.algorithms.base import Population
 from evoprompt.data.dataset import PrimevulDataset
+from evoprompt.data.cwe_categories import (
+    CWE_MAJOR_CATEGORIES, map_cwe_to_major, canonicalize_category
+)
 
 
 def setup_logging():
@@ -126,37 +129,42 @@ def create_optimized_config():
 
 
 def create_diverse_initial_prompts():
-    """创建多样化的初始prompt集合，充分利用种群规模"""
+    """创建多样化的初始prompt集合，支持CWE大类分类"""
+    # 获取CWE大类列表用于提示
+    categories_text = ", ".join([f"'{cat}'" for cat in CWE_MAJOR_CATEGORIES])
+    
     initial_prompts = [
-        # 简洁分析类
-        "Analyze this code for security vulnerabilities. Look for buffer overflows, injection attacks, memory corruption, and unsafe function usage. Respond 'vulnerable' if you find security issues, 'benign' if the code appears safe.\n\nCode to analyze:\n{input}\n\nSecurity assessment:",
+        # CWE大类导向分析
+        f"Analyze this code for security vulnerabilities and classify it into one of these CWE major categories: {categories_text}. If no vulnerability is found, respond with 'Benign'.\n\nCode to analyze:\n{{input}}\n\nCWE Major Category:",
         
-        "Check this code for security vulnerabilities. Focus on real exploitable issues. Answer 'vulnerable' or 'benign':\n\n{input}\n\nResult:",
+        f"You are a security expert. Examine this code and identify the primary CWE major category from: {categories_text}. For secure code, use 'Benign'.\n\nCode: {{input}}\n\nCWE Classification:",
+        
+        # 具体分析导向类
+        f"Perform detailed security analysis and classify into CWE major categories:\n- Buffer Errors: buffer overflows, bounds checking issues\n- Injection: SQL, command, XSS injection attacks\n- Memory Management: use-after-free, double-free, memory leaks\n- Pointer Dereference: null pointer, invalid pointer usage\n- Integer Errors: overflow, underflow, wraparound\n- Concurrency Issues: race conditions, synchronization problems\n- Path Traversal: directory traversal attacks\n- Cryptography Issues: weak crypto, broken algorithms\n- Information Exposure: data leaks, privacy issues\n- Other: other security issues\n- Benign: no vulnerabilities\n\nCode: {{input}}\n\nCategory:",
+        
+        f"Identify the primary vulnerability type. Choose from: {categories_text}. Focus on the most significant security issue present.\n\n{{input}}\n\nPrimary vulnerability category:",
         
         # 专家角色类
-        "You are a cybersecurity expert conducting a code security review. Examine this code snippet for potential vulnerabilities including but not limited to: SQL injection, buffer overflow, use-after-free, null pointer dereference, and input validation issues. Classify as 'vulnerable' or 'benign'.\n\n{input}\n\nYour expert assessment:",
+        f"As a cybersecurity expert, classify this code's primary security issue using CWE major categories: {categories_text}. Use 'Benign' for secure code.\n\nCode under review:\n{{input}}\n\nExpert classification:",
         
-        "As a security-focused code reviewer, examine this code with a defensive mindset. Consider: Are there any unsafe operations? Is input properly validated? Could this code be exploited by an attacker? Respond with 'vulnerable' for unsafe code or 'benign' for secure code.\n\nCode under review:\n{input}\n\nDefensive analysis result:",
+        f"Security code review: Examine for buffer errors, injection flaws, memory issues, pointer problems, integer errors, concurrency bugs, path traversal, crypto weaknesses, or information exposure. Classify accordingly or mark as 'Benign'.\n\nCode: {{input}}\n\nSecurity classification:",
         
         # 结构化分析类
-        "Perform a systematic security analysis of this code:\n1. Check for unsafe function calls\n2. Analyze input validation\n3. Look for memory management issues\n4. Identify potential attack vectors\n\nCode: {input}\n\nBased on your analysis, is this code 'vulnerable' or 'benign'?",
+        f"Systematic vulnerability analysis:\n1. Check for buffer/bounds issues → Buffer Errors\n2. Look for injection vectors → Injection\n3. Analyze memory management → Memory Management\n4. Check pointer usage → Pointer Dereference\n5. Review integer operations → Integer Errors\n6. Examine concurrency → Concurrency Issues\n7. Check path handling → Path Traversal\n8. Review cryptography → Cryptography Issues\n9. Look for data leaks → Information Exposure\n10. Other security issues → Other\n11. No issues → Benign\n\nCode: {{input}}\n\nResult:",
         
-        "Evaluate this code's security on multiple levels:\n- Syntax level: unsafe functions, operations\n- Logic level: control flow vulnerabilities\n- Data level: input/output handling issues\n\nCode: {input}\n\nOverall security verdict ('vulnerable' or 'benign'):",
+        # CWE模式识别类
+        f"Identify CWE patterns and map to major categories. Examples:\n- CWE-120,119,787: Buffer Errors\n- CWE-78,79,89: Injection\n- CWE-416,415,401: Memory Management\n- CWE-476: Pointer Dereference\n- CWE-190,191: Integer Errors\n- CWE-362: Concurrency Issues\n- CWE-22: Path Traversal\n- CWE-327,326: Cryptography Issues\n- CWE-200: Information Exposure\n\nClassify: {{input}}\n\nCWE Major Category:",
         
-        # CWE导向类
-        "Review this code for Common Weakness Enumeration (CWE) patterns such as CWE-120 (buffer overflow), CWE-79 (XSS), CWE-89 (SQL injection), CWE-476 (null pointer dereference), and other security weaknesses. Answer 'vulnerable' if any CWE patterns are found, 'benign' otherwise.\n\n{input}\n\nCWE-based assessment:",
+        # 攻击场景类
+        f"From an attacker's perspective, what's the primary exploitable weakness? Categorize as: {categories_text}.\n\n{{input}}\n\nExploitable weakness category:",
         
-        "Examine this code for specific vulnerability patterns: command injection, path traversal, integer overflow, race conditions, and cryptographic weaknesses. Provide verdict 'vulnerable' or 'benign'.\n\n{input}\n\nPattern analysis:",
+        # 简洁高效类
+        f"Security category classification. Options: {categories_text}.\n\nCode: {{input}}\n\nCategory:",
         
-        # 攻击者视角类
-        "Think like an attacker: could you exploit this code? Look for entry points, unsafe operations, and potential attack surfaces. If you can find a way to exploit it, answer 'vulnerable'. If not, answer 'benign'.\n\n{input}\n\nAttacker's assessment:",
+        f"Vulnerability type identification. Choose the most appropriate: Buffer Errors, Injection, Memory Management, Pointer Dereference, Integer Errors, Concurrency Issues, Path Traversal, Cryptography Issues, Information Exposure, Other, or Benign.\n\n{{input}}\n\nType:",
         
-        "From a penetration tester's perspective, assess this code for exploitable vulnerabilities. Focus on real-world attack scenarios. Answer 'vulnerable' if exploitable, 'benign' if secure.\n\n{input}\n\nPentest verdict:",
-        
-        # 简化高效类
-        "Security check: Is this code vulnerable? Answer 'vulnerable' or 'benign'.\n\n{input}\n\nQuick assessment:",
-        
-        "Code security analysis. Look for vulnerabilities and unsafe patterns. Reply 'vulnerable' or 'benign'.\n\n{input}\n\nAnalysis:"
+        # 防御角度类
+        f"Defense-focused analysis: What type of security control would prevent exploitation? Map to vulnerability categories: {categories_text}.\n\nCode to protect:\n{{input}}\n\nVulnerability category:"
     ]
     
     return initial_prompts
@@ -194,7 +202,9 @@ class SampleWiseTracker:
                 "cve": sample_data.get('cve', 'None'),
                 "cve_desc": sample_data.get('cve_desc', 'None'),
                 "func_hash": sample_data.get('func_hash', ''),
-                "file_name": sample_data.get('file_name', '')
+                "file_name": sample_data.get('file_name', ''),
+                "ground_truth_category": sample_data.get('ground_truth_category', 'Unknown'),
+                "predicted_category": sample_data.get('predicted_category', 'Unknown')
             }
         }
         
@@ -221,13 +231,15 @@ class SampleWiseTracker:
         }
     
     def save_statistics(self):
-        """保存统计信息"""
+        """保存统计信息（支持CWE大类多分类）"""
         if not self.sample_results:
             return
             
         # 按prompt统计
         prompt_stats = {}
         cwe_analysis = {}
+        category_analysis = {}  # 新增：CWE大类分析
+        confusion_matrix = {}   # 新增：混淆矩阵
         
         for result in self.sample_results:
             prompt_id = result['prompt_id']
@@ -248,7 +260,39 @@ class SampleWiseTracker:
             if result['feedback_applied']:
                 stats["feedback_applied_count"] += 1
             
-            # CWE统计分析
+            # CWE大类分析（新增）
+            # 从样本结果的metadata中获取类别信息
+            metadata = result.get('metadata', {})
+            ground_truth_cat = metadata.get('ground_truth_category', 'Unknown')
+            predicted_cat = metadata.get('predicted_category', 'Unknown')
+            
+            # 更新混淆矩阵
+            if ground_truth_cat not in confusion_matrix:
+                confusion_matrix[ground_truth_cat] = {}
+            if predicted_cat not in confusion_matrix[ground_truth_cat]:
+                confusion_matrix[ground_truth_cat][predicted_cat] = 0
+            confusion_matrix[ground_truth_cat][predicted_cat] += 1
+            
+            # 按CWE大类统计
+            if ground_truth_cat not in category_analysis:
+                category_analysis[ground_truth_cat] = {
+                    "total_samples": 0,
+                    "correct_predictions": 0,
+                    "accuracy": 0.0,
+                    "predicted_as": {}  # 被预测为各个类别的次数
+                }
+            
+            cat_stats = category_analysis[ground_truth_cat]
+            cat_stats["total_samples"] += 1
+            if result['correct']:
+                cat_stats["correct_predictions"] += 1
+            
+            # 记录预测分布
+            if predicted_cat not in cat_stats["predicted_as"]:
+                cat_stats["predicted_as"][predicted_cat] = 0
+            cat_stats["predicted_as"][predicted_cat] += 1
+            
+            # 原有CWE统计分析（保留兼容）
             cwe_codes = result.get('cwe_codes', [])
             for cwe in cwe_codes:
                 if cwe not in cwe_analysis:
@@ -278,7 +322,12 @@ class SampleWiseTracker:
             stats["accuracy"] = stats["correct_samples"] / stats["total_samples"] if stats["total_samples"] > 0 else 0
             stats["generations"] = list(stats["generations"])
         
-        # 计算CWE准确率
+        # 计算CWE大类准确率
+        for cat in category_analysis:
+            cat_stats = category_analysis[cat]
+            cat_stats["accuracy"] = cat_stats["correct_predictions"] / cat_stats["total_samples"] if cat_stats["total_samples"] > 0 else 0
+        
+        # 计算原有CWE准确率
         for cwe in cwe_analysis:
             cwe_stats = cwe_analysis[cwe]
             cwe_stats["accuracy"] = cwe_stats["correct_predictions"] / cwe_stats["total_samples"] if cwe_stats["total_samples"] > 0 else 0
@@ -292,7 +341,15 @@ class SampleWiseTracker:
             "overall_accuracy": sum(1 for r in self.sample_results if r['correct']) / len(self.sample_results),
             "prompt_statistics": prompt_stats,
             "generation_summary": self._get_generation_summary(),
-            "cwe_analysis": cwe_analysis,
+            "cwe_major_category_analysis": category_analysis,  # 新增：CWE大类分析
+            "confusion_matrix": confusion_matrix,              # 新增：混淆矩阵
+            "category_summary": {                              # 新增：类别总结
+                "total_categories": len(category_analysis),
+                "best_performing_categories": sorted(category_analysis.items(), key=lambda x: x[1]["accuracy"], reverse=True)[:5],
+                "worst_performing_categories": sorted(category_analysis.items(), key=lambda x: x[1]["accuracy"])[:5],
+                "most_common_categories": sorted(category_analysis.items(), key=lambda x: x[1]["total_samples"], reverse=True)[:5]
+            },
+            "cwe_analysis": cwe_analysis,                      # 保留原有统计
             "cwe_summary": {
                 "total_cwe_types": len(cwe_analysis),
                 "most_common_cwes": sorted(cwe_analysis.items(), key=lambda x: x[1]["total_samples"], reverse=True)[:10],
@@ -613,7 +670,7 @@ Generate only the improved prompt, nothing else:
         return target_prompt
 
 
-def sample_wise_feedback_training(initial_prompt: str, train_samples: List[dict], 
+def sample_wise_feedback_training(initial_prompt: str, train_samples, 
                                 llm_client, sample_tracker: SampleWiseTracker,
                                 config: dict, generation: int, prompt_id: str,
                                 batch_idx: int) -> str:
@@ -632,14 +689,30 @@ def sample_wise_feedback_training(initial_prompt: str, train_samples: List[dict]
         try:
             # 使用当前prompt预测
             code = sample.input_text
-            ground_truth = int(sample.target)
+            ground_truth_binary = int(sample.target)
+            
+            # 从样本的CWE代码获取真实的CWE大类
+            cwe_codes = sample.metadata.get('cwe', [])
+            if ground_truth_binary == 1 and cwe_codes:
+                # 有漏洞的样本，映射到CWE大类
+                ground_truth_category = map_cwe_to_major(cwe_codes)
+            else:
+                # 无漏洞的样本
+                ground_truth_category = "Benign"
             
             query = current_prompt.format(input=code)
-            prediction_text = llm_client.generate(query, temperature=0.1, max_tokens=10)
+            prediction_text = llm_client.generate(query, temperature=0.1, max_tokens=20)
             
-            # 解析预测结果
-            prediction_binary = 1 if 'vulnerable' in prediction_text.lower() else 0
-            correct = (prediction_binary == ground_truth)
+            # 规范化模型输出到CWE大类
+            predicted_category = canonicalize_category(prediction_text)
+            if predicted_category is None:
+                # 如果无法解析，根据是否包含vulnerability相关词汇来判断
+                if any(word in prediction_text.lower() for word in ['vulnerable', 'vulnerability', 'vuln', 'exploit']):
+                    predicted_category = "Other"  # 默认为Other类别
+                else:
+                    predicted_category = "Benign"
+            
+            correct = (predicted_category == ground_truth_category)
             
             # 转换Sample对象为字典格式
             sample_data = {
@@ -650,7 +723,9 @@ def sample_wise_feedback_training(initial_prompt: str, train_samples: List[dict]
                 'cve': sample.metadata.get('cve', 'None'),
                 'cve_desc': sample.metadata.get('cve_desc', 'None'),
                 'func_hash': sample.metadata.get('func_hash', ''),
-                'file_name': sample.metadata.get('file_name', '')
+                'file_name': sample.metadata.get('file_name', ''),
+                'ground_truth_category': ground_truth_category,  # 新增：真实CWE大类
+                'predicted_category': predicted_category         # 新增：预测CWE大类
             }
             
             # 记录样本结果
@@ -659,7 +734,7 @@ def sample_wise_feedback_training(initial_prompt: str, train_samples: List[dict]
                 sample_idx=sample_idx,
                 sample_data=sample_data,
                 prediction=prediction_text,
-                ground_truth=ground_truth,
+                ground_truth=ground_truth_binary,  # 保持原有的二分类ground_truth用于兼容
                 correct=correct,
                 generation=generation,
                 feedback_applied=True
@@ -682,7 +757,7 @@ def sample_wise_feedback_training(initial_prompt: str, train_samples: List[dict]
                     project_info = f"\nProject: {sample_data['project']}"
                 
                 feedback_instruction = f"""
-The current prompt made an incorrect prediction. Please improve it based on the specific vulnerability information.
+The current prompt made an incorrect CWE major category classification. Please improve it based on the specific vulnerability information.
 
 Current Prompt:
 {current_prompt}
@@ -690,13 +765,14 @@ Current Prompt:
 Code Sample:
 {code[:500]}...
 
-Ground Truth: {"vulnerable" if ground_truth == 1 else "benign"}
-Predicted: {"vulnerable" if prediction_binary == 1 else "benign"}{project_info}{cwe_info}{cve_info}
+Ground Truth Category: {ground_truth_category}
+Predicted Category: {predicted_category}{project_info}{cwe_info}{cve_info}
 
-Create an improved prompt that would correctly classify this sample. Focus on:
-1. The specific CWE categories mentioned above (if any)
-2. The vulnerability patterns or security aspects this sample demonstrates  
-3. Common security issues in {sample_data.get('project', 'this type of')} code
+Create an improved prompt that would correctly classify this sample into the correct CWE major category. Focus on:
+1. The specific CWE categories: {ground_truth_category} characteristics
+2. The vulnerability patterns that distinguish {ground_truth_category} from other categories
+3. Common {ground_truth_category} issues in {sample_data.get('project', 'this type of')} code
+4. Ensure the prompt can distinguish between all CWE major categories: {", ".join(CWE_MAJOR_CATEGORIES)}
 
 Improved prompt:
 """
@@ -721,7 +797,7 @@ Improved prompt:
 
 def evaluate_on_dataset(prompt: str, dataset, llm_client, prompt_id: str,
                        sample_tracker: SampleWiseTracker, generation: int) -> float:
-    """在数据集上评估prompt性能"""
+    """在数据集上评估prompt性能（支持CWE大类多分类）"""
     correct = 0
     samples = dataset.get_samples()
     total = len(samples)
@@ -729,13 +805,30 @@ def evaluate_on_dataset(prompt: str, dataset, llm_client, prompt_id: str,
     for idx, sample in enumerate(samples):
         try:
             code = sample.input_text
-            ground_truth = int(sample.target)
+            ground_truth_binary = int(sample.target)
+            
+            # 从样本的CWE代码获取真实的CWE大类
+            cwe_codes = sample.metadata.get('cwe', [])
+            if ground_truth_binary == 1 and cwe_codes:
+                # 有漏洞的样本，映射到CWE大类
+                ground_truth_category = map_cwe_to_major(cwe_codes)
+            else:
+                # 无漏洞的样本
+                ground_truth_category = "Benign"
             
             query = prompt.format(input=code)
-            prediction_text = llm_client.generate(query, temperature=0.1, max_tokens=10)
+            prediction_text = llm_client.generate(query, temperature=0.1, max_tokens=20)
             
-            prediction_binary = 1 if 'vulnerable' in prediction_text.lower() else 0
-            is_correct = (prediction_binary == ground_truth)
+            # 规范化模型输出到CWE大类
+            predicted_category = canonicalize_category(prediction_text)
+            if predicted_category is None:
+                # 如果无法解析，根据是否包含vulnerability相关词汇来判断
+                if any(word in prediction_text.lower() for word in ['vulnerable', 'vulnerability', 'vuln', 'exploit']):
+                    predicted_category = "Other"  # 默认为Other类别
+                else:
+                    predicted_category = "Benign"
+            
+            is_correct = (predicted_category == ground_truth_category)
             
             if is_correct:
                 correct += 1
@@ -749,7 +842,9 @@ def evaluate_on_dataset(prompt: str, dataset, llm_client, prompt_id: str,
                 'cve': sample.metadata.get('cve', 'None'),
                 'cve_desc': sample.metadata.get('cve_desc', 'None'),
                 'func_hash': sample.metadata.get('func_hash', ''),
-                'file_name': sample.metadata.get('file_name', '')
+                'file_name': sample.metadata.get('file_name', ''),
+                'ground_truth_category': ground_truth_category,  # 新增：真实CWE大类
+                'predicted_category': predicted_category         # 新增：预测CWE大类
             }
             
             sample_tracker.log_sample_result(
@@ -757,7 +852,7 @@ def evaluate_on_dataset(prompt: str, dataset, llm_client, prompt_id: str,
                 sample_idx=idx,
                 sample_data=sample_data,
                 prediction=prediction_text,
-                ground_truth=ground_truth,
+                ground_truth=ground_truth_binary,  # 保持原有的二分类ground_truth用于兼容
                 correct=is_correct,
                 generation=generation,
                 feedback_applied=False
@@ -767,7 +862,7 @@ def evaluate_on_dataset(prompt: str, dataset, llm_client, prompt_id: str,
             print(f"     ⚠️ 样本 {idx} 评估失败: {e}")
     
     accuracy = correct / total if total > 0 else 0
-    print(f"     📊 评估完成: {correct}/{total} = {accuracy:.4f}")
+    print(f"     📊 CWE大类评估完成: {correct}/{total} = {accuracy:.4f}")
     return accuracy
 
 
