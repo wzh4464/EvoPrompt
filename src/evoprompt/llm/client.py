@@ -95,14 +95,15 @@ class SVENLLMClient(LLMClient):
         logger.info(f"Backup API: {self.backup_api_base}")
         logger.info(f"Max concurrency: {self.max_concurrency}")
     
-    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = 1000) -> str:
+    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = None) -> str:
         """Make API request with fallback support."""
         data = {
             "model": self.model_name,
             "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
+            "temperature": temperature
         }
+        if max_tokens is not None:
+            data["max_tokens"] = max_tokens
         
         # Try primary API first, then backup API
         apis_to_try = [self.api_base, self.backup_api_base]
@@ -141,7 +142,7 @@ class SVENLLMClient(LLMClient):
         
         # Extract parameters
         temperature = kwargs.get("temperature", 0.1)
-        max_tokens = kwargs.get("max_tokens", 1000)
+        max_tokens = kwargs.get("max_tokens", None)
         task = kwargs.get("task", False)
         
         result = self._make_request(messages, temperature, max_tokens)
@@ -315,17 +316,20 @@ class OpenAICompatibleClient(LLMClient):
         logger.info(f"Initialized OpenAI-compatible client with model: {self.model_name}")
         logger.info(f"API Base: {self.api_base}")
     
-    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = 1000) -> str:
+    def _make_request(self, messages: List[Dict], temperature: float = 0.1, max_tokens: int = None) -> str:
         """Make API request using OpenAI client."""
         for attempt in range(self.max_retries):
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    stream=False  # Non-streaming for simplicity
-                )
+                params = {
+                    "model": self.model_name,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "stream": False  # Non-streaming for simplicity
+                }
+                if max_tokens is not None:
+                    params["max_tokens"] = max_tokens
+                    
+                response = self.client.chat.completions.create(**params)
                 
                 content = response.choices[0].message.content.strip()
                 logger.debug(f"Successful API call (attempt {attempt + 1})")
@@ -347,7 +351,7 @@ class OpenAICompatibleClient(LLMClient):
         
         # Extract parameters
         temperature = kwargs.get("temperature", 0.1)
-        max_tokens = kwargs.get("max_tokens", 1000)
+        max_tokens = kwargs.get("max_tokens", None)
         task = kwargs.get("task", False)
         
         result = self._make_request(messages, temperature, max_tokens)
