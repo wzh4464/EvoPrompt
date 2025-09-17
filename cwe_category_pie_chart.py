@@ -284,12 +284,12 @@ def create_bar_chart(stats, output_file=None, show_plot=True):
     # Add grid lines
     ax.grid(True, axis='y', alpha=0.3)
     
-    # Add horizontal line at 30% to show the target range
-    ax.axhline(y=30, color='red', linestyle='--', alpha=0.7, label='30% Threshold')
-    ax.axhline(y=20, color='orange', linestyle='--', alpha=0.7, label='20% Threshold')
-    
-    # Add legend
-    ax.legend(fontsize=FONT_SIZE_LEGEND, prop={'family': 'Times New Roman'})
+    # Add horizontal line at 32.6% to show the target range
+    ax.axhline(y=32.6, color='red', linestyle='--', alpha=0.7, label='Baseline 1')
+    ax.axhline(y=21.4, color='orange', linestyle='--', alpha=0.7, label='Baseline 2')
+
+    # Add legend with font size 20 using prop
+    ax.legend(prop={'family': 'Times New Roman', 'size': 20})
     
     # Adjust layout
     plt.tight_layout()
