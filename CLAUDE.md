@@ -44,15 +44,21 @@ EvoPrompt/
 
 ## API配置
 
-项目使用`.env`文件管理API配置：
+项目现在使用ModelScope API，通过`.env`文件管理配置：
 
 ```bash
-# .env文件内容
-API_BASE_URL=https://newapi.pockgo.com/v1
-API_KEY=sk-dqKjXVxdHzHTeARINu6Xm0DT4pDuoSrM8Z9TVUWDqJUIC8mx
+# .env文件内容 - ModelScope配置
+API_BASE_URL=https://api-inference.modelscope.cn/v1/
+API_KEY=ms-d18289c0-fa42-4449-b95d-fbaf794ae65a
 BACKUP_API_BASE_URL=https://newapi.aicohere.org/v1
-MODEL_NAME=kimi-k2-code
+MODEL_NAME=Qwen/Qwen3-Coder-480B-A35B-Instruct
 ```
+
+### ModelScope集成优势
+- ✅ OpenAI兼容API格式
+- ✅ 支持Qwen大模型系列
+- ✅ 更稳定的服务质量
+- ✅ 代码生成专用模型
 
 ## SVEN LLM客户端集成
 
@@ -105,9 +111,13 @@ results = sven_llm_query([prompt1, prompt2], client, task=True)
 
 ## 常用命令
 
-### 测试SVEN LLM客户端
+### 测试ModelScope集成
 ```bash
-uv run python sven_llm_client.py
+# 运行ModelScope集成演示
+uv run python test_modelscope_demo.py
+
+# 运行完整测试（需要绑定阿里云账户）
+uv run python test_modelscope.py
 ```
 
 ### 运行1%数据演示

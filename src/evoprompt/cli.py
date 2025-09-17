@@ -39,9 +39,9 @@ def create_parser() -> argparse.ArgumentParser:
                        help="Mutation rate")
     
     # LLM settings
-    parser.add_argument("--llm-type", type=str, default="gpt-3.5-turbo",
+    parser.add_argument("--llm-type", type=str, default="kimi-k2-0711-preview",
                        help="LLM type for evolution")
-    parser.add_argument("--evaluation-llm", type=str, default="gpt-3.5-turbo",
+    parser.add_argument("--evaluation-llm", type=str, default="kimi-k2-0711-preview",
                        help="LLM for evaluation")
     
     # Data settings
