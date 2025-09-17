@@ -11,15 +11,13 @@ import time
 import random
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List
 
 # 添加src路径
 sys.path.insert(0, "src")
 
 from evoprompt.data.sampler import sample_primevul_1percent
-from evoprompt.workflows import VulnerabilityDetectionWorkflow
 from evoprompt.core.prompt_tracker import PromptTracker
-from evoprompt.algorithms.differential import DifferentialEvolution
 from evoprompt.algorithms.base import Population
 from evoprompt.data.dataset import PrimevulDataset
 from evoprompt.data.cwe_categories import (
@@ -62,7 +60,7 @@ def check_api_configuration():
     api_base = os.getenv("API_BASE_URL", "https://api.chatanywhere.tech/v1")
     model_name = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
 
-    print(f"✅ ChatAnywhere API配置检查通过:")
+    print("✅ ChatAnywhere API配置检查通过:")
     print(f"   API_BASE_URL: {api_base}")
     print(f"   MODEL_NAME: {model_name}")
     print(f"   API_KEY: {api_key[:10]}...")
@@ -135,20 +133,20 @@ def create_diverse_initial_prompts():
         f"Analyze this code for security vulnerabilities and classify it into one of these CWE major categories: {categories_text}. If no vulnerability is found, respond with 'Benign'.\n\nCode to analyze:\n{{input}}\n\nCWE Major Category:",
         f"You are a security expert. Examine this code and identify the primary CWE major category from: {categories_text}. For secure code, use 'Benign'.\n\nCode: {{input}}\n\nCWE Classification:",
         # 具体分析导向类
-        f"Perform detailed security analysis and classify into CWE major categories:\n- Buffer Errors: buffer overflows, bounds checking issues\n- Injection: SQL, command, XSS injection attacks\n- Memory Management: use-after-free, double-free, memory leaks\n- Pointer Dereference: null pointer, invalid pointer usage\n- Integer Errors: overflow, underflow, wraparound\n- Concurrency Issues: race conditions, synchronization problems\n- Path Traversal: directory traversal attacks\n- Cryptography Issues: weak crypto, broken algorithms\n- Information Exposure: data leaks, privacy issues\n- Other: other security issues\n- Benign: no vulnerabilities\n\nCode: {{input}}\n\nCategory:",
+        "Perform detailed security analysis and classify into CWE major categories:\n- Buffer Errors: buffer overflows, bounds checking issues\n- Injection: SQL, command, XSS injection attacks\n- Memory Management: use-after-free, double-free, memory leaks\n- Pointer Dereference: null pointer, invalid pointer usage\n- Integer Errors: overflow, underflow, wraparound\n- Concurrency Issues: race conditions, synchronization problems\n- Path Traversal: directory traversal attacks\n- Cryptography Issues: weak crypto, broken algorithms\n- Information Exposure: data leaks, privacy issues\n- Other: other security issues\n- Benign: no vulnerabilities\n\nCode: {input}\n\nCategory:",
         f"Identify the primary vulnerability type. Choose from: {categories_text}. Focus on the most significant security issue present.\n\n{{input}}\n\nPrimary vulnerability category:",
         # 专家角色类
         f"As a cybersecurity expert, classify this code's primary security issue using CWE major categories: {categories_text}. Use 'Benign' for secure code.\n\nCode under review:\n{{input}}\n\nExpert classification:",
-        f"Security code review: Examine for buffer errors, injection flaws, memory issues, pointer problems, integer errors, concurrency bugs, path traversal, crypto weaknesses, or information exposure. Classify accordingly or mark as 'Benign'.\n\nCode: {{input}}\n\nSecurity classification:",
+        "Security code review: Examine for buffer errors, injection flaws, memory issues, pointer problems, integer errors, concurrency bugs, path traversal, crypto weaknesses, or information exposure. Classify accordingly or mark as 'Benign'.\n\nCode: {input}\n\nSecurity classification:",
         # 结构化分析类
-        f"Systematic vulnerability analysis:\n1. Check for buffer/bounds issues → Buffer Errors\n2. Look for injection vectors → Injection\n3. Analyze memory management → Memory Management\n4. Check pointer usage → Pointer Dereference\n5. Review integer operations → Integer Errors\n6. Examine concurrency → Concurrency Issues\n7. Check path handling → Path Traversal\n8. Review cryptography → Cryptography Issues\n9. Look for data leaks → Information Exposure\n10. Other security issues → Other\n11. No issues → Benign\n\nCode: {{input}}\n\nResult:",
+        "Systematic vulnerability analysis:\n1. Check for buffer/bounds issues → Buffer Errors\n2. Look for injection vectors → Injection\n3. Analyze memory management → Memory Management\n4. Check pointer usage → Pointer Dereference\n5. Review integer operations → Integer Errors\n6. Examine concurrency → Concurrency Issues\n7. Check path handling → Path Traversal\n8. Review cryptography → Cryptography Issues\n9. Look for data leaks → Information Exposure\n10. Other security issues → Other\n11. No issues → Benign\n\nCode: {input}\n\nResult:",
         # CWE模式识别类
-        f"Identify CWE patterns and map to major categories. Examples:\n- CWE-120,119,787: Buffer Errors\n- CWE-78,79,89: Injection\n- CWE-416,415,401: Memory Management\n- CWE-476: Pointer Dereference\n- CWE-190,191: Integer Errors\n- CWE-362: Concurrency Issues\n- CWE-22: Path Traversal\n- CWE-327,326: Cryptography Issues\n- CWE-200: Information Exposure\n\nClassify: {{input}}\n\nCWE Major Category:",
+        "Identify CWE patterns and map to major categories. Examples:\n- CWE-120,119,787: Buffer Errors\n- CWE-78,79,89: Injection\n- CWE-416,415,401: Memory Management\n- CWE-476: Pointer Dereference\n- CWE-190,191: Integer Errors\n- CWE-362: Concurrency Issues\n- CWE-22: Path Traversal\n- CWE-327,326: Cryptography Issues\n- CWE-200: Information Exposure\n\nClassify: {input}\n\nCWE Major Category:",
         # 攻击场景类
         f"From an attacker's perspective, what's the primary exploitable weakness? Categorize as: {categories_text}.\n\n{{input}}\n\nExploitable weakness category:",
         # 简洁高效类
         f"Security category classification. Options: {categories_text}.\n\nCode: {{input}}\n\nCategory:",
-        f"Vulnerability type identification. Choose the most appropriate: Buffer Errors, Injection, Memory Management, Pointer Dereference, Integer Errors, Concurrency Issues, Path Traversal, Cryptography Issues, Information Exposure, Other, or Benign.\n\n{{input}}\n\nType:",
+        "Vulnerability type identification. Choose the most appropriate: Buffer Errors, Injection, Memory Management, Pointer Dereference, Integer Errors, Concurrency Issues, Path Traversal, Cryptography Issues, Information Exposure, Other, or Benign.\n\n{input}\n\nType:",
         # 防御角度类
         f"Defense-focused analysis: What type of security control would prevent exploitation? Map to vulnerability categories: {categories_text}.\n\nCode to protect:\n{{input}}\n\nVulnerability category:",
     ]
@@ -441,12 +439,12 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
     dev_file = Path(sample_data_dir) / "dev.txt"
     train_file = Path(sample_data_dir) / "train.txt"
 
-    print(f"📁 数据配置:")
+    print("📁 数据配置:")
     print(f"   开发集: {dev_file}")
     print(f"   训练集: {train_file}")
 
     # 加载和打乱训练数据
-    print(f"🔄 加载并打乱训练数据...")
+    print("🔄 加载并打乱训练数据...")
     train_dataset = PrimevulDataset(str(train_file), "train")
     train_samples = train_dataset.get_samples()  # 使用正确的方法获取样本
 
@@ -485,22 +483,14 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
         for i, prompt in enumerate(initial_prompts, 1):
             f.write(f"Prompt {i}:\n{'-' * 20}\n{prompt}\n\n")
 
-    print(f"💾 实验配置:")
+    print("💾 实验配置:")
     print(f"   初始prompts: {len(initial_prompts)}")
     print(f"   种群大小: {config['population_size']}")
     print(f"   最大代数: {config['max_generations']}")
     print(f"   反馈批大小: {config['feedback_batch_size']}")
     print(f"   CWE大类模式: {config.get('use_cwe_major', False)}")
 
-    # 创建进化算法
-    algorithm = DifferentialEvolution(
-        {
-            "population_size": config["population_size"],
-            "max_generations": config["max_generations"],
-            "mutation_factor": config.get("mutation_rate", 0.15),
-            "crossover_probability": config.get("crossover_probability", 0.8),
-        }
-    )
+    # 创建进化算法（配置存储但算法在后续使用中直接调用）
 
     # 记录初始prompts
     for i, prompt in enumerate(initial_prompts):
@@ -512,7 +502,7 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
             metadata={"sample_wise_feedback": True, "prompt_index": i},
         )
 
-    print(f"\n🚀 启动样本级反馈进化...")
+    print("\n🚀 启动样本级反馈进化...")
     start_time = time.time()
 
     try:
@@ -523,7 +513,7 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
         population = Population(population_individuals)
 
         # 在开发集上评估初始种群
-        print(f"📊 评估初始种群...")
+        print("📊 评估初始种群...")
         for i, individual in enumerate(population.individuals):
             individual.fitness = evaluate_on_dataset(
                 individual.prompt,
@@ -633,10 +623,10 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
                         batch_count += 1
                     else:
                         new_individuals.append(target_individual)
-                        print(f"     ⚠️ 变异失败，保留原个体")
+                        print("     ⚠️ 变异失败，保留原个体")
                 else:
                     new_individuals.append(target_individual)
-                    print(f"     ⚠️ 候选不足，保留原个体")
+                    print("     ⚠️ 候选不足，保留原个体")
 
             # 更新种群
             population = Population(new_individuals)
@@ -669,7 +659,7 @@ def run_concurrent_evolution_with_feedback(config: dict, sample_data_dir: str):
         final_best = population.best()
         total_time = time.time() - start_time
 
-        print(f"\n🎉 样本级反馈进化完成!")
+        print("\n🎉 样本级反馈进化完成!")
         print(f"   总耗时: {total_time:.2f}秒")
         print(f"   最终最佳适应度: {final_best.fitness:.4f}")
 
@@ -1285,7 +1275,7 @@ def main():
         config = create_optimized_config()
         config["api_key"] = api_key
 
-        print(f"\n⚙️ 样本级反馈实验配置:")
+        print("\n⚙️ 样本级反馈实验配置:")
         print(f"   实验ID: {config['experiment_id']}")
         print(f"   算法: {config['algorithm'].upper()}")
         print(f"   种群大小: {config['population_size']}")
@@ -1304,10 +1294,10 @@ def main():
             config, sample_output_dir
         )
 
-        print(f"\n✅ 样本级反馈实验完成!")
+        print("\n✅ 样本级反馈实验完成!")
         print(f"📂 结果目录: {exp_dir}")
         print(f"🎯 最佳适应度: {results['best_fitness']:.4f}")
-        print(f"📈 性能统计:")
+        print("📈 性能统计:")
         print(f"   总耗时: {results['total_time']:.2f}秒")
         print(f"   训练样本: {results['training_samples']}")
         print(f"   样本级反馈: {results['sample_wise_feedback']}")
@@ -1321,7 +1311,7 @@ def main():
             )
 
         # 4. 显示生成的文件
-        print(f"\n📁 生成的分析文件:")
+        print("\n📁 生成的分析文件:")
         analysis_files = [
             "sample_feedback.jsonl",  # 样本级反馈记录
             "sample_statistics.json",  # 样本统计
