@@ -191,3 +191,6 @@ outputs/demo_primevul_1percent/demo_primevul_1pct_20250729_HHMMSS/
 2. **API密钥安全**: 确保.env文件不被提交到版本控制
 3. **环境配置**: 项目已配置好uv环境，直接使用即可
 4. **兼容性**: 保持与原EvoPrompt接口的向后兼容
+
+在开发阶段，尽量少写 try/except，让异常直接抛出来，你能从 traceback 里快速定位。
+只有在你需要做 容错处理 或 对用户友好提示 的地方，再加上 try/except。
