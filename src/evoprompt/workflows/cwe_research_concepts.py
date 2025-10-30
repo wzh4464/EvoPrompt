@@ -23,8 +23,7 @@ from ..data.cwe_research_concepts import (
 
 
 class CWEConceptEvaluator(Evaluator):
-    """Evaluator for 10-class CWE Research Concepts."""
-
+    """Evaluator for 10-class CWE Research Concepts, with filled prompt记录功能."""
     def __init__(
         self,
         dataset,
@@ -32,26 +31,34 @@ class CWEConceptEvaluator(Evaluator):
         llm_client,
         prompt_tracker: Optional[PromptTracker] = None,
         sample_size: int = 100,
+        filled_prompts_file: Optional[str] = None # 新增
     ):
         super().__init__(dataset, metric, llm_client)
         self.prompt_tracker = prompt_tracker
         self.sample_size = sample_size
         self.evaluation_count = 0
+        self.filled_prompts_file = filled_prompts_file
 
     def evaluate(self, prompt: str, generation: int = 0) -> EvaluationResult:
         self.evaluation_count += 1
         samples = self.dataset.get_samples(self.sample_size)
         predictions: List[str] = []
         targets: List[str] = []
-
         enum_text = all_concepts_enumeration()
-
-        for sample in samples:
+        filled_examples = []
+        for idx, sample in enumerate(samples):
             formatted_prompt = (
                 f"{prompt}\n\nClassify the following code into one of the CWE Research Concepts (0-10).\n"
                 f"Respond ONLY with the category number (0-10).\n\n{enum_text}\n\nCode to analyze:\n{{input}}\n".replace("{input}", sample.input_text)
             )
-
+            instance = {
+                "template": prompt,
+                "filled": formatted_prompt,
+                "sample_id": getattr(sample, 'id', idx),
+                "generation": generation,
+                "target": getattr(sample, 'target', None)
+            }
+            filled_examples.append(instance)
             try:
                 response = self.llm_client.generate(formatted_prompt, max_tokens=8, temperature=0.1)
                 cid = parse_concept_from_response(response)
@@ -60,18 +67,22 @@ class CWEConceptEvaluator(Evaluator):
                 pred_name = concept_id_to_name(cid)
             except Exception:
                 pred_name = concept_id_to_name(0)
-
             predictions.append(pred_name)
-
             # Target mapping
             if str(sample.target) == "0":
                 targets.append(concept_id_to_name(0))
             else:
                 cid_t = map_cwe_list_to_concept_id(sample.metadata.get("cwe", []))
                 targets.append(concept_id_to_name(cid_t))
-
+        # 写入filled prompt实例
+        if self.filled_prompts_file and filled_examples:
+            try:
+                with open(self.filled_prompts_file, 'a', encoding='utf-8') as f:
+                    for item in filled_examples:
+                        f.write(json.dumps(item, ensure_ascii=False) + '\n')
+            except Exception as e:
+                print(f"⚠️ 填充prompt样例保存失败: {e}")
         score = self.metric.compute(predictions, targets)
-
         if self.prompt_tracker:
             self.prompt_tracker.log_prompt(
                 prompt=prompt,
@@ -85,7 +96,6 @@ class CWEConceptEvaluator(Evaluator):
                     "targets_sample": targets[:5],
                 },
             )
-
         return EvaluationResult(
             score=score,
             details={
@@ -132,12 +142,14 @@ class CWEConceptWorkflow:
     def create_components(self, dev_dataset):
         llm_client = create_llm_client(llm_type=self.config.get("llm_type", "sven"))
         metric = AccuracyMetric()
+        filled_prompts_file = str(self.exp_dir / "filled_prompts.jsonl")
         evaluator = CWEConceptEvaluator(
             dataset=dev_dataset,
             metric=metric,
             llm_client=llm_client,
             prompt_tracker=self.prompt_tracker,
             sample_size=self.config.get("sample_size", 100),
+            filled_prompts_file=filled_prompts_file
         )
         algorithm_type = self.config.get("algorithm", "de").lower()
         algorithm_config = {
@@ -173,6 +185,14 @@ class CWEConceptWorkflow:
 
     def run_evolution(self) -> Dict[str, Any]:
         self.logger.info("Starting CWE Research Concepts evolution...")
+        # 保存 meta prompt
+        if self.config.get("meta_prompt"):
+            meta_path = self.exp_dir / "meta_prompt.txt"
+            try:
+                with open(meta_path, 'w', encoding='utf-8') as f:
+                    f.write(str(self.config["meta_prompt"]).strip() + '\n')
+            except Exception as e:
+                self.logger.warning(f"Failed to save meta prompt: {e}")
         dev_dataset, test_dataset = self.prepare_data()
         llm_client, evaluator, algorithm = self.create_components(dev_dataset)
         initial_prompts = self.get_initial_prompts()
@@ -184,6 +204,14 @@ class CWEConceptWorkflow:
         return results
 
     def save_results(self, results: Dict[str, Any], test_dataset, llm_client):
+        # 再次确保 meta prompt 单独保存
+        if self.config.get("meta_prompt"):
+            meta_path = self.exp_dir / "meta_prompt.txt"
+            try:
+                with open(meta_path, 'w', encoding='utf-8') as f:
+                    f.write(str(self.config["meta_prompt"]).strip() + '\n')
+            except Exception as e:
+                self.logger.warning(f"Failed to save meta prompt: {e}")
         self.prompt_tracker.save_summary(results)
         top_prompts_file = self.exp_dir / "top_prompts.txt"
         self.prompt_tracker.export_prompts_by_fitness(str(top_prompts_file), top_k=10)

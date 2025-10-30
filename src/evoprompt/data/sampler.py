@@ -273,7 +273,7 @@ def sample_primevul_1percent(
     # 采样1%数据
     sampled_data, stats = sampler.sample_primevul_balanced(
         data_file=str(dev_file),
-        sample_ratio=0.01,
+        sample_ratio=1.0,
         balance_mode=balance_mode,
     )
     

@@ -36,24 +36,44 @@ class Evaluator:
         self.llm_client = llm_client
         self.template_config = template_config or {}
         
-    def evaluate(self, prompt: str, sample_size: Optional[int] = None) -> EvaluationResult:
-        """Evaluate a prompt on the dataset."""
+    def evaluate(self, prompt: str, sample_size: Optional[int] = None, filled_prompts_file: Optional[str] = None) -> EvaluationResult:
+        """Evaluate a prompt on the dataset. Optionally log all filled prompt instances."""
         samples = self.dataset.get_samples(sample_size)
         predictions = []
         targets = []
-        
-        for sample in samples:
+        filled_examples = []
+
+        for idx, sample in enumerate(samples):
             # Format prompt with sample
             formatted_prompt = self._format_prompt(prompt, sample)
-            
+
+            # 收集填充实例
+            instance = {
+                "template": prompt,
+                "filled": formatted_prompt,
+                "sample_id": getattr(sample, 'id', idx),
+                "generation": getattr(self, 'generation', None),
+                "target": getattr(sample, 'target', None)
+            }
+            filled_examples.append(instance)
+
             # Get prediction from LLM
             response = self.llm_client.generate(formatted_prompt)
             predictions.append(response)
             targets.append(sample.target)
-            
+
+        # 写入聚合的填充实例（如指定文件）
+        if filled_prompts_file is not None and filled_examples:
+            try:
+                with open(filled_prompts_file, 'a', encoding='utf-8') as f:
+                    for item in filled_examples:
+                        f.write(json.dumps(item, ensure_ascii=False) + '\n')
+            except Exception as e:
+                print(f"⚠️ 填充prompt样例保存失败: {e}")
+
         # Calculate metric
         score = self.metric.compute(predictions, targets)
-        
+
         return EvaluationResult(
             score=score,
             details={

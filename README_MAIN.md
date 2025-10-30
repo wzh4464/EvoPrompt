@@ -432,3 +432,14 @@ uv run python main.py --max-retries 5 --retry-delay 2.0
 ## 许可证
 
 本项目遵循 MIT 许可证。
+
+### result/ 实验输出目录新增文件说明
+
+- `filled_prompts.jsonl`：每次evaluation记录实际变量填充后的prompt实例，每行为一个JSON对象，包含：
+    - `template`：原始prompt模板
+    - `filled`：替换所有变量后的完整prompt
+    - `sample_id`: 样本编号
+    - `generation`：进化代数
+    - `target`：目标（如有）
+
+- `meta_prompt.txt`：记录用于指导prompt演化的meta prompt文本（若实验有指定）。
