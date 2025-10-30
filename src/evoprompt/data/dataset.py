@@ -94,7 +94,23 @@ class PrimevulDataset(Dataset):
         if metadata_path:
             try:
                 metadata_file = open(metadata_path, "r", encoding="utf-8")
-                metadata_iter = iter(metadata_file)
+
+                def _metadata_generator():
+                    for raw_line in metadata_file:
+                        line = raw_line.strip()
+                        if not line:
+                            continue
+                        try:
+                            yield json.loads(line)
+                        except json.JSONDecodeError as exc:
+                            logger.warning(
+                                "Failed to parse metadata line in %s: %s",
+                                metadata_path,
+                                exc,
+                            )
+                            continue
+
+                metadata_iter = _metadata_generator()
             except Exception as e:
                 logger.warning(f"Failed to open metadata file: {metadata_path}: {e}")
 

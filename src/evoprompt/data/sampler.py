@@ -2,177 +2,239 @@
 
 import random
 import json
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from pathlib import Path
 import logging
+
+from .cwe_categories import map_cwe_to_major
 
 logger = logging.getLogger(__name__)
 
 
 class BalancedSampler:
     """Creates balanced samples from datasets."""
-    
+
     def __init__(self, seed: int = 42):
         self.seed = seed
         random.seed(seed)
-        
+
+    def _determine_label(
+        self,
+        item: Dict[str, Any],
+        balance_mode: str,
+        target_field: str,
+    ) -> Optional[str]:
+        """Determine the grouping label based on the requested balance mode."""
+        target_raw = item.get(target_field, 0)
+        try:
+            target_int = int(target_raw)
+        except (TypeError, ValueError):
+            target_int = 0
+
+        if balance_mode == "target":
+            return str(target_int)
+
+        if balance_mode == "major":
+            if target_int == 0:
+                return "Benign"
+
+            cwe_codes = item.get("cwe", [])
+            if isinstance(cwe_codes, str):
+                cwe_codes = [cwe_codes] if cwe_codes else []
+            elif not isinstance(cwe_codes, list):
+                cwe_codes = []
+
+            major = map_cwe_to_major(cwe_codes) if cwe_codes else "Other"
+            return major or "Other"
+
+        raise ValueError(f"Unsupported balance_mode: {balance_mode}")
+
     def sample_primevul_balanced(
-        self, 
-        data_file: str, 
+        self,
+        data_file: str,
         sample_ratio: float = 0.01,
-        target_field: str = "target"
+        target_field: str = "target",
+        balance_mode: str = "target",
     ) -> Tuple[List[Dict], Dict[str, int]]:
         """
         从Primevul数据集中采样均衡的数据。
-        
+
         Args:
             data_file: JSONL格式的数据文件路径
             sample_ratio: 采样比例 (0.01 = 1%)
             target_field: 目标标签字段名
-            
+            balance_mode: 均衡模式，"target" 按 0/1，"major" 按 CWE 大类
+
         Returns:
             (sampled_data, statistics)
         """
         logger.info(f"Loading data from {data_file}")
-        
+        logger.info(f"Balance mode: {balance_mode}")
+
         # 加载所有数据
-        all_data = []
-        with open(data_file, 'r', encoding='utf-8') as f:
+        all_data: List[Dict[str, Any]] = []
+        with open(data_file, "r", encoding="utf-8") as f:
             for line in f:
                 if line.strip():
                     try:
                         item = json.loads(line.strip())
                         all_data.append(item)
                     except json.JSONDecodeError as e:
-                        logger.warning(f"Failed to parse line: {line[:100]}... Error: {e}")
-        
-        logger.info(f"Loaded {len(all_data)} total samples")
-        
+                        logger.warning(
+                            "Failed to parse line: %s... Error: %s", line[:100], e
+                        )
+
+        if not all_data:
+            raise ValueError(f"No data loaded from {data_file}")
+
+        logger.info("Loaded %d total samples", len(all_data))
+
         # 按标签分组
-        label_groups = {}
+        label_groups: Dict[str, List[Dict[str, Any]]] = {}
         for item in all_data:
-            label = item.get(target_field, 0)
-            if label not in label_groups:
-                label_groups[label] = []
-            label_groups[label].append(item)
-        
+            label = self._determine_label(item, balance_mode, target_field)
+            if label is None:
+                continue
+            item["_balance_label"] = label
+            label_groups.setdefault(label, []).append(item)
+
+        if not label_groups:
+            raise ValueError("No samples grouped for balancing; check balance_mode input.")
+
         # 计算统计信息
-        stats = {f"total_{label}": len(items) for label, items in label_groups.items()}
+        stats = {
+            f"total_{label}": len(items) for label, items in label_groups.items()
+        }
         stats["total_samples"] = len(all_data)
-        
+
         logger.info("Original data distribution:")
-        for label, count in stats.items():
-            if label.startswith("total_") and label != "total_samples":
-                percentage = (count / len(all_data)) * 100
-                logger.info(f"  Label {label.split('_')[1]}: {count} samples ({percentage:.1f}%)")
-        
-        # 计算每个标签需要采样的数量
-        total_target_samples = int(len(all_data) * sample_ratio)
-        min_label_count = min(len(items) for items in label_groups.values())
-        max_samples_per_label = int(total_target_samples / len(label_groups))
-        
-        # 确保不超过最小标签的样本数
-        samples_per_label = min(max_samples_per_label, min_label_count)
-        
-        logger.info(f"Target total samples: {total_target_samples}")
-        logger.info(f"Samples per label: {samples_per_label}")
-        
-        # 从每个标签组中均匀采样
-        sampled_data = []
-        sampled_stats = {}
-        
         for label, items in label_groups.items():
-            # 随机采样
-            sampled_items = random.sample(items, samples_per_label)
+            percentage = (len(items) / len(all_data)) * 100
+            logger.info("  Label %s: %d samples (%.1f%%)", label, len(items), percentage)
+
+        # 计算每个标签需要采样的数量
+        total_target_samples = max(1, int(len(all_data) * sample_ratio))
+        available_labels = {
+            label: items for label, items in label_groups.items() if len(items) > 0
+        }
+        if not available_labels:
+            raise ValueError("No labels available for sampling after filtering.")
+
+        max_samples_per_label = max(1, int(total_target_samples / len(available_labels)))
+
+        logger.info("Target total samples: %d", total_target_samples)
+        logger.info("Initial max samples per label: %d", max_samples_per_label)
+
+        sampled_data: List[Dict[str, Any]] = []
+        sampled_stats: Dict[str, int] = {}
+
+        for label, items in available_labels.items():
+            sample_count = min(max_samples_per_label, len(items))
+            if sample_count <= 0:
+                logger.warning("Skipping label %s due to insufficient samples.", label)
+                continue
+
+            sampled_items = random.sample(items, sample_count)
             sampled_data.extend(sampled_items)
             sampled_stats[f"sampled_{label}"] = len(sampled_items)
-            
-            logger.info(f"Sampled {len(sampled_items)} samples from label {label}")
-        
+
+            logger.info("Sampled %d samples from label %s", len(sampled_items), label)
+
+        if not sampled_data:
+            raise ValueError("Sampling produced no data; adjust sample_ratio or balance_mode.")
+
         # 打乱最终数据
         random.shuffle(sampled_data)
-        
+
         # 更新统计信息
         sampled_stats["sampled_total"] = len(sampled_data)
         sampled_stats["sample_ratio"] = len(sampled_data) / len(all_data)
         sampled_stats.update(stats)  # 包含原始统计信息
-        
-        logger.info(f"Final balanced sample: {len(sampled_data)} samples ({sampled_stats['sample_ratio']:.3f} of original)")
-        
+
+        logger.info(
+            "Final balanced sample: %d samples (%.3f of original)",
+            len(sampled_data),
+            sampled_stats["sample_ratio"],
+        )
+
         return sampled_data, sampled_stats
-    
+
     def save_sampled_data(
-        self, 
-        sampled_data: List[Dict], 
+        self,
+        sampled_data: List[Dict],
         output_file: str,
-        format: str = "jsonl"
+        format: str = "jsonl",
     ):
         """保存采样数据到文件。"""
         output_path = Path(output_file)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         if format.lower() == "jsonl":
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 for item in sampled_data:
-                    f.write(json.dumps(item, ensure_ascii=False) + '\n')
+                    f.write(json.dumps(item, ensure_ascii=False) + "\n")
         elif format.lower() == "tab":
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 for item in sampled_data:
-                    func = item.get('func', '').strip()
-                    target = str(item.get('target', 0))
+                    func = item.get("func", "").strip()
+                    target = str(item.get("target", 0))
                     # 清理函数代码为单行
-                    func_clean = func.replace('\n', ' ').replace('\t', ' ')
-                    while '  ' in func_clean:
-                        func_clean = func_clean.replace('  ', ' ')
+                    func_clean = func.replace("\n", " ").replace("\t", " ")
+                    while "  " in func_clean:
+                        func_clean = func_clean.replace("  ", " ")
                     f.write(f"{func_clean}\t{target}\n")
-        
-        logger.info(f"Saved {len(sampled_data)} samples to {output_path}")
+
+        logger.info("Saved %d samples to %s", len(sampled_data), output_path)
         return str(output_path)
-    
+
     def create_train_dev_split(
         self,
         sampled_data: List[Dict],
         dev_ratio: float = 0.3,
-        target_field: str = "target"
+        target_field: str = "target",
+        label_field: Optional[str] = None,
     ) -> Tuple[List[Dict], List[Dict]]:
         """将采样数据分割为训练集和开发集，保持平衡。"""
-        
+
+        group_field = label_field or target_field
+
         # 按标签分组
-        label_groups = {}
+        label_groups: Dict[str, List[Dict[str, Any]]] = {}
         for item in sampled_data:
-            label = item.get(target_field, 0) 
-            if label not in label_groups:
-                label_groups[label] = []
-            label_groups[label].append(item)
-        
-        train_data = []
-        dev_data = []
-        
+            label = item.get(group_field, item.get(target_field, 0))
+            label_groups.setdefault(str(label), []).append(item)
+
+        train_data: List[Dict[str, Any]] = []
+        dev_data: List[Dict[str, Any]] = []
+
         # 从每个标签组中分割
         for label, items in label_groups.items():
             random.shuffle(items)
-            
+
             dev_count = int(len(items) * dev_ratio)
             train_count = len(items) - dev_count
-            
+
             train_data.extend(items[:train_count])
             dev_data.extend(items[train_count:])
-            
-            logger.info(f"Label {label}: {train_count} train, {dev_count} dev")
-        
+
+            logger.info("Label %s: %d train, %d dev", label, train_count, dev_count)
+
         # 打乱数据
         random.shuffle(train_data)
         random.shuffle(dev_data)
-        
-        logger.info(f"Split complete: {len(train_data)} train, {len(dev_data)} dev samples")
-        
+
+        logger.info(
+            "Split complete: %d train, %d dev samples", len(train_data), len(dev_data)
+        )
+
         return train_data, dev_data
 
 
 def sample_primevul_1percent(
     primevul_dir: str,
     output_dir: str,
-    seed: int = 42
+    seed: int = 42,
+    balance_mode: str = "target",
 ) -> Dict[str, Any]:
     """
     从Primevul数据集采样1%均衡数据的便捷函数。
@@ -211,7 +273,8 @@ def sample_primevul_1percent(
     # 采样1%数据
     sampled_data, stats = sampler.sample_primevul_balanced(
         data_file=str(dev_file),
-        sample_ratio=0.01
+        sample_ratio=0.01,
+        balance_mode=balance_mode,
     )
     
     # 创建输出目录
@@ -220,8 +283,9 @@ def sample_primevul_1percent(
     
     # 分割为训练和开发集
     train_data, dev_data = sampler.create_train_dev_split(
-        sampled_data, 
-        dev_ratio=0.3
+        sampled_data,
+        dev_ratio=0.3,
+        label_field="_balance_label",
     )
     
     # 保存数据文件
@@ -258,7 +322,8 @@ def sample_primevul_1percent(
         "sample_ratio": 0.01,
         "dev_ratio": 0.3,
         "seed": seed,
-        "source_file": str(dev_file)
+        "source_file": str(dev_file),
+        "balance_mode": balance_mode,
     }
     
     with open(stats_file, 'w', encoding='utf-8') as f:

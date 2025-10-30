@@ -831,10 +831,41 @@ class PrimeVulLayer1Pipeline:
         print("📁 准备数据集...")
         primevul_dir = Path(self.config.get("primevul_dir", "./data/primevul/primevul"))
         sample_dir = Path(self.config.get("sample_dir", "./data/primevul_1percent_sample"))
+        balance_mode = self.config.get("balance_mode", "target")
+        force_resample = bool(self.config.get("force_resample", False))
 
-        if not sample_dir.exists():
-            print(f"   生成 1% 采样数据到 {sample_dir}")
-            sample_primevul_1percent(str(primevul_dir), str(sample_dir), seed=42)
+        stats_file = sample_dir / "sampling_stats.json"
+        regenerate_samples = force_resample or not sample_dir.exists()
+
+        if not regenerate_samples and stats_file.exists():
+            try:
+                with open(stats_file, "r", encoding="utf-8") as f:
+                    stats_payload = json.load(f)
+                existing_mode = (
+                    stats_payload.get("sampling_config", {}).get("balance_mode", "target")
+                )
+                if existing_mode != balance_mode:
+                    print(
+                        f"   ⚠️ 当前采样使用 {existing_mode}，与配置的 {balance_mode} 不一致，重新采样"
+                    )
+                    regenerate_samples = True
+            except Exception as exc:
+                print(f"   ⚠️ 读取采样统计失败: {exc}，重新采样")
+                regenerate_samples = True
+        elif not regenerate_samples:
+            print("   ⚠️ 未找到采样统计信息，将重新采样")
+            regenerate_samples = True
+
+        if regenerate_samples:
+            print(f"   生成 1% 采样数据到 {sample_dir} (balance_mode={balance_mode})")
+            sample_primevul_1percent(
+                str(primevul_dir),
+                str(sample_dir),
+                seed=42,
+                balance_mode=balance_mode,
+            )
+        else:
+            print(f"   使用已有采样数据 {sample_dir} (balance_mode={balance_mode})")
 
         train_file = sample_dir / "train.txt"
         dev_file = sample_dir / "dev.txt"
@@ -1120,6 +1151,17 @@ def main():
                        help="禁用 checkpoint 功能")
     parser.add_argument("--auto-recover", action="store_true",
                        help="自动从 checkpoint 恢复（不询问）")
+    parser.add_argument(
+        "--balance-mode",
+        choices=["target", "major"],
+        default="target",
+        help="采样均衡模式: target=二分类, major=CWE大类",
+    )
+    parser.add_argument(
+        "--force-resample",
+        action="store_true",
+        help="无论采样目录是否存在都重新采样",
+    )
 
     args = parser.parse_args()
 
@@ -1134,6 +1176,8 @@ def main():
         "retry_delay": args.retry_delay,
         "enable_checkpoint": not args.no_checkpoint,
         "auto_recover": args.auto_recover,
+        "balance_mode": args.balance_mode,
+        "force_resample": args.force_resample,
     }
 
     # 创建并运行 pipeline
