@@ -38,6 +38,7 @@ from evoprompt.utils.checkpoint import (
     BatchCheckpointer,
     ExperimentRecovery,
 )
+from evoprompt.utils.text import safe_format
 from sklearn.metrics import classification_report, confusion_matrix
 import numpy as np
 
@@ -584,7 +585,7 @@ class PrimeVulLayer1Pipeline:
         queries = []
         for sample in samples:
             code = sample.input_text
-            query = prompt.format(input=code)
+            query = safe_format(prompt, input=code)
             queries.append(query)
 
             # 获取 ground truth

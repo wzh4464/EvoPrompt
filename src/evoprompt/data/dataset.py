@@ -49,9 +49,21 @@ class PrimevulDataset(Dataset):
 
     def __init__(self, data_path: str, split: str = "dev"):
         super().__init__(f"primevul_{split}")
-        self.data_path = data_path
+        self.data_path = self._auto_fixed_path(data_path)
         self.split = split
-        self._samples = self.load_data(data_path)
+        self._samples = self.load_data(self.data_path)
+
+    @staticmethod
+    def _auto_fixed_path(data_path: str):
+        """优先查找 _fixed 文件，若无则用原文件名."""
+        path_obj = Path(data_path)
+        # 支持 jsonl/txt两类
+        fixed = None
+        if path_obj.suffix in {'.jsonl', '.txt'}:
+            fixed_path = path_obj.with_name(f"{path_obj.stem}_fixed{path_obj.suffix}")
+            if fixed_path.exists():
+                fixed = str(fixed_path)
+        return fixed or data_path
 
     def load_data(self, data_path: str) -> List[Sample]:
         """Load Primevul data from JSONL or tab-separated format."""
@@ -81,25 +93,10 @@ class PrimevulDataset(Dataset):
 
         if metadata_path:
             try:
-                metadata_file = metadata_path.open("r", encoding="utf-8")
-
-                def iter_metadata_lines():
-                    for raw_line in metadata_file:
-                        line = raw_line.strip()
-                        if not line:
-                            continue
-                        try:
-                            yield json.loads(line)
-                        except json.JSONDecodeError:
-                            logger.warning(
-                                "Failed to parse metadata line in %s: %s",
-                                metadata_path,
-                                line[:80],
-                            )
-
-                metadata_iter = iter(iter_metadata_lines())
-            except OSError as e:
-                logger.warning(f"Failed to open companion metadata file {metadata_path}: {e}")
+                metadata_file = open(metadata_path, "r", encoding="utf-8")
+                metadata_iter = iter(metadata_file)
+            except Exception as e:
+                logger.warning(f"Failed to open metadata file: {metadata_path}: {e}")
 
         try:
             with open(data_path, "r", encoding="utf-8") as f:

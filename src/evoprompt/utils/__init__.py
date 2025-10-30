@@ -7,6 +7,7 @@ from .checkpoint import (
     ExperimentRecovery,
     with_retry,
 )
+from .text import escape_braces, safe_format
 
 __all__ = [
     "CheckpointManager",
@@ -14,4 +15,6 @@ __all__ = [
     "BatchCheckpointer",
     "ExperimentRecovery",
     "with_retry",
+    "escape_braces",
+    "safe_format",
 ]

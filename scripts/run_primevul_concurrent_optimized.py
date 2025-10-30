@@ -25,6 +25,7 @@ from evoprompt.data.cwe_categories import (
     map_cwe_to_major,
     canonicalize_category,
 )
+from evoprompt.utils.text import safe_format
 
 
 def setup_logging():
@@ -777,7 +778,7 @@ def sample_wise_feedback_training(
                 else:
                     ground_truth_category = "Benign"
 
-                query = current_prompt.format(input=code)
+                query = safe_format(current_prompt, input=code)
                 batch_queries.append(query)
                 sample_metadata.append(
                     {
@@ -945,7 +946,7 @@ Improved prompt:
                 else:
                     ground_truth_category = "Benign"
 
-                query = current_prompt.format(input=code)
+                query = safe_format(current_prompt, input=code)
                 prediction_text = llm_client.generate(
                     query, temperature=0.1, max_tokens=20
                 )
@@ -1090,7 +1091,7 @@ def evaluate_on_dataset(
             else:
                 ground_truth_category = "Benign"
 
-            query = prompt.format(input=code)
+            query = safe_format(prompt, input=code)
             batch_queries.append(query)
             batch_samples.append(sample)
             batch_metadata.append(
@@ -1181,7 +1182,7 @@ def evaluate_on_dataset(
                 else:
                     ground_truth_category = "Benign"
 
-                query = prompt.format(input=code)
+                query = safe_format(prompt, input=code)
                 prediction_text = llm_client.generate(
                     query, temperature=0.1, max_tokens=20
                 )

@@ -62,8 +62,12 @@ _CWE_ID_TO_MAJOR = {
     22:  "Path Traversal",  # Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')
 
     # Crypto
+    310: "Cryptography Issues",  # Cryptographic Issues
+    311: "Cryptography Issues",  # Missing Encryption of Sensitive Data
+    312: "Cryptography Issues",  # Cleartext Storage of Sensitive Information
     326: "Cryptography Issues",  # Inadequate Encryption Strength
     327: "Cryptography Issues",  # Use of a Broken or Risky Cryptographic Algorithm
+    330: "Cryptography Issues",  # Use of Insufficiently Random Values
 
     # Information exposure
     200: "Information Exposure",  # Information Exposure

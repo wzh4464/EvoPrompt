@@ -21,6 +21,7 @@ from evoprompt.data.cwe_categories import (
 from evoprompt.llm.client import create_default_client
 from evoprompt.llm.async_client import AsyncLLMClient
 import asyncio
+from evoprompt.utils.text import safe_format
 
 
 def load_sampling_stats(stats_file: str) -> Dict[str, Any]:
@@ -85,7 +86,7 @@ async def evaluate_prompt_on_samples_async(
             ground_truth_category = "Benign"
 
         # 构建查询
-        query = prompt.format(input=code)
+        query = safe_format(prompt, input=code)
         batch_queries.append(query)
         batch_samples.append(sample)
         batch_metadata.append(
@@ -317,7 +318,7 @@ def evaluate_prompt_on_samples(
                 ground_truth_category = "Benign"
 
             # 构建查询
-            query = prompt.format(input=code)
+            query = safe_format(prompt, input=code)
 
             # 调用LLM
             prediction_text = llm_client.generate(query, temperature=0.1, max_tokens=50)

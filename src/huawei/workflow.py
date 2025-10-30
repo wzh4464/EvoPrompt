@@ -18,6 +18,7 @@ try:
     from ..evoprompt.algorithms.genetic import GeneticAlgorithm
     from ..evoprompt.llm.client import create_llm_client
     from ..evoprompt.metrics.base import AccuracyMetric
+    from ..evoprompt.utils.text import safe_format
 except ImportError:
     # 处理直接运行时的导入问题
     import sys
@@ -32,6 +33,7 @@ except ImportError:
     from evoprompt.algorithms.genetic import GeneticAlgorithm
     from evoprompt.llm.client import create_llm_client
     from evoprompt.metrics.base import AccuracyMetric
+    from evoprompt.utils.text import safe_format
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +67,11 @@ class HuaweiSecurityEvaluator(Evaluator):
         for sample in samples:
             try:
                 # 构建评估 prompt
-                evaluation_prompt = prompt.format(
+                evaluation_prompt = safe_format(
+                    prompt,
                     category_list="\\n".join(f"- {cat}" for cat in self.dataset.get_categories()),
                     code=sample.code,
-                    lang=sample.metadata.get("lang", "cpp")
+                    lang=sample.metadata.get("lang", "cpp"),
                 )
 
                 # 获取 LLM 响应

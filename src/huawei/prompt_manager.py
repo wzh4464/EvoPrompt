@@ -6,6 +6,8 @@ import logging
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 
+from evoprompt.utils.text import safe_format
+
 logger = logging.getLogger(__name__)
 
 
@@ -343,11 +345,12 @@ class HuaweiPromptManager:
         code_normalized = code.replace('\\r\\n', '\\n').replace('\\r', '\\n')
 
         # 替换模板变量
-        prompt = template.format(
+        prompt = safe_format(
+            template,
             category_list=category_list,
             code=code_normalized,
             lang=lang,
-            focus_category=focus_category or "所有类型"
+            focus_category=focus_category or "所有类型",
         )
 
         return prompt

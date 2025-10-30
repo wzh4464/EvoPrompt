@@ -21,6 +21,8 @@ import sys
 from pathlib import Path
 from typing import List, Dict, Any
 
+from evoprompt.utils.text import safe_format
+
 DEFAULT_TEMPLATE = """你是一个静态分析分类助手。
 任务：基于给定的代码片段，从下列 Category 列表中选出所有适用的类别；若无匹配，返回 ["None"]。
 
@@ -76,7 +78,8 @@ def build_prompt(template: str, categories: List[str], code: str, lang: str) -> 
     # 规范化换行，避免 \r\n 带来的显示问题
     code_norm = code.replace("\r\n", "\n").replace("\r", "\n")
     category_bullets = "\n".join(f"- {c}" for c in categories)
-    prompt = template.format(
+    prompt = safe_format(
+        template,
         category_bullets=category_bullets,
         code=code_norm,
         lang=(lang or "cpp"),

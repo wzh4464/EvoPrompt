@@ -14,6 +14,8 @@ import random
 # 添加src路径
 sys.path.insert(0, 'src')
 
+from evoprompt.utils.text import safe_format
+
 def create_mock_data(temp_dir: Path):
     """创建模拟的Primevul数据用于测试"""
     
@@ -192,7 +194,7 @@ def test_batch_integration():
             
             for i, sample in enumerate(samples):
                 code = sample.input_text
-                query = test_prompt.format(input=code[:100])  # 截取前100字符
+                query = safe_format(test_prompt, input=code[:100])  # 截取前100字符
                 batch_queries.append(query)
                 batch_samples.append(sample)
             
