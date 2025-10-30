@@ -11,6 +11,9 @@
 ✅ **初始化 Prompts**: 从 `init/layer1_prompts.txt` 读取初始 prompts
 ✅ **完整指标**: 输出 precision, recall, f1-score 分类报告
 ✅ **结果存档**: 所有结果保存到 `result/` 文件夹
+✅ **Checkpoint 机制**: 自动保存进度，支持断点恢复
+✅ **重试机制**: API 失败自动重试（指数退避）
+✅ **容错处理**: 网络中断、API 不稳定均可恢复
 
 ## 快速开始
 
@@ -38,6 +41,9 @@ uv run python main.py \
 | `--primevul-dir` | `./data/primevul/primevul` | PrimeVul 原始数据集路径 |
 | `--sample-dir` | `./data/primevul_1percent_sample` | 1% 采样数据路径 |
 | `--experiment-id` | 自动生成 | 实验 ID（时间戳） |
+| `--max-retries` | 3 | API 调用最大重试次数 |
+| `--retry-delay` | 1.0 | 重试基础延迟时间（秒） |
+| `--no-checkpoint` | False | 禁用 checkpoint 功能 |
 
 ## 目录结构
 
@@ -53,7 +59,13 @@ EvoPrompt/
 │       ├── classification_metrics.json     # JSON 格式指标
 │       ├── confusion_matrix.json           # 混淆矩阵
 │       ├── batch_analyses.jsonl            # 每个 batch 的分析
-│       └── experiment_summary.json         # 完整实验总结
+│       ├── experiment_summary.json         # 完整实验总结
+│       ├── checkpoints/                    # Checkpoint 目录
+│       │   ├── latest.json                # 最新 checkpoint
+│       │   ├── backup.json                # 备份 checkpoint
+│       │   ├── state.pkl                  # 完整状态
+│       │   └── batches/                   # Batch 级 checkpoint
+│       └── recovery.log                    # 恢复日志
 ├── data/                            # 数据目录
 │   └── primevul_1percent_sample/   # 1% 采样数据
 └── src/                             # 源代码
@@ -366,10 +378,56 @@ print(f"Best fitness: {results['best_fitness']}")
 3. **Layer-2 精调**: 使用最佳 prompt 进行更细粒度的分类
 4. **生产部署**: 将最佳 prompt 集成到生产环境
 
+## Checkpoint 和容错
+
+### 自动保存
+
+系统会在以下时机自动保存 checkpoint:
+- ✅ 每个 batch 处理后
+- ✅ 每代进化完成后
+- ✅ 用户中断 (Ctrl+C) 时
+- ✅ 发生错误时
+
+### 断点恢复
+
+当检测到未完成的实验时：
+
+```bash
+uv run python main.py
+
+🔄 检测到未完成的实验...
+是否从 checkpoint 恢复? (y/n): y
+✅ 从完整状态恢复
+   将从第 3 代继续
+```
+
+### API 重试
+
+当 API 调用失败时，自动重试（指数退避）：
+
+```bash
+🔍 批量预测 16 个样本...
+  ⚠️ API 调用失败 (尝试 1/3): Connection timeout
+  ⏳ 等待 1.0秒 后重试...
+  ⚠️ API 调用失败 (尝试 2/3): Connection timeout
+  ⏳ 等待 2.0秒 后重试...
+  ✅ API 调用成功
+```
+
+### 配置重试参数
+
+```bash
+# 增加重试次数和延迟（适用于不稳定的 API）
+uv run python main.py --max-retries 5 --retry-delay 2.0
+```
+
+详细信息请参考 [CHECKPOINT_GUIDE.md](./CHECKPOINT_GUIDE.md)
+
 ## 相关文档
 
 - [CLAUDE.md](./CLAUDE.md) - 项目整体说明
 - [PRIMEVUL_LAYERED_FLOW.md](./PRIMEVUL_LAYERED_FLOW.md) - 分层流程文档
+- [CHECKPOINT_GUIDE.md](./CHECKPOINT_GUIDE.md) - Checkpoint 机制详细指南
 
 ## 许可证
 

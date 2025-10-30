@@ -16,7 +16,9 @@ import time
 import random
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
+import textwrap
+from string import Template
 
 # 添加 src 路径
 sys.path.insert(0, "src")
@@ -30,6 +32,12 @@ from evoprompt.data.cwe_categories import (
 )
 from evoprompt.llm.client import create_default_client
 from evoprompt.algorithms.base import Individual, Population
+from evoprompt.utils.checkpoint import (
+    CheckpointManager,
+    RetryManager,
+    BatchCheckpointer,
+    ExperimentRecovery,
+)
 from sklearn.metrics import classification_report, confusion_matrix
 import numpy as np
 
@@ -133,13 +141,125 @@ class BatchAnalyzer:
         return suggestions
 
 
+class StructuredPromptBuilder:
+    """Helper to build prompts with fixed structure and mutable guidance."""
+
+    ANALYSIS_START = "### ANALYSIS GUIDANCE START"
+    ANALYSIS_END = "### ANALYSIS GUIDANCE END"
+
+    def __init__(self, categories: List[str], default_guidance: str):
+        self.categories = categories
+        self.default_guidance = default_guidance.strip()
+        self.template = Template(
+            textwrap.dedent(
+                """You are a security-focused code analysis assistant.
+
+Classify the provided code into exactly one of the following CWE major categories:
+$categories_block
+
+$analysis_start
+$analysis_guidance
+$analysis_end
+
+Decision Rules (do not modify):
+- Examine control flow, data flow, and API usage for concrete vulnerability patterns.
+- Confirm that untrusted input crossing trust boundaries is either sanitized or defended.
+- Validate memory and pointer operations for bounds, lifetime, and null safety.
+- Prefer `Benign` when there is no actionable, exploitable vulnerability evidence.
+
+Output Requirements (do not modify):
+- Respond with a single category name from the list above.
+- Do not provide explanations or additional text.
+
+Code to analyze:
+$code_placeholder
+
+CWE Major Category:
+"""
+            ).strip()
+        )
+
+    @property
+    def template_preview(self) -> str:
+        """Return a preview of the structured template for evolution instructions."""
+        return self.template.substitute(
+            categories_block=self._format_categories(),
+            analysis_start=self.ANALYSIS_START,
+            analysis_end=self.ANALYSIS_END,
+            analysis_guidance="<<analysis guidance text>>",
+            code_placeholder="{input}",
+        )
+
+    def _format_categories(self) -> str:
+        return "\n".join(f"- {cat}" for cat in self.categories)
+
+    def render(self, guidance: str) -> str:
+        """Render the full prompt using the provided guidance."""
+        cleaned_guidance = self._sanitize_guidance_text(guidance)
+        return self.template.substitute(
+            categories_block=self._format_categories(),
+            analysis_start=self.ANALYSIS_START,
+            analysis_end=self.ANALYSIS_END,
+            analysis_guidance=cleaned_guidance,
+            code_placeholder="{input}",
+        )
+
+    def _sanitize_guidance_text(self, guidance: Optional[str]) -> str:
+        if not guidance:
+            return self.default_guidance
+        cleaned = textwrap.dedent(guidance).replace(self.ANALYSIS_START, "").replace(self.ANALYSIS_END, "")
+        cleaned = cleaned.replace("{input}", "").strip()
+        return cleaned if cleaned else self.default_guidance
+
+    def extract_guidance(self, prompt: str) -> Optional[str]:
+        """Extract the mutable guidance section from an existing prompt."""
+        if not prompt:
+            return None
+
+        start_idx = prompt.find(self.ANALYSIS_START)
+        end_idx = prompt.find(self.ANALYSIS_END)
+
+        if start_idx == -1 or end_idx == -1 or end_idx <= start_idx:
+            return None
+
+        start_idx += len(self.ANALYSIS_START)
+        guidance = prompt[start_idx:end_idx].strip()
+        return guidance if guidance else None
+
+    def ensure_structure(self, prompt: str, fallback_guidance: Optional[str] = None) -> Tuple[str, str]:
+        """
+        Ensure the prompt adheres to the structured template.
+
+        Returns:
+            (structured_prompt, guidance_text)
+        """
+        guidance = self.extract_guidance(prompt)
+        if guidance is None:
+            fallback = fallback_guidance.strip() if fallback_guidance and fallback_guidance.strip() else self.default_guidance
+            guidance = fallback
+        sanitized_guidance = self._sanitize_guidance_text(guidance)
+        structured_prompt = self.render(sanitized_guidance)
+        return structured_prompt, sanitized_guidance
+
+
 class PromptEvolver:
     """基于 Batch 分析反馈的 Prompt 进化器"""
+
+    DEFAULT_GUIDANCE = textwrap.dedent(
+        """
+        - Start by identifying whether external input influences security-critical operations.
+        - Inspect array, buffer, and pointer handling for missing bounds and lifetime safeguards.
+        - Check memory allocation/freeing patterns for leaks, double frees, or use-after-free issues.
+        - Look for concurrency primitives that could cause race conditions or inconsistent state.
+        - When no concrete vulnerability conditions exist, return 'Benign'.
+        """
+    ).strip()
 
     def __init__(self, llm_client, config: Dict[str, Any]):
         self.llm_client = llm_client
         self.config = config
         self.evolution_history = []
+        self.builder = StructuredPromptBuilder(CWE_MAJOR_CATEGORIES, self.DEFAULT_GUIDANCE)
 
     def evolve_with_feedback(
         self,
@@ -147,13 +267,17 @@ class PromptEvolver:
         batch_analysis: Dict[str, Any],
         generation: int
     ) -> str:
-        """根据 batch 分析反馈进化 prompt"""
+        """根据 batch 分析反馈进化 prompt，仅调整可变指导部分"""
+
+        structured_prompt, current_guidance = self.builder.ensure_structure(current_prompt)
+        if self.builder.extract_guidance(current_prompt) is None:
+            print("    ℹ️ 原 prompt 已包装为固定结构，以保护 {input} 占位符和输出格式")
+        current_prompt = structured_prompt
 
         # 如果准确率已经很高，不需要改进
         if batch_analysis["accuracy"] >= 0.95:
             return current_prompt
 
-        # 构建进化指令
         improvement_text = "\n".join(
             f"- {sug}" for sug in batch_analysis["improvement_suggestions"]
         )
@@ -163,57 +287,105 @@ class PromptEvolver:
             for pattern, count in batch_analysis["error_patterns"].items()
         )
 
-        evolution_instruction = f"""
-You are improving a vulnerability detection prompt based on batch analysis feedback.
+        guidance_for_prompt = self._trim_for_prompt(current_guidance)
+        improvement_for_prompt = self._trim_for_prompt(improvement_text)
+        errors_for_prompt = self._trim_for_prompt(error_text if error_text else "None - all predictions were correct")
 
-Current Prompt:
-{current_prompt}
+        evolution_instruction = textwrap.dedent(
+            f"""
+            You are improving only the ANALYSIS GUIDANCE section of a structured vulnerability classification prompt.
 
-Batch Analysis Results:
-- Accuracy: {batch_analysis['accuracy']:.2%}
-- Batch size: {batch_analysis['batch_size']}
-- Correct predictions: {batch_analysis['correct']}
+            The prompt uses this fixed template (do not alter anything outside the guidance markers):
+            {self.builder.template_preview}
 
-Common Error Patterns:
-{error_text if error_text else "None - all predictions were correct"}
+            Current ANALYSIS GUIDANCE:
+            {guidance_for_prompt}
 
-Improvement Suggestions:
-{improvement_text}
+            Batch Analysis Results:
+            - Accuracy: {batch_analysis['accuracy']:.2%}
+            - Batch size: {batch_analysis['batch_size']}
+            - Correct predictions: {batch_analysis['correct']}
 
-Task: Create an improved prompt that:
-1. Addresses the identified error patterns
-2. Better distinguishes between the confused categories
-3. Maintains the same output format (CWE major category or 'Benign')
-4. Keeps the {{{{input}}}} placeholder for code insertion
-5. Uses the following valid categories: {", ".join(CWE_MAJOR_CATEGORIES)}
+            Common Error Patterns:
+            {errors_for_prompt}
 
-Return ONLY the improved prompt text, nothing else:
-"""
+            Improvement Suggestions:
+            {improvement_for_prompt if improvement_text else '- Maintain current guidance with minor refinements.'}
+
+            Requirements:
+            - Return a JSON object with a single key "analysis_guidance" whose value is the improved multi-line guidance text.
+            - Preserve the intent of the fixed template, keep category coverage balanced, and emphasize distinctions for observed errors.
+            - Keep bullet style or numbered lists if they help clarity.
+            """
+        ).strip()
 
         try:
-            improved_prompt = self.llm_client.generate(
+            raw_response = self.llm_client.generate(
                 evolution_instruction,
                 temperature=0.7,
-                max_tokens=500
-            )
+                max_tokens=600
+            ).strip()
 
-            # 验证改进后的 prompt
-            if "{input}" in improved_prompt and len(improved_prompt.strip()) > 50:
-                self.evolution_history.append({
-                    "generation": generation,
-                    "batch_idx": batch_analysis["batch_idx"],
-                    "old_accuracy": batch_analysis["accuracy"],
-                    "prompt": improved_prompt,
-                    "timestamp": datetime.now().isoformat(),
-                })
-                return improved_prompt.strip()
-            else:
-                print(f"    ⚠️ 进化后的 prompt 无效，保持原 prompt")
+            new_guidance = self._parse_guidance_response(raw_response)
+            if not new_guidance:
+                print("    ⚠️ 进化响应无法解析，保持原 prompt")
                 return current_prompt
+
+            new_prompt = self.builder.render(new_guidance)
+
+            self.evolution_history.append({
+                "generation": generation,
+                "batch_idx": batch_analysis["batch_idx"],
+                "old_accuracy": batch_analysis["accuracy"],
+                "new_guidance": new_guidance,
+                "timestamp": datetime.now().isoformat(),
+            })
+            return new_prompt
 
         except Exception as e:
             print(f"    ❌ Prompt 进化失败: {e}")
             return current_prompt
+
+    def _parse_guidance_response(self, response: str) -> Optional[str]:
+        """Parse the LLM response for the updated guidance text."""
+        if not response:
+            return None
+
+        cleaned = response.strip()
+
+        if cleaned.startswith("```") and cleaned.endswith("```"):
+            cleaned = cleaned.strip("`").strip()
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:].strip()
+
+        try:
+            data = json.loads(cleaned)
+        except json.JSONDecodeError:
+            # Treat plain text as guidance fallback
+            return cleaned.strip()
+
+        if isinstance(data, dict):
+            guidance = data.get("analysis_guidance")
+            if isinstance(guidance, str):
+                return guidance.strip()
+            if isinstance(guidance, list):
+                joined = "\n".join(str(item) for item in guidance)
+                return joined.strip()
+        if isinstance(data, list) and data:
+            first = data[0]
+            if isinstance(first, dict):
+                return self._parse_guidance_response(json.dumps(first))
+            joined = "\n".join(str(item) for item in data)
+            return joined.strip()
+        return None
+
+    def _trim_for_prompt(self, text: str, limit: int = 1200) -> str:
+        if not text:
+            return ""
+        stripped = text.strip()
+        if len(stripped) <= limit:
+            return stripped
+        return stripped[:limit].rstrip() + "\n... (truncated)"
 
 
 class PrimeVulLayer1Pipeline:
@@ -230,19 +402,30 @@ class PrimeVulLayer1Pipeline:
         self.result_dir.mkdir(exist_ok=True)
 
         # 创建实验子目录
-        self.exp_id = config.get("experiment_id", f"layer1_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+        self.exp_id = config.get("experiment_id") or f"layer1_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.exp_dir = self.result_dir / self.exp_id
-        self.exp_dir.mkdir(exist_ok=True)
+        self.exp_dir.mkdir(exist_ok=True, parents=True)
 
         # 初始化组件
         self.llm_client = create_default_client()
         self.batch_analyzer = BatchAnalyzer(batch_size=self.batch_size)
         self.prompt_evolver = PromptEvolver(self.llm_client, config)
 
+        # 初始化 Checkpoint 管理器
+        self.checkpoint_manager = CheckpointManager(self.exp_dir, auto_save=True)
+        self.batch_checkpointer = BatchCheckpointer(self.exp_dir / "checkpoints", self.batch_size)
+        self.retry_manager = RetryManager(
+            max_retries=config.get("max_retries", 3),
+            base_delay=config.get("retry_delay", 1.0),
+            exponential_backoff=True
+        )
+        self.recovery = ExperimentRecovery(self.exp_dir)
+
         print(f"✅ 初始化 PrimeVul Layer-1 Pipeline")
         print(f"   实验 ID: {self.exp_id}")
         print(f"   Batch 大小: {self.batch_size}")
         print(f"   结果目录: {self.exp_dir}")
+        print(f"   Checkpoint: 启用 (最大重试: {config.get('max_retries', 3)})")
 
     def load_initial_prompts(self) -> List[str]:
         """从 init/ 文件夹加载初始 prompts"""
@@ -271,55 +454,121 @@ class PrimeVulLayer1Pipeline:
 
         # 按分隔符分割
         prompts = []
-        for section in content.split("=" * 80):
+        sections = content.split("=" * 80)
+
+        for section in sections:
             section = section.strip()
-            if not section or section.startswith("#"):
+            if not section:
                 continue
-            # 移除注释行
-            lines = [line for line in section.split("\n") if not line.strip().startswith("#")]
+
+            # 移除注释行（以 # 开头的行）
+            lines = []
+            for line in section.split("\n"):
+                stripped = line.strip()
+                # 跳过注释行，但保留非注释内容
+                if not stripped.startswith("#"):
+                    lines.append(line)
+
             prompt = "\n".join(lines).strip()
-            if prompt and "{input}" in prompt:
-                prompts.append(prompt)
+
+            if not prompt:
+                continue
+
+            structured_prompt, _ = self.prompt_evolver.builder.ensure_structure(
+                prompt, fallback_guidance=prompt
+            )
+            prompts.append(structured_prompt)
+            print(f"   ✓ 加载 Prompt {len(prompts)}: {structured_prompt[:60]}...")
+            if structured_prompt != prompt:
+                print("     ↳ 已转换为结构化模板，固定 {input} 占位符和输出规范")
 
         print(f"✅ 从 {prompts_file} 加载了 {len(prompts)} 个初始 prompts")
         return prompts if prompts else self._create_default_prompts()
 
     def _create_default_prompts(self) -> List[str]:
-        """创建默认的初始 prompts"""
-        categories_text = ", ".join(f"'{cat}'" for cat in CWE_MAJOR_CATEGORIES)
+        """创建默认的初始 prompts
 
-        return [
-            f"""Analyze this code for security vulnerabilities and classify it into one of these CWE major categories: {categories_text}.
-If no vulnerability is found, respond with 'Benign'.
-Respond ONLY with the category name.
+        重要: 所有 prompt 都必须显式列出完整的类别列表
+        """
+        builder = self.prompt_evolver.builder
 
-Code to analyze:
-{{input}}
-
-CWE Major Category:""",
-
-            f"""You are a security expert analyzing code for vulnerabilities.
-Classify the code into ONE of these categories: {categories_text}.
-For secure code, respond with 'Benign'.
-Output ONLY the category name, nothing else.
-
-Code:
-{{input}}
-
-Category:""",
-
-            f"""Security vulnerability classification task.
-Categories: {categories_text}
-
-Examine the code and identify the PRIMARY vulnerability type.
-If the code is secure, respond with 'Benign'.
-Response format: Category name only.
-
-Code to analyze:
-{{input}}
-
-Result:""",
+        guidance_variations = [
+            builder.default_guidance,
+            textwrap.dedent(
+                """
+                - Review buffer allocations, index arithmetic, and memcpy/memset usage for overflow or underflow patterns.
+                - Distinguish pointer misuse by checking for null validation, dangling references, and invalid dereferences.
+                - Confirm lifetime management: match allocations to frees and inspect error paths for leaks or double frees.
+                - Prefer 'Benign' when operations stay within documented bounds and defensive guards are present.
+                """
+            ).strip(),
+            textwrap.dedent(
+                """
+                - Trace all user-controlled inputs; ensure sanitization before reaching system, SQL, or command execution calls.
+                - Map CWE hints (e.g., CWE-79, CWE-89) to major categories while verifying the exploit is feasible.
+                - Contrast injection findings with buffer or integer issues to avoid mislabeling multi-symptom defects.
+                - Choose 'Benign' when inputs are validated, escaped, or unused in sensitive contexts.
+                """
+            ).strip(),
+            textwrap.dedent(
+                """
+                - Focus on concurrency primitives (locks, atomics, threads); identify missing synchronization around shared state.
+                - Examine memory sharing, producer/consumer logic, and ordering guarantees for race windows.
+                - When concurrency looks safe, fall back to scanning for memory, buffer, or injection issues before 'Benign'.
+                - Document evidence-driven reasoning within the guidance to disambiguate close categories.
+                """
+            ).strip(),
+            textwrap.dedent(
+                """
+                - Audit memory allocation and cleanup paths: ensure every malloc/new has a corresponding free/delete.
+                - Detect use-after-free by following pointers after deallocation or across error labels.
+                - Treat lack of deallocation on all exit paths as Memory Management issues unless the lifetime is intentional.
+                - If memory handling is correct, check pointer, integer, and buffer safety before defaulting to 'Benign'.
+                """
+            ).strip(),
+            textwrap.dedent(
+                """
+                - Evaluate arithmetic and casting for overflow/underflow when values influence lengths, indexes, or allocations.
+                - Watch for signed/unsigned conversions, bit shifts, and loop counters that can wrap unexpectedly.
+                - Differentiate between Buffer Errors (actual out-of-bounds access) and Integer Errors (unsafe numeric range handling).
+                - Confirm no exploitable arithmetic flaw exists before selecting 'Benign'.
+                """
+            ).strip(),
+            textwrap.dedent(
+                """
+                - Inspect file and path construction for traversal sequences or unsafe concatenation of untrusted input.
+                - Review cryptographic usage for deprecated algorithms, missing randomness, or hard-coded secrets.
+                - Check logging and error handling for unintended information disclosure.
+                - Mark as 'Benign' only if path, crypto, and disclosure surfaces are hardened and validated.
+                """
+            ).strip(),
+            textwrap.dedent(
+                """
+                - Combine control-flow and data-flow evidence to justify selecting a specific CWE major category.
+                - Prioritize categories that align with the root cause, not just surface symptoms.
+                - Highlight differentiators between closely related categories (e.g., Buffer Errors vs. Pointer Dereference).
+                - Default to 'Benign' when safeguards mitigate potential issues or evidence is speculative.
+                """
+            ).strip(),
+            textwrap.dedent(
+                """
+                - Use a two-pass review: first scan for any vulnerability triggers, then confirm mitigation coverage.
+                - Record decisive cues (API usage, missing checks, lifetime anomalies) that map to each CWE major category.
+                - Reinforce conservative judgment—require demonstrable exploit paths before assigning a vulnerable label.
+                - End guidance with a reminder to return just the category token.
+                """
+            ).strip(),
+            textwrap.dedent(
+                """
+                - Validate that selected categories remain mutually exclusive: choose the most specific applicable label.
+                - Escalate ambiguous findings to 'Other' only when no primary category captures the vulnerability traits.
+                - Encourage deeper inspection of secondary evidence when error patterns repeat across batches.
+                - Reinforce the requirement to output exactly one category name and nothing else.
+                """
+            ).strip(),
         ]
+
+        return [builder.render(guidance) for guidance in guidance_variations]
 
     def batch_predict(
         self,
@@ -349,33 +598,66 @@ Result:""",
 
             ground_truths.append(ground_truth_category)
 
-        # 批量调用 LLM
+        # 批量调用 LLM (带重试机制)
         print(f"      🔍 批量预测 {len(queries)} 个样本...")
         try:
-            responses = self.llm_client.batch_generate(
-                queries,
-                temperature=0.1,
-                max_tokens=20,
-                batch_size=min(8, len(queries)),
-                concurrent=True
-            )
+            # 使用重试管理器包装 API 调用
+            def batch_generate_with_retry():
+                return self.llm_client.batch_generate(
+                    queries,
+                    temperature=0.1,
+                    max_tokens=20,
+                    batch_size=min(8, len(queries)),
+                    concurrent=True
+                )
+
+            responses = self.retry_manager.retry_with_backoff(batch_generate_with_retry)
 
             # 规范化输出
-            for response in responses:
+            for idx, response in enumerate(responses):
                 if response == "error":
                     predictions.append("Other")
                 else:
                     predicted_category = canonicalize_category(response)
+
+                    # 调试：打印前几个响应
+                    if batch_idx == 0 and idx < 3:
+                        print(f"        🔍 调试响应 {idx+1}: '{response[:100]}...'")
+                        print(f"        🎯 解析结果: '{predicted_category}'")
+
                     if predicted_category is None:
                         # 尝试从响应中提取
-                        if "benign" in response.lower():
+                        response_lower = response.lower()
+                        if "benign" in response_lower:
                             predicted_category = "Benign"
+                        elif "buffer" in response_lower:
+                            predicted_category = "Buffer Errors"
+                        elif "injection" in response_lower or "inject" in response_lower:
+                            predicted_category = "Injection"
+                        elif "memory" in response_lower:
+                            predicted_category = "Memory Management"
+                        elif "pointer" in response_lower:
+                            predicted_category = "Pointer Dereference"
+                        elif "integer" in response_lower:
+                            predicted_category = "Integer Errors"
+                        elif "concurrency" in response_lower or "race" in response_lower:
+                            predicted_category = "Concurrency Issues"
+                        elif "path" in response_lower or "traversal" in response_lower:
+                            predicted_category = "Path Traversal"
+                        elif "crypto" in response_lower or "encryption" in response_lower:
+                            predicted_category = "Cryptography Issues"
+                        elif "information" in response_lower or "exposure" in response_lower or "leak" in response_lower:
+                            predicted_category = "Information Exposure"
                         else:
                             predicted_category = "Other"
+
+                        if batch_idx == 0 and idx < 3:
+                            print(f"        ⚠️ 使用关键词匹配: '{predicted_category}'")
+
                     predictions.append(predicted_category)
 
         except Exception as e:
-            print(f"      ❌ 批量预测失败: {e}")
+            print(f"      ❌ 批量预测失败 (已达最大重试次数): {e}")
             predictions = ["Other"] * len(samples)
 
         return predictions, ground_truths
@@ -386,9 +668,10 @@ Result:""",
         dataset,
         generation: int,
         prompt_id: str,
-        enable_evolution: bool = False
+        enable_evolution: bool = False,
+        start_batch_idx: int = 0
     ) -> Dict[str, Any]:
-        """在完整数据集上评估 prompt，使用 batch 处理"""
+        """在完整数据集上评估 prompt，使用 batch 处理和 checkpoint"""
         samples = dataset.get_samples()
         total_samples = len(samples)
 
@@ -396,27 +679,51 @@ Result:""",
         all_ground_truths = []
         batch_analyses = []
 
-        current_prompt = prompt
+        current_prompt, _ = self.prompt_evolver.builder.ensure_structure(
+            prompt, fallback_guidance=prompt
+        )
         num_batches = (total_samples + self.batch_size - 1) // self.batch_size
 
         print(f"    📊 评估 prompt (共 {num_batches} 个 batches, {total_samples} 个样本)")
 
-        for batch_idx in range(num_batches):
+        # 检查是否有未完成的 batch
+        if start_batch_idx > 0:
+            print(f"    🔄 从 Batch {start_batch_idx + 1} 继续...")
+
+        for batch_idx in range(start_batch_idx, num_batches):
             start_idx = batch_idx * self.batch_size
             end_idx = min(start_idx + self.batch_size, total_samples)
             batch_samples = samples[start_idx:end_idx]
 
             print(f"      Batch {batch_idx + 1}/{num_batches} (样本 {start_idx+1}-{end_idx})")
 
-            # 批量预测
-            predictions, ground_truths = self.batch_predict(
-                current_prompt, batch_samples, batch_idx
-            )
+            # 检查是否已有 checkpoint
+            cached_batch = self.batch_checkpointer.load_batch_result(generation, batch_idx)
+            if cached_batch:
+                print(f"        📦 从 checkpoint 加载结果")
+                predictions = cached_batch["predictions"]
+                ground_truths = cached_batch["ground_truths"]
+                batch_analysis = cached_batch["analysis"]
+                cached_prompt = cached_batch.get("prompt", current_prompt)
+                current_prompt, _ = self.prompt_evolver.builder.ensure_structure(
+                    cached_prompt, fallback_guidance=cached_prompt
+                )
+            else:
+                # 批量预测
+                predictions, ground_truths = self.batch_predict(
+                    current_prompt, batch_samples, batch_idx
+                )
 
-            # 分析 batch 结果
-            batch_analysis = self.batch_analyzer.analyze_batch(
-                predictions, ground_truths, batch_idx
-            )
+                # 分析 batch 结果
+                batch_analysis = self.batch_analyzer.analyze_batch(
+                    predictions, ground_truths, batch_idx
+                )
+
+                # 保存 batch checkpoint
+                self.batch_checkpointer.save_batch_result(
+                    generation, batch_idx, predictions, ground_truths,
+                    batch_analysis, current_prompt
+                )
 
             print(f"        ✓ 准确率: {batch_analysis['accuracy']:.2%} ({batch_analysis['correct']}/{batch_analysis['batch_size']})")
 
@@ -430,12 +737,20 @@ Result:""",
             # 根据 batch 分析进化 prompt (仅在训练模式下)
             if enable_evolution and batch_analysis["accuracy"] < 0.95:
                 print(f"        🧬 尝试进化 prompt...")
-                new_prompt = self.prompt_evolver.evolve_with_feedback(
-                    current_prompt, batch_analysis, generation
-                )
-                if new_prompt != current_prompt:
-                    print(f"        ✅ Prompt 已进化")
-                    current_prompt = new_prompt
+
+                def evolve_with_retry():
+                    return self.prompt_evolver.evolve_with_feedback(
+                        current_prompt, batch_analysis, generation
+                    )
+
+                try:
+                    new_prompt = self.retry_manager.retry_with_backoff(evolve_with_retry)
+                    if new_prompt != current_prompt:
+                        print(f"        ✅ Prompt 已进化")
+                        current_prompt = new_prompt
+                except Exception as e:
+                    print(f"        ⚠️ Prompt 进化失败: {e}")
+                    # 继续使用当前 prompt
 
         # 计算整体指标
         overall_accuracy = sum(p == g for p, g in zip(all_predictions, all_ground_truths)) / len(all_predictions)
@@ -471,10 +786,45 @@ Result:""",
         }
 
     def run_evolution(self) -> Dict[str, Any]:
-        """运行完整的进化流程"""
+        """运行完整的进化流程 (支持断点恢复)"""
         print("\n" + "="*80)
         print("🚀 开始 PrimeVul Layer-1 并发漏洞分类")
         print("="*80 + "\n")
+
+        # 0. 检查是否可以恢复实验
+        start_generation = 0
+        population = None
+        best_results = []
+
+        # 检查是否启用自动恢复
+        auto_recover = self.config.get("auto_recover", False)
+
+        if self.recovery.can_recover():
+            print("🔄 检测到未完成的实验...")
+
+            # 根据配置决定是否自动恢复
+            should_recover = auto_recover
+
+            if not auto_recover:
+                try:
+                    user_input = input("是否从 checkpoint 恢复? (y/n): ").strip().lower()
+                    should_recover = (user_input == 'y')
+                except (EOFError, KeyboardInterrupt):
+                    print("\n⚠️ 无法读取用户输入，跳过恢复")
+                    should_recover = False
+
+            if should_recover:
+                recovered_state = self.recovery.recover_experiment()
+                if recovered_state and recovered_state.get("full_state"):
+                    print("✅ 从完整状态恢复")
+                    start_generation = recovered_state["generation"]
+                    population = recovered_state["population"]
+                    best_results = recovered_state["best_results"]
+                    print(f"   将从第 {start_generation + 1} 代继续\n")
+                else:
+                    print("⚠️ 只能恢复部分信息，将重新开始实验\n")
+            else:
+                print("⚠️ 跳过恢复，重新开始实验\n")
 
         # 1. 准备数据
         print("📁 准备数据集...")
@@ -494,76 +844,125 @@ Result:""",
         print(f"   ✅ 训练集: {len(train_dataset)} 样本")
         print(f"   ✅ 开发集: {len(dev_dataset)} 样本")
 
-        # 2. 加载初始 prompts
-        print("\n📝 加载初始 prompts...")
-        initial_prompts = self.load_initial_prompts()
+        # 2. 加载初始 prompts (如果没有恢复种群)
+        if population is None:
+            print("\n📝 加载初始 prompts...")
+            initial_prompts = self.load_initial_prompts()
 
-        # 3. 初始评估
-        print(f"\n📊 初始评估 ({len(initial_prompts)} 个 prompts)...")
-        population = []
+            # 3. 初始评估
+            print(f"\n📊 初始评估 ({len(initial_prompts)} 个 prompts)...")
+            population = []
 
-        for i, prompt in enumerate(initial_prompts):
-            print(f"\n  Prompt {i+1}/{len(initial_prompts)}")
-            result = self.evaluate_prompt_on_dataset(
-                prompt, dev_dataset, generation=0,
-                prompt_id=f"initial_{i}", enable_evolution=False
+            for i, prompt in enumerate(initial_prompts):
+                print(f"\n  Prompt {i+1}/{len(initial_prompts)}")
+                result = self.evaluate_prompt_on_dataset(
+                    prompt, dev_dataset, generation=0,
+                    prompt_id=f"initial_{i}", enable_evolution=False
+                )
+                individual = Individual(prompt)
+                individual.fitness = result["accuracy"]
+                population.append((individual, result))
+                print(f"    ✓ 适应度: {individual.fitness:.4f}")
+
+            # 保存初始 checkpoint
+            self.checkpoint_manager.save_checkpoint(
+                generation=0,
+                batch_idx=0,
+                population=population,
+                best_results=best_results,
+                metadata={"stage": "initial_evaluation"}
             )
-            individual = Individual(prompt)
-            individual.fitness = result["accuracy"]
-            population.append((individual, result))
-            print(f"    ✓ 适应度: {individual.fitness:.4f}")
 
         # 4. 进化过程
         max_generations = self.config.get("max_generations", 5)
         print(f"\n🧬 开始进化 (共 {max_generations} 代)...")
 
-        best_results = []
-
-        for generation in range(1, max_generations + 1):
+        for generation in range(start_generation + 1, max_generations + 1):
             print(f"\n{'='*80}")
             print(f"📈 第 {generation} 代进化")
             print(f"{'='*80}\n")
 
-            # 选择最佳个体
-            population.sort(key=lambda x: x[0].fitness, reverse=True)
-            best_individual, best_result = population[0]
-            best_results.append(best_result)
+            try:
+                # 选择最佳个体
+                population.sort(key=lambda x: x[0].fitness, reverse=True)
+                best_individual, best_result = population[0]
+                best_results.append(best_result)
 
-            print(f"  当前最佳适应度: {best_individual.fitness:.4f}")
+                print(f"  当前最佳适应度: {best_individual.fitness:.4f}")
 
-            # 在训练集上进化最佳 prompt
-            print(f"\n  在训练集上进化最佳 prompt...")
-            evolved_result = self.evaluate_prompt_on_dataset(
-                best_individual.prompt,
-                train_dataset,
-                generation=generation,
-                prompt_id=f"gen{generation}_best",
-                enable_evolution=True
-            )
-
-            # 创建进化后的个体并在开发集上评估
-            evolved_prompt = evolved_result["final_prompt"]
-            if evolved_prompt != best_individual.prompt:
-                print(f"\n  在开发集上评估进化后的 prompt...")
-                eval_result = self.evaluate_prompt_on_dataset(
-                    evolved_prompt,
-                    dev_dataset,
+                # 在训练集上进化最佳 prompt
+                print(f"\n  在训练集上进化最佳 prompt...")
+                evolved_result = self.evaluate_prompt_on_dataset(
+                    best_individual.prompt,
+                    train_dataset,
                     generation=generation,
-                    prompt_id=f"gen{generation}_evolved",
-                    enable_evolution=False
+                    prompt_id=f"gen{generation}_best",
+                    enable_evolution=True
                 )
 
-                evolved_individual = Individual(evolved_prompt)
-                evolved_individual.fitness = eval_result["accuracy"]
+                # 创建进化后的个体并在开发集上评估
+                evolved_prompt = evolved_result["final_prompt"]
+                if evolved_prompt != best_individual.prompt:
+                    print(f"\n  在开发集上评估进化后的 prompt...")
+                    eval_result = self.evaluate_prompt_on_dataset(
+                        evolved_prompt,
+                        dev_dataset,
+                        generation=generation,
+                        prompt_id=f"gen{generation}_evolved",
+                        enable_evolution=False
+                    )
 
-                print(f"    进化前适应度: {best_individual.fitness:.4f}")
-                print(f"    进化后适应度: {evolved_individual.fitness:.4f}")
+                    evolved_individual = Individual(evolved_prompt)
+                    evolved_individual.fitness = eval_result["accuracy"]
 
-                if evolved_individual.fitness > best_individual.fitness:
-                    print(f"    ✅ 接受进化后的 prompt!")
-                    population[0] = (evolved_individual, eval_result)
-                else:
-                    print(f"    ❌ 保留原 prompt")
+                    print(f"    进化前适应度: {best_individual.fitness:.4f}")
+                    print(f"    进化后适应度: {evolved_individual.fitness:.4f}")
+
+                    if evolved_individual.fitness > best_individual.fitness:
+                        print(f"    ✅ 接受进化后的 prompt!")
+                        population[0] = (evolved_individual, eval_result)
+                    else:
+                        print(f"    ❌ 保留原 prompt")
+
+                # 保存代级 checkpoint
+                self.checkpoint_manager.save_checkpoint(
+                    generation=generation,
+                    batch_idx=0,
+                    population=population,
+                    best_results=best_results,
+                    metadata={"stage": f"generation_{generation}_complete"}
+                )
+                print(f"\n  💾 Checkpoint 已保存 (第 {generation} 代)")
+
+                # 清理旧的 checkpoint
+                if generation % 3 == 0:
+                    self.checkpoint_manager.cleanup_old_checkpoints(keep_last_n=10)
+
+            except KeyboardInterrupt:
+                print(f"\n⚠️ 用户中断实验")
+                print(f"💾 保存当前进度到 checkpoint...")
+                self.checkpoint_manager.save_checkpoint(
+                    generation=generation,
+                    batch_idx=0,
+                    population=population,
+                    best_results=best_results,
+                    metadata={"stage": "interrupted", "reason": "keyboard_interrupt"}
+                )
+                print(f"✅ Checkpoint 已保存，可以稍后恢复")
+                raise
+
+            except Exception as e:
+                print(f"\n❌ 第 {generation} 代发生错误: {e}")
+                print(f"💾 保存当前进度到 checkpoint...")
+                self.checkpoint_manager.save_checkpoint(
+                    generation=generation,
+                    batch_idx=0,
+                    population=population,
+                    best_results=best_results,
+                    metadata={"stage": "error", "error": str(e)}
+                )
+                print(f"✅ Checkpoint 已保存，可以稍后恢复")
+                raise
 
         # 5. 最终结果
         population.sort(key=lambda x: x[0].fitness, reverse=True)
@@ -573,6 +972,14 @@ Result:""",
         print(f"🎉 进化完成!")
         print(f"{'='*80}\n")
         print(f"  最终适应度: {best_individual.fitness:.4f}")
+
+        # 打印重试统计
+        retry_stats = self.retry_manager.get_stats()
+        print(f"\n📊 API 调用统计:")
+        print(f"   成功: {retry_stats['success_count']}")
+        print(f"   失败: {retry_stats['failure_count']}")
+        if retry_stats['failure_count'] > 0:
+            print(f"   重试成功率: {retry_stats['success_count'] / (retry_stats['success_count'] + retry_stats['failure_count']):.2%}")
 
         # 6. 保存结果
         self.save_results(best_individual, best_result, best_results)
@@ -704,6 +1111,14 @@ def main():
                        help="采样数据目录")
     parser.add_argument("--experiment-id", type=str, default=None,
                        help="实验 ID (默认自动生成)")
+    parser.add_argument("--max-retries", type=int, default=3,
+                       help="API 调用最大重试次数")
+    parser.add_argument("--retry-delay", type=float, default=1.0,
+                       help="重试基础延迟时间（秒）")
+    parser.add_argument("--no-checkpoint", action="store_true",
+                       help="禁用 checkpoint 功能")
+    parser.add_argument("--auto-recover", action="store_true",
+                       help="自动从 checkpoint 恢复（不询问）")
 
     args = parser.parse_args()
 
@@ -714,6 +1129,10 @@ def main():
         "primevul_dir": args.primevul_dir,
         "sample_dir": args.sample_dir,
         "experiment_id": args.experiment_id,
+        "max_retries": args.max_retries,
+        "retry_delay": args.retry_delay,
+        "enable_checkpoint": not args.no_checkpoint,
+        "auto_recover": args.auto_recover,
     }
 
     # 创建并运行 pipeline

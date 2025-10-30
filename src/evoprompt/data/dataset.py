@@ -61,6 +61,46 @@ class PrimevulDataset(Dataset):
             logger.warning(f"Data file not found: {data_path}")
             return samples
 
+        path_obj = Path(data_path)
+        metadata_path: Optional[Path] = None
+
+        if path_obj.suffix.lower() in {".txt", ".tsv"}:
+            # Attempt to locate companion JSONL file with full metadata
+            companion_candidates = [
+                path_obj.with_name(f"{path_obj.stem}_sample.jsonl"),
+                path_obj.with_suffix(".jsonl"),
+            ]
+
+            for candidate in companion_candidates:
+                if candidate.exists():
+                    metadata_path = candidate
+                    break
+
+        metadata_file = None
+        metadata_iter = None
+
+        if metadata_path:
+            try:
+                metadata_file = metadata_path.open("r", encoding="utf-8")
+
+                def iter_metadata_lines():
+                    for raw_line in metadata_file:
+                        line = raw_line.strip()
+                        if not line:
+                            continue
+                        try:
+                            yield json.loads(line)
+                        except json.JSONDecodeError:
+                            logger.warning(
+                                "Failed to parse metadata line in %s: %s",
+                                metadata_path,
+                                line[:80],
+                            )
+
+                metadata_iter = iter(iter_metadata_lines())
+            except OSError as e:
+                logger.warning(f"Failed to open companion metadata file {metadata_path}: {e}")
+
         try:
             with open(data_path, "r", encoding="utf-8") as f:
                 first_line = f.readline().strip()
@@ -108,16 +148,69 @@ class PrimevulDataset(Dataset):
                             continue
 
                         func_code, target = parts
+                        target = target.strip()
+                        metadata = {"line_num": line_num}
+
+                        meta_record = None
+                        if metadata_iter is not None:
+                            try:
+                                meta_record = next(metadata_iter)
+                            except StopIteration:
+                                logger.warning(
+                                    "Companion metadata file %s has fewer entries than %s (stopped at line %d)",
+                                    metadata_path,
+                                    data_path,
+                                    line_num,
+                                )
+                                metadata_iter = None
+
+                        if meta_record:
+                            metadata.update(
+                                {
+                                    "idx": meta_record.get("idx"),
+                                    "project": meta_record.get("project"),
+                                    "commit_id": meta_record.get("commit_id"),
+                                    "cwe": meta_record.get("cwe", []),
+                                    "cve": meta_record.get("cve"),
+                                    "func_hash": meta_record.get("func_hash"),
+                                }
+                            )
+
+                            raw_target = meta_record.get("target")
+                            if raw_target is not None:
+                                try:
+                                    target = str(int(raw_target))
+                                except (TypeError, ValueError):
+                                    target = str(raw_target)
+
+                            raw_code = meta_record.get("func")
+                            if isinstance(raw_code, str) and raw_code.strip():
+                                func_code = raw_code.strip()
 
                         sample = Sample(
                             input_text=func_code.strip(),
-                            target=target.strip(),
-                            metadata={"line_num": line_num},
+                            target=target,
+                            metadata=metadata,
                         )
                         samples.append(sample)
 
         except Exception as e:
             logger.error(f"Error loading data from {data_path}: {e}")
+        finally:
+            if metadata_file:
+                remaining = 0
+                if metadata_iter is not None:
+                    for _ in metadata_iter:
+                        remaining += 1
+                if remaining > 0:
+                    logger.warning(
+                        "Companion metadata file %s has %d extra entries beyond %s",
+                        metadata_path,
+                        remaining,
+                        data_path,
+                    )
+                metadata_file.close()
+
 
         logger.info(f"Loaded {len(samples)} samples from {data_path}")
         return samples

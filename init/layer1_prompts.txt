@@ -1,23 +1,15 @@
 # PrimeVul Layer-1 初始化 Prompts
-# 每个 prompt 之间用 "=" 分隔线分隔
-# Prompt 中必须包含 {input} 占位符用于代码插入
+# 每个 prompt 之间用 "=" * 80 分隔
+# Prompt 中必须包含 {input} 占位符
 #
-# 这些 prompts 用于 CWE 大类漏洞分类任务
-# 有效的类别包括:
-# - Benign (无漏洞)
-# - Buffer Errors (缓冲区错误)
-# - Injection (注入攻击)
-# - Memory Management (内存管理问题)
-# - Pointer Dereference (指针解引用)
-# - Integer Errors (整数错误)
-# - Concurrency Issues (并发问题)
-# - Path Traversal (路径遍历)
-# - Cryptography Issues (密码学问题)
-# - Information Exposure (信息泄露)
-# - Other (其他安全问题)
+# 重要: 所有 prompt 必须显式列出完整的类别选项
+# 类别列表: 'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference',
+#          'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues',
+#          'Information Exposure', 'Other'
 
-# Prompt 1
-Analyze this code for security vulnerabilities and classify it into one of these CWE major categories: 'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'.
+# Prompt 1: 直接分析型
+Analyze this code for security vulnerabilities and classify it into ONE of these CWE major categories:
+'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'
 
 If no vulnerability is found, respond with 'Benign'.
 Respond ONLY with the category name.
@@ -29,22 +21,12 @@ CWE Major Category:
 
 ================================================================================
 
-# Prompt 2
+# Prompt 2: 安全专家角色
 You are a security expert analyzing code for vulnerabilities.
-
 Classify the code into ONE of these categories:
-- Benign: No security vulnerabilities
-- Buffer Errors: Buffer overflow, out-of-bounds access
-- Injection: SQL injection, command injection, XSS
-- Memory Management: Use-after-free, double-free, memory leaks
-- Pointer Dereference: Null pointer dereference
-- Integer Errors: Integer overflow/underflow
-- Concurrency Issues: Race conditions, deadlocks
-- Path Traversal: Directory traversal attacks
-- Cryptography Issues: Weak crypto, broken algorithms
-- Information Exposure: Data leaks, sensitive info disclosure
-- Other: Other security issues
+'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'
 
+For secure code, respond with 'Benign'.
 Output ONLY the category name, nothing else.
 
 Code:
@@ -54,23 +36,14 @@ Category:
 
 ================================================================================
 
-# Prompt 3
+# Prompt 3: 任务导向型
 Security vulnerability classification task.
 
-Examine the code and identify the PRIMARY vulnerability type from these CWE major categories:
-1. Benign - Code has no security vulnerabilities
-2. Buffer Errors - Issues with buffer boundaries and memory bounds
-3. Injection - SQL, command, or XSS injection vulnerabilities
-4. Memory Management - Memory allocation/deallocation errors
-5. Pointer Dereference - Invalid or null pointer access
-6. Integer Errors - Overflow, underflow, or wraparound issues
-7. Concurrency Issues - Race conditions or synchronization problems
-8. Path Traversal - Unauthorized file/directory access
-9. Cryptography Issues - Weak or broken cryptographic implementations
-10. Information Exposure - Unintended data disclosure
-11. Other - Security issues not covered by above categories
+Available categories: 'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'
 
-Response format: Category name only (e.g., "Buffer Errors" or "Benign").
+Examine the code and identify the PRIMARY vulnerability type.
+If the code is secure, respond with 'Benign'.
+Response format: Category name only.
 
 Code to analyze:
 {input}
@@ -79,175 +52,126 @@ Result:
 
 ================================================================================
 
-# Prompt 4
-You are performing a security code review. Your task is to classify code samples into vulnerability categories based on CWE (Common Weakness Enumeration) major groups.
+# Prompt 4: 模式匹配型
+Identify the security vulnerability pattern in this code.
 
-Available categories:
-• Benign: Secure code with no vulnerabilities
-• Buffer Errors: CWE-119, CWE-120, CWE-787 (buffer overflows, bounds violations)
-• Injection: CWE-78, CWE-79, CWE-89 (command injection, XSS, SQL injection)
-• Memory Management: CWE-416, CWE-415, CWE-401 (use-after-free, double-free, leaks)
-• Pointer Dereference: CWE-476 (null or invalid pointer access)
-• Integer Errors: CWE-190, CWE-191 (overflow, underflow, wraparound)
-• Concurrency Issues: CWE-362 (race conditions, improper synchronization)
-• Path Traversal: CWE-22 (directory traversal, unauthorized path access)
-• Cryptography Issues: CWE-326, CWE-327 (weak or broken crypto)
-• Information Exposure: CWE-200 (sensitive data leaks)
-• Other: Security issues not matching above categories
+Choose ONE category from: 'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'
 
-Analyze this code and respond with ONLY the category name:
+Look for:
+- Buffer Errors: buffer overflows, out-of-bounds access
+- Injection: SQL/command/code injection vulnerabilities
+- Memory Management: use-after-free, double-free, memory leaks
+- Pointer Dereference: null pointer dereference
+- Integer Errors: integer overflow/underflow
+- Concurrency Issues: race conditions, deadlocks
+- Path Traversal: directory traversal vulnerabilities
+- Cryptography Issues: weak crypto, improper key management
+- Information Exposure: sensitive data leaks
+- Benign: no security issues found
+- Other: other CWE types
 
+Code:
+{input}
+
+Category:
+
+================================================================================
+
+# Prompt 5: 步骤分析型
+Step-by-step security analysis:
+
+1. Read the code carefully
+2. Identify potential security issues
+3. Classify into ONE of these categories: 'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'
+
+Output format: Category name only.
+
+Code:
 {input}
 
 Classification:
 
 ================================================================================
 
-# Prompt 5
-Systematic vulnerability analysis:
+# Prompt 6: 特征检测型
+Detect security vulnerability by examining code characteristics.
 
-Step 1: Check for buffer/bounds issues → Buffer Errors
-Step 2: Look for injection vectors (SQL, command, XSS) → Injection
-Step 3: Analyze memory allocation/deallocation → Memory Management
-Step 4: Check pointer usage and dereferences → Pointer Dereference
-Step 5: Review integer operations for overflow/underflow → Integer Errors
-Step 6: Examine concurrency and synchronization → Concurrency Issues
-Step 7: Check path handling and file operations → Path Traversal
-Step 8: Review cryptographic implementations → Cryptography Issues
-Step 9: Look for data leaks and exposure → Information Exposure
-Step 10: Other security issues → Other
-Step 11: No issues found → Benign
+Categories: 'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'
 
-Apply these checks to the code below and output ONLY the matching category name.
-
-Code:
-{input}
-
-Result:
-
-================================================================================
-
-# Prompt 6
-As a cybersecurity expert specializing in static code analysis, classify this code snippet into one CWE major category.
-
-Focus on identifying:
-- Memory safety issues (buffer, pointer, allocation)
-- Input validation problems (injection attacks)
-- Numeric computation errors (integer overflows)
-- Concurrency bugs (race conditions)
-- Path validation issues (traversal attacks)
-- Cryptographic weaknesses
-- Information disclosure vulnerabilities
-- Or determine if code is secure (Benign)
-
-Valid categories: Benign, Buffer Errors, Injection, Memory Management, Pointer Dereference, Integer Errors, Concurrency Issues, Path Traversal, Cryptography Issues, Information Exposure, Other
-
-Code under review:
-{input}
-
-Expert classification:
-
-================================================================================
-
-# Prompt 7
-Identify CWE patterns in this code and map to major vulnerability categories.
-
-Common CWE mappings:
-- CWE-120, 119, 787, 125 → Buffer Errors
-- CWE-78, 79, 89, 74 → Injection
-- CWE-416, 415, 401 → Memory Management
-- CWE-476 → Pointer Dereference
-- CWE-190, 191 → Integer Errors
-- CWE-362 → Concurrency Issues
-- CWE-22 → Path Traversal
-- CWE-327, 326 → Cryptography Issues
-- CWE-200 → Information Exposure
-
-If no vulnerability pattern is detected, classify as "Benign".
-If the vulnerability doesn't match known patterns, use "Other".
-
-Respond with ONLY the category name.
-
-Code to classify:
-{input}
-
-CWE Major Category:
-
-================================================================================
-
-# Prompt 8
-From an attacker's perspective, what's the primary exploitable weakness in this code?
-
-Consider these attack vectors:
-1. Buffer-based attacks (overflows, out-of-bounds access)
-2. Injection attacks (SQL, command, XSS)
-3. Memory corruption exploits (use-after-free, double-free)
-4. Null/invalid pointer exploitation
-5. Integer overflow/underflow exploitation
-6. Race condition exploitation
-7. Path traversal attacks
-8. Cryptographic attacks (weak algorithms)
-9. Information disclosure
-10. Other exploitation techniques
-
-If code is secure against known attacks, respond "Benign".
-
-Output format: One category name only.
+Analysis focus:
+- Check for buffer handling issues (Buffer Errors)
+- Look for unsanitized inputs (Injection)
+- Examine memory operations (Memory Management)
+- Verify pointer usage (Pointer Dereference)
+- Review integer operations (Integer Errors)
+- Check thread safety (Concurrency Issues)
+- Analyze file path handling (Path Traversal)
+- Review cryptographic functions (Cryptography Issues)
+- Check for data leakage (Information Exposure)
 
 Code:
-{input}
-
-Exploitable weakness category:
-
-================================================================================
-
-# Prompt 9
-Defense-focused vulnerability analysis.
-
-Question: What type of security control would be needed to prevent exploitation of this code?
-
-Categories by defense requirement:
-- Buffer Errors: Bounds checking, safe string functions
-- Injection: Input validation, parameterized queries
-- Memory Management: Smart pointers, RAII, garbage collection
-- Pointer Dereference: Null checks, defensive programming
-- Integer Errors: Safe math operations, bounds checking
-- Concurrency Issues: Proper locking, atomic operations
-- Path Traversal: Path canonicalization, whitelist validation
-- Cryptography Issues: Strong algorithms, proper key management
-- Information Exposure: Access controls, encryption
-- Other: Various security controls
-- Benign: No additional controls needed
-
-Analyze the code and respond with the vulnerability category that indicates what security control is missing.
-
-Code to protect:
-{input}
-
-Vulnerability category:
-
-================================================================================
-
-# Prompt 10
-Code security triage: Classify by severity and type.
-
-Primary vulnerability categories (ordered by typical severity):
-1. Injection - Critical: Allows arbitrary code/command execution
-2. Buffer Errors - Critical: Memory corruption, code execution
-3. Memory Management - High: Crashes, potential code execution
-4. Integer Errors - High: Logic errors, memory corruption
-5. Path Traversal - High: Unauthorized file access
-6. Pointer Dereference - Medium: Crashes, denial of service
-7. Concurrency Issues - Medium: Data corruption, races
-8. Cryptography Issues - Medium: Data exposure, authentication bypass
-9. Information Exposure - Low to Medium: Sensitive data leaks
-10. Other - Varies: Miscellaneous security issues
-11. Benign - None: No vulnerabilities detected
-
-Analyze this code and output ONLY the category name that best matches the primary vulnerability:
-
 {input}
 
 Category:
+
+================================================================================
+
+# Prompt 7: 简洁型
+Classify this code's security vulnerability.
+
+Categories: 'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'
+
+Code:
+{input}
+
+Answer (category name only):
+
+================================================================================
+
+# Prompt 8: CWE专家型
+As a CWE expert, classify this code into the most appropriate category.
+
+Available CWE major categories: 'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'
+
+Consider the primary security concern in the code.
+Respond with only the category name.
+
+Code:
+{input}
+
+Category:
+
+================================================================================
+
+# Prompt 9: 对比分析型
+Compare this code against known vulnerability patterns.
+
+Select ONE category: 'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'
+
+Consider:
+- What type of security flaw is present?
+- Which CWE category best describes it?
+- If no flaw exists, choose 'Benign'
+
+Code:
+{input}
+
+Classification:
+
+================================================================================
+
+# Prompt 10: 上下文型
+Security vulnerability detection and classification.
+
+You must choose ONE category from this complete list:
+'Benign', 'Buffer Errors', 'Injection', 'Memory Management', 'Pointer Dereference', 'Integer Errors', 'Concurrency Issues', 'Path Traversal', 'Cryptography Issues', 'Information Exposure', 'Other'
+
+Analyze the code for security issues and select the most appropriate category.
+For code without security issues, select 'Benign'.
+
+Code to analyze:
+{input}
+
+Selected category:
 
 ================================================================================
