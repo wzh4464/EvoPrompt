@@ -73,7 +73,7 @@ class SVENLLMClient(LLMClient):
         # Get configuration from environment or parameters
         self.api_base = api_base or os.getenv("API_BASE_URL", "https://api.chatanywhere.tech/v1")
         self.api_key = api_key or os.getenv("API_KEY", "")
-        self.model_name = model_name or os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+        self.model_name = model_name or os.getenv("MODEL_NAME", "gpt-4o")
         self.backup_api_base = os.getenv("BACKUP_API_BASE_URL", "https://newapi.aicohere.org/v1")
         
         self.max_retries = max_retries
@@ -620,6 +620,21 @@ def sven_llm_query(data: Union[str, List[str]], client: LLMClient, task: bool = 
 
 
 # Main entry point - use OpenAI-compatible client as default  
-def create_default_client():
-    """Create default OpenAI-compatible LLM client (ModelScope)."""
-    return OpenAICompatibleClient()
+def create_default_client(model_name: Optional[str] = None, api_base: Optional[str] = None, api_key: Optional[str] = None):
+    """Create default OpenAI-compatible LLM client for code analysis."""
+    model = model_name or os.getenv("MODEL_NAME", None)
+    base = api_base or os.getenv("API_BASE_URL", None)
+    key = api_key or os.getenv("API_KEY", None)
+    return OpenAICompatibleClient(model_name=model, api_base=base, api_key=key)
+
+
+def create_meta_prompt_client(
+    model_name: Optional[str] = None,
+    api_base: Optional[str] = None,
+    api_key: Optional[str] = None,
+) -> LLMClient:
+    """Create LLM client dedicated to meta-prompt evolution."""
+    meta_model = model_name or os.getenv("META_MODEL_NAME", "claude-sonnet-4-5-20250929-thinking")
+    meta_base = api_base or os.getenv("META_API_BASE_URL") or os.getenv("API_BASE_URL")
+    meta_key = api_key or os.getenv("META_API_KEY") or os.getenv("API_KEY")
+    return OpenAICompatibleClient(model_name=meta_model, api_base=meta_base, api_key=meta_key)
