@@ -21,16 +21,22 @@ import textwrap
 from string import Template
 
 # 添加 src 路径
-sys.path.insert(0, "src")
+PROJECT_ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from evoprompt.data.sampler import sample_primevul_1percent
 from evoprompt.data.dataset import PrimevulDataset
-from evoprompt.data.cwe_categories import (
-    CWE_MAJOR_CATEGORIES,
-    map_cwe_to_major,
-    canonicalize_category,
+from evoprompt.data.cwe_layer1 import (
+    CWE_ID_PATTERN,
+    LAYER1_ALIAS_MAP,
+    LAYER1_CLASS_LABELS,
+    LAYER1_CATEGORY_DESCRIPTIONS_BLOCK,
+    LAYER1_DESCENDANT_TO_ROOT,
+    LAYER1_SUBCATEGORY_REFERENCE,
+    canonicalize_layer1_category,
+    map_cwe_to_layer1,
 )
-from evoprompt.llm.client import create_default_client
+from evoprompt.llm.client import create_default_client, create_meta_prompt_client
 from evoprompt.algorithms.base import Individual, Population
 from evoprompt.utils.checkpoint import (
     CheckpointManager,
@@ -148,16 +154,31 @@ class StructuredPromptBuilder:
     ANALYSIS_START = "### ANALYSIS GUIDANCE START"
     ANALYSIS_END = "### ANALYSIS GUIDANCE END"
 
-    def __init__(self, categories: List[str], default_guidance: str):
+    def __init__(
+        self,
+        categories: List[str],
+        default_guidance: str,
+        subcategory_reference: Optional[str] = None,
+        category_descriptions: Optional[str] = None,
+    ):
         self.categories = categories
         self.default_guidance = default_guidance.strip()
+        self.subcategory_reference = (
+            textwrap.dedent(subcategory_reference).strip()
+            if subcategory_reference
+            else ""
+        )
+        self.category_descriptions = (
+            textwrap.dedent(category_descriptions).strip()
+            if category_descriptions
+            else ""
+        )
         self.template = Template(
             textwrap.dedent(
                 """You are a security-focused code analysis assistant.
 
-Classify the provided code into exactly one of the following CWE major categories:
-$categories_block
-
+Classify the provided code into exactly one of the following level-0 CWE root categories:
+$categories_block$category_descriptions_block$subcategory_reference_block
 $analysis_start
 $analysis_guidance
 $analysis_end
@@ -185,6 +206,8 @@ CWE Major Category:
         """Return a preview of the structured template for evolution instructions."""
         return self.template.substitute(
             categories_block=self._format_categories(),
+            category_descriptions_block=self._format_category_descriptions_block(),
+            subcategory_reference_block=self._preview_subcategory_reference_block(),
             analysis_start=self.ANALYSIS_START,
             analysis_end=self.ANALYSIS_END,
             analysis_guidance="<<analysis guidance text>>",
@@ -194,11 +217,34 @@ CWE Major Category:
     def _format_categories(self) -> str:
         return "\n".join(f"- {cat}" for cat in self.categories)
 
+    def _format_category_descriptions_block(self) -> str:
+        if not self.category_descriptions:
+            return "\n"
+        return (
+            "\nCategory Descriptions (fixed reference):\n"
+            f"{self.category_descriptions}\n"
+        )
+
+    def _format_subcategory_reference_block(self) -> str:
+        if not self.subcategory_reference:
+            return "\n"
+        return (
+            "\nReference Subcategories (for context):\n"
+            f"{self.subcategory_reference}\n"
+        )
+
+    def _preview_subcategory_reference_block(self) -> str:
+        if not self.subcategory_reference:
+            return "\n"
+        return "\nReference Subcategories (for context):\n<<subcategory reference>>\n"
+
     def render(self, guidance: str) -> str:
         """Render the full prompt using the provided guidance."""
         cleaned_guidance = self._sanitize_guidance_text(guidance)
         return self.template.substitute(
             categories_block=self._format_categories(),
+            category_descriptions_block=self._format_category_descriptions_block(),
+            subcategory_reference_block=self._format_subcategory_reference_block(),
             analysis_start=self.ANALYSIS_START,
             analysis_end=self.ANALYSIS_END,
             analysis_guidance=cleaned_guidance,
@@ -260,7 +306,12 @@ class PromptEvolver:
         self.llm_client = llm_client
         self.config = config
         self.evolution_history = []
-        self.builder = StructuredPromptBuilder(CWE_MAJOR_CATEGORIES, self.DEFAULT_GUIDANCE)
+        self.builder = StructuredPromptBuilder(
+            LAYER1_CLASS_LABELS,
+            self.DEFAULT_GUIDANCE,
+            subcategory_reference=LAYER1_SUBCATEGORY_REFERENCE,
+            category_descriptions=LAYER1_CATEGORY_DESCRIPTIONS_BLOCK,
+        )
 
     def evolve_with_feedback(
         self,
@@ -408,9 +459,18 @@ class PrimeVulLayer1Pipeline:
         self.exp_dir.mkdir(exist_ok=True, parents=True)
 
         # 初始化组件
-        self.llm_client = create_default_client()
+        self.llm_client = create_default_client(
+            model_name=config.get("analysis_model_name"),
+            api_base=config.get("analysis_api_base"),
+            api_key=config.get("analysis_api_key"),
+        )
+        self.meta_llm_client = create_meta_prompt_client(
+            model_name=config.get("meta_model_name"),
+            api_base=config.get("meta_api_base"),
+            api_key=config.get("meta_api_key"),
+        )
         self.batch_analyzer = BatchAnalyzer(batch_size=self.batch_size)
-        self.prompt_evolver = PromptEvolver(self.llm_client, config)
+        self.prompt_evolver = PromptEvolver(self.meta_llm_client, config)
 
         # 初始化 Checkpoint 管理器
         self.checkpoint_manager = CheckpointManager(self.exp_dir, auto_save=True)
@@ -593,7 +653,7 @@ class PrimeVulLayer1Pipeline:
             cwe_codes = sample.metadata.get("cwe", [])
 
             if ground_truth_binary == 1 and cwe_codes:
-                ground_truth_category = map_cwe_to_major(cwe_codes)
+                ground_truth_category = map_cwe_to_layer1(cwe_codes)
             else:
                 ground_truth_category = "Benign"
 
@@ -619,7 +679,7 @@ class PrimeVulLayer1Pipeline:
                 if response == "error":
                     predictions.append("Other")
                 else:
-                    predicted_category = canonicalize_category(response)
+                    predicted_category = canonicalize_layer1_category(response)
 
                     # 调试：打印前几个响应
                     if batch_idx == 0 and idx < 3:
@@ -627,33 +687,31 @@ class PrimeVulLayer1Pipeline:
                         print(f"        🎯 解析结果: '{predicted_category}'")
 
                     if predicted_category is None:
-                        # 尝试从响应中提取
                         response_lower = response.lower()
-                        if "benign" in response_lower:
-                            predicted_category = "Benign"
-                        elif "buffer" in response_lower:
-                            predicted_category = "Buffer Errors"
-                        elif "injection" in response_lower or "inject" in response_lower:
-                            predicted_category = "Injection"
-                        elif "memory" in response_lower:
-                            predicted_category = "Memory Management"
-                        elif "pointer" in response_lower:
-                            predicted_category = "Pointer Dereference"
-                        elif "integer" in response_lower:
-                            predicted_category = "Integer Errors"
-                        elif "concurrency" in response_lower or "race" in response_lower:
-                            predicted_category = "Concurrency Issues"
-                        elif "path" in response_lower or "traversal" in response_lower:
-                            predicted_category = "Path Traversal"
-                        elif "crypto" in response_lower or "encryption" in response_lower:
-                            predicted_category = "Cryptography Issues"
-                        elif "information" in response_lower or "exposure" in response_lower or "leak" in response_lower:
-                            predicted_category = "Information Exposure"
-                        else:
-                            predicted_category = "Other"
+                        for key, mapped_label in LAYER1_ALIAS_MAP.items():
+                            if len(key) <= 4:
+                                continue
+                            if key in response_lower:
+                                predicted_category = mapped_label
+                                break
+
+                        if predicted_category is None:
+                            match = CWE_ID_PATTERN.search(response_lower)
+                            if match:
+                                candidate_label = LAYER1_DESCENDANT_TO_ROOT.get(match.group().upper())
+                                if candidate_label:
+                                    predicted_category = candidate_label
+
+                        if predicted_category is None:
+                            if "benign" in response_lower:
+                                predicted_category = "Benign"
+                            elif "unknown" in response_lower or "other" in response_lower:
+                                predicted_category = "Other"
+                            else:
+                                predicted_category = "Other"
 
                         if batch_idx == 0 and idx < 3:
-                            print(f"        ⚠️ 使用关键词匹配: '{predicted_category}'")
+                            print(f"        ⚠️ 使用层级映射回退: '{predicted_category}'")
 
                     predictions.append(predicted_category)
 
@@ -760,7 +818,7 @@ class PrimeVulLayer1Pipeline:
         report = classification_report(
             all_ground_truths,
             all_predictions,
-            labels=CWE_MAJOR_CATEGORIES,
+            labels=LAYER1_CLASS_LABELS,
             output_dict=True,
             zero_division=0
         )
@@ -769,7 +827,7 @@ class PrimeVulLayer1Pipeline:
         cm = confusion_matrix(
             all_ground_truths,
             all_predictions,
-            labels=CWE_MAJOR_CATEGORIES
+            labels=LAYER1_CLASS_LABELS
         )
 
         return {
@@ -831,7 +889,7 @@ class PrimeVulLayer1Pipeline:
         print("📁 准备数据集...")
         primevul_dir = Path(self.config.get("primevul_dir", "./data/primevul/primevul"))
         sample_dir = Path(self.config.get("sample_dir", "./data/primevul_1percent_sample"))
-        balance_mode = self.config.get("balance_mode", "target")
+        balance_mode = self.config.get("balance_mode", "layer1")
         force_resample = bool(self.config.get("force_resample", False))
 
         stats_file = sample_dir / "sampling_stats.json"
@@ -1064,7 +1122,7 @@ class PrimeVulLayer1Pipeline:
             f.write(f"{'Category':<25} {'Precision':>10} {'Recall':>10} {'F1-Score':>10} {'Support':>10}\n")
             f.write(f"{'-'*80}\n")
 
-            for category in CWE_MAJOR_CATEGORIES:
+            for category in LAYER1_CLASS_LABELS:
                 if category in report:
                     metrics = report[category]
                     f.write(f"{category:<25} {metrics['precision']:>10.4f} {metrics['recall']:>10.4f} "
@@ -1084,7 +1142,7 @@ class PrimeVulLayer1Pipeline:
         confusion_file = self.exp_dir / "confusion_matrix.json"
         with open(confusion_file, "w", encoding="utf-8") as f:
             json.dump({
-                "labels": CWE_MAJOR_CATEGORIES,
+                "labels": LAYER1_CLASS_LABELS,
                 "matrix": best_result["confusion_matrix"]
             }, f, indent=2, ensure_ascii=False)
         print(f"  ✓ {confusion_file}")
@@ -1119,7 +1177,7 @@ class PrimeVulLayer1Pipeline:
         print(f"{'Category':<25} {'Precision':>10} {'Recall':>10} {'F1-Score':>10} {'Support':>10}")
         print(f"{'-'*80}")
 
-        for category in CWE_MAJOR_CATEGORIES:
+        for category in LAYER1_CLASS_LABELS:
             if category in report:
                 metrics = report[category]
                 print(f"{category:<25} {metrics['precision']:>10.4f} {metrics['recall']:>10.4f} "
