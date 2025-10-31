@@ -7,6 +7,7 @@ from pathlib import Path
 import logging
 
 from .cwe_categories import map_cwe_to_major
+from .cwe_layer1 import map_cwe_to_layer1
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,19 @@ class BalancedSampler:
             major = map_cwe_to_major(cwe_codes) if cwe_codes else "Other"
             return major or "Other"
 
+        if balance_mode == "layer1":
+            if target_int == 0:
+                return "Benign"
+
+            cwe_codes = item.get("cwe", [])
+            if isinstance(cwe_codes, str):
+                cwe_codes = [cwe_codes] if cwe_codes else []
+            elif not isinstance(cwe_codes, list):
+                cwe_codes = []
+
+            layer1 = map_cwe_to_layer1(cwe_codes) if cwe_codes else "Other"
+            return layer1 or "Other"
+
         raise ValueError(f"Unsupported balance_mode: {balance_mode}")
 
     def sample_primevul_balanced(
@@ -63,7 +77,7 @@ class BalancedSampler:
             data_file: JSONL格式的数据文件路径
             sample_ratio: 采样比例 (0.01 = 1%)
             target_field: 目标标签字段名
-            balance_mode: 均衡模式，"target" 按 0/1，"major" 按 CWE 大类
+        balance_mode: 均衡模式，"target" 按 0/1，"major" 按旧 CWE 大类，"layer1" 按层级根节点
 
         Returns:
             (sampled_data, statistics)
@@ -234,7 +248,7 @@ def sample_primevul_1percent(
     primevul_dir: str,
     output_dir: str,
     seed: int = 42,
-    balance_mode: str = "target",
+    balance_mode: str = "layer1",
 ) -> Dict[str, Any]:
     """
     从Primevul数据集采样1%均衡数据的便捷函数。
@@ -273,7 +287,7 @@ def sample_primevul_1percent(
     # 采样1%数据
     sampled_data, stats = sampler.sample_primevul_balanced(
         data_file=str(dev_file),
-        sample_ratio=1.0,
+        sample_ratio=0.1,
         balance_mode=balance_mode,
     )
     
@@ -287,6 +301,19 @@ def sample_primevul_1percent(
         dev_ratio=0.3,
         label_field="_balance_label",
     )
+
+    original_train_len = len(train_data)
+    train_data = [item for item in train_data if item.get("_balance_label") != "Benign"]
+    removed_benign = original_train_len - len(train_data)
+
+    if removed_benign:
+        logger.info(
+            "Removed %d Benign samples from training split to focus on vulnerable categories",
+            removed_benign,
+        )
+
+    if not train_data:
+        raise ValueError("Training split is empty after removing Benign samples.")
     
     # 保存数据文件
     files = {}
@@ -318,12 +345,16 @@ def sample_primevul_1percent(
     # 保存统计信息
     stats_file = output_path / "sampling_stats.json"
     stats["files"] = files
+    stats["train_without_benign"] = len(train_data)
+    stats["train_removed_benign"] = removed_benign
     stats["sampling_config"] = {
         "sample_ratio": 0.01,
         "dev_ratio": 0.3,
         "seed": seed,
         "source_file": str(dev_file),
         "balance_mode": balance_mode,
+        "train_remove_benign": True,
+        "removed_benign_train": removed_benign,
     }
     
     with open(stats_file, 'w', encoding='utf-8') as f:
