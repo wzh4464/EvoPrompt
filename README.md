@@ -164,6 +164,45 @@ uv run ruff check src/
 uv run mypy src/
 ```
 
+## 🧪 Response Parsing Harness
+
+Use `scripts/verify_response_parsing.py` to run a handful of real LLM calls and
+confirm that the parser recovers the intended labels:
+
+```bash
+uv run python scripts/verify_response_parsing.py \
+  --llm-type openai \
+  --model-name gpt-4o-mini \
+  --sample-file data/primevul_1percent_sample/dev_sample.jsonl \
+  --max-samples 3 \
+  --temperature 0.0 \
+  --verbose
+```
+
+- 指定完整 PrimeVul 样本并输出结果归档，可直接复制下面命令：
+
+```bash
+uv run python scripts/verify_response_parsing.py \
+  --model-name gpt-4o \
+  --sample-file data/primevul_1percent_sample/dev_sample.jsonl \
+  --max-samples 10 \
+  --temperature 0.0 \
+  --verbose \
+  --use-cwe-major \
+  --output-json result.json
+```
+
+- 默认运行真实 LLM；确保 `.env` 中已有 `API_KEY`、`API_BASE_URL`、`MODEL_NAME`
+  等配置。
+- 内置 `--use-cwe-major` 模式用于验证大类分类解析。
+- 若想在离线环境调试，可传 `--mock-response "benign"` 复用单一响应，但
+  该模式不会进行真实 API 校验。
+- 使用 `--output-json` 将每个样例的 prompt、原始响应与解析结果保存下来，
+  便于进一步分析。
+
+> pytest 默认不会运行 `tests/test_response_parsing.py`；若需要连同单元测试一起校验，
+> 请在命令前设置 `RUN_RESPONSE_PARSING_TESTS=1`。
+
 ## 📋 Requirements
 
 - Python 3.11+
