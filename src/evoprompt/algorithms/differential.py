@@ -53,6 +53,8 @@ You are helping with differential evolution for prompt optimization. Given three
 1. Taking the base prompt (Prompt 1)
 2. Adding the "difference" between Prompt 2 and Prompt 3
 3. The result should combine elements that make Prompt 2 better than Prompt 3
+4. Preserve any {{input}} or {{nl_ast}} placeholders if they effectively contribute to performance
+5. Note that {{nl_ast}} provides semantic code structure and may enhance analysis
 
 Base Prompt (x_r1): {x_r1.prompt}
 
@@ -88,7 +90,10 @@ Make a small improvement to this prompt while maintaining its core functionality
 
 Original: {individual.prompt}
 
-Create a slightly improved version:
+Create a slightly improved version that:
+1. Maintains core functionality
+2. Preserves {{input}} and {{nl_ast}} placeholders if present
+3. Leverages {{nl_ast}} semantic information effectively if used
 
 Improved prompt:"""
 

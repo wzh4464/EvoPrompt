@@ -221,6 +221,9 @@ class PrimevulDataset(Dataset):
                                 "func_hash": item.get("func_hash"),
                                 "file_name": file_name,  # 保留原始文件名
                                 "lang": lang,  # 新增：语言标识
+                                # NL AST fields (if available from comment4vul processing)
+                                "nl_ast": item.get("natural_language_ast") or item.get("clean_code") or item.get("nl_ast"),
+                                "choices": item.get("choices"),  # Original commented code
                             }
 
                             sample = Sample(

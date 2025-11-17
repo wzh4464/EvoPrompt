@@ -108,6 +108,8 @@ Create a new prompt that:
 2. Maintains clarity and coherence
 3. Is suitable for the same task
 4. Is different from both parent prompts
+5. If either prompt uses {{input}} or {{nl_ast}} placeholders, preserve their effective usage
+6. The {{nl_ast}} placeholder provides semantic code structure and can enhance understanding
 
 New combined prompt:"""
 
@@ -141,6 +143,8 @@ Create an improved version that:
 2. Has slightly different wording or structure
 3. Might be more clear, specific, or effective
 4. Is still coherent and well-formed
+5. Preserves any {{input}} or {{nl_ast}} placeholders if they exist
+6. Consider that {{nl_ast}} provides semantic code structure that can enhance analysis
 
 Improved prompt:"""
 

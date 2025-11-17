@@ -153,19 +153,40 @@ class Evaluator:
         return EvaluationResult(score=score, details=details)
         
     def _format_prompt(self, prompt: str, sample) -> str:
-        """Format the prompt with sample data and optional static analysis.
+        """Format the prompt with sample data and optional enhancements.
 
         Args:
-            prompt: Template prompt with {input} placeholder
+            prompt: Template prompt with {input} and/or {nl_ast} placeholders
             sample: Sample object with input_text and metadata
 
         Returns:
-            str: Formatted prompt, optionally enhanced with static analysis results
+            str: Formatted prompt, optionally enhanced with NL AST and/or static analysis results
         """
         # 基础格式化
         formatted = prompt
         if hasattr(sample, 'input_text'):
             formatted = formatted.replace("{input}", sample.input_text)
+
+        # NL AST 增强
+        if "{nl_ast}" in formatted and hasattr(sample, 'metadata'):
+            nl_ast = sample.metadata.get("nl_ast")
+            if nl_ast:
+                # Replace {nl_ast} placeholder with actual NL AST
+                formatted = formatted.replace("{nl_ast}", nl_ast)
+            else:
+                # If nl_ast not available but placeholder exists, remove it or use original code
+                formatted = formatted.replace("{nl_ast}", sample.input_text)
+                if sample.metadata.get("idx"):
+                    logger.debug(f"NL AST not available for sample {sample.metadata['idx']}, using original code")
+
+        # 自动注入 NL AST (可选,如果配置启用且 prompt 中没有明确使用)
+        if (self.config.get("auto_inject_nl_ast", False) and
+            "{nl_ast}" not in prompt and
+            hasattr(sample, 'metadata')):
+            nl_ast = sample.metadata.get("nl_ast")
+            if nl_ast and nl_ast != sample.input_text:
+                # Only inject if NL AST is different from original code
+                formatted = f"{formatted}\n\n### Natural Language AST\n{nl_ast}"
 
         # 静态分析增强
         if self.static_analysis_enabled and hasattr(sample, 'metadata'):

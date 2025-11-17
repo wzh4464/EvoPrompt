@@ -1,3 +1,6 @@
 [submodule "sven"]
 	path = sven
 	url = git@github.com:wzh4464/sven.git
+[submodule "comment4vul"]
+	path = comment4vul
+	url = git@github.com:wzh4464/Comment4Vul.git
