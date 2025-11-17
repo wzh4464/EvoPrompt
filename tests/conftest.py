@@ -49,6 +49,7 @@ def mock_dataset():
         def __init__(self, input_text, target):
             self.input_text = input_text
             self.target = target
+            self.metadata = {}
     
     dataset.get_samples.return_value = [
         MockSample("What is 2+2?", "4"),

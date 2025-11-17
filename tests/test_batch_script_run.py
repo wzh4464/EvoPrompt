@@ -44,6 +44,9 @@ def create_mock_data(temp_dir: Path):
         }
     ]
     
+    # 确保目录存在
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    
     # 写入开发集
     dev_file = temp_dir / "dev.txt"
     with open(dev_file, 'w', encoding='utf-8') as f:

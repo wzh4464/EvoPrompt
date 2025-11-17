@@ -5,13 +5,18 @@
 
 import sys
 import inspect
+from pathlib import Path
+
+# 添加项目根目录到路径，以便导入scripts模块
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 
 def test_default_concurrent_config():
     """测试默认配置是否启用并发"""
     print("🔧 测试默认并发配置...")
 
-    from run_primevul_concurrent_optimized import create_optimized_config
+    from scripts.run_primevul_concurrent_optimized import create_optimized_config
 
     config = create_optimized_config()
 
@@ -39,7 +44,7 @@ def test_concurrent_parameter_flow():
     """测试并发参数在整个调用链中的传递"""
     print("\n🔄 测试并发参数传递...")
 
-    from run_primevul_concurrent_optimized import create_optimized_config
+    from scripts.run_primevul_concurrent_optimized import create_optimized_config
 
     # 创建测试配置
     config = create_optimized_config()

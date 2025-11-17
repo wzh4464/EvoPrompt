@@ -106,8 +106,9 @@ class Evaluator:
             targets.append(sample.target)
 
             # 汇总静态分析结果
-            if '_analysis_result' in sample.metadata:
-                result = sample.metadata['_analysis_result']
+            metadata = getattr(sample, 'metadata', {})
+            if '_analysis_result' in metadata:
+                result = metadata['_analysis_result']
                 analysis_stats["total_analyzed"] += 1
                 analysis_stats["total_vulnerabilities"] += len(result.vulnerabilities)
 

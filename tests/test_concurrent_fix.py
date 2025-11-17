@@ -4,7 +4,12 @@
 """
 
 import sys
+from pathlib import Path
+
 sys.path.insert(0, 'src')
+# 添加项目根目录到路径，以便导入scripts模块
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 def test_openai_client_concurrent():
     """测试OpenAI客户端并发功能"""
@@ -86,7 +91,7 @@ def test_config_and_params():
     """测试配置和参数传递"""
     print("\n⚙️ 测试配置和参数传递...")
     
-    from run_primevul_concurrent_optimized import create_optimized_config
+    from scripts.run_primevul_concurrent_optimized import create_optimized_config
     
     config = create_optimized_config()
     

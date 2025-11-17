@@ -56,7 +56,8 @@ def safe_format(template: str, mapping: Optional[Mapping[str, Any]] = None, **kw
     }
 
     protected_template, markers = _protect_placeholders(template, escaped_values)
-    sanitized_template = protected_template.replace("{", "{{").replace("}", "}}")
+    # 双倍转义字面花括号，这样格式化后会保留为 {{ 和 }}
+    sanitized_template = protected_template.replace("{", "{{{{").replace("}", "}}}}")
     restored_template = _restore_placeholders(sanitized_template, markers)
 
     return restored_template.format(**escaped_values)

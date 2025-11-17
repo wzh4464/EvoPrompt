@@ -11,13 +11,16 @@ from pathlib import Path
 
 # 添加src路径
 sys.path.insert(0, 'src')
+# 添加项目根目录到路径，以便导入scripts模块
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 def test_config_generation():
     """测试配置生成是否包含批处理参数"""
     print("🔧 测试配置生成...")
     
     # 导入函数
-    from run_primevul_concurrent_optimized import create_optimized_config
+    from scripts.run_primevul_concurrent_optimized import create_optimized_config
     
     config = create_optimized_config()
     
@@ -83,7 +86,7 @@ def test_function_signatures():
     
     try:
         # 导入修改后的函数
-        from run_primevul_concurrent_optimized import (
+        from scripts.run_primevul_concurrent_optimized import (
             evaluate_on_dataset,
             sample_wise_feedback_training
         )
@@ -164,7 +167,7 @@ def test_import_and_basic_functionality():
     
     try:
         # 测试主要函数导入
-        from run_primevul_concurrent_optimized import (
+        from scripts.run_primevul_concurrent_optimized import (
             create_optimized_config,
             run_concurrent_evolution_with_feedback,
             evaluate_on_dataset,

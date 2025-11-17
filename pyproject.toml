@@ -65,7 +65,6 @@ vulnerability = [
     "bitsandbytes>=0.41.1",
     "comet>=3.1.0",
     "easse",
-    "fairseq>=0.12.2",
     "mosestokenizer>=1.2.1",
     "msal>=1.20.0",
     "nevergrad>=0.7.0",
