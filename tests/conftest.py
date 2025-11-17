@@ -3,13 +3,18 @@
 import pytest
 import tempfile
 import os
+import sys
 from pathlib import Path
 from unittest.mock import Mock
 
-from src.evoprompt.llm.client import LLMClient
-from src.evoprompt.core.evaluator import Evaluator
-from src.evoprompt.data.dataset import Dataset
-from src.evoprompt.metrics.base import Metric
+# Add src to path for imports
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / "src"))
+
+from evoprompt.llm.client import LLMClient
+from evoprompt.core.evaluator import Evaluator
+from evoprompt.data.dataset import Dataset
+from evoprompt.metrics.base import Metric
 
 
 @pytest.fixture
