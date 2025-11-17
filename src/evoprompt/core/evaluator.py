@@ -2,12 +2,15 @@
 
 import json
 import os
+import logging
 from typing import Dict, Any, List, Optional, Protocol
 import numpy as np
 
 from ..llm.client import LLMClient
 from ..data.dataset import Dataset
 from ..metrics.base import Metric
+
+logger = logging.getLogger(__name__)
 
 
 class EvaluationResult:
@@ -23,7 +26,7 @@ class EvaluationResult:
 
 class Evaluator:
     """Modern evaluator for prompt performance assessment."""
-    
+
     def __init__(
         self,
         dataset: Dataset,
@@ -34,8 +37,39 @@ class Evaluator:
         self.dataset = dataset
         self.metric = metric
         self.llm_client = llm_client
-        self.template_config = template_config or {}
-        
+        self.config = template_config or {}
+
+        # 静态分析配置
+        self.static_analysis_enabled = self.config.get("enable_static_analysis", False)
+        self.analysis_cache = None
+        self.analyzers = {}
+
+        if self.static_analysis_enabled:
+            self._initialize_static_analysis()
+
+    def _initialize_static_analysis(self) -> None:
+        """初始化静态分析器和缓存"""
+        try:
+            from ..analysis.cache import AnalysisCache
+            from ..analysis.bandit_analyzer import BanditAnalyzer
+
+            # 初始化缓存
+            cache_dir = self.config.get("analysis_cache_dir", ".cache/analysis")
+            self.analysis_cache = AnalysisCache(cache_dir)
+
+            # 注册可用的分析器
+            if BanditAnalyzer.is_available():
+                analyzer = BanditAnalyzer()
+                self.analyzers['python'] = analyzer
+                self.analyzers['py'] = analyzer
+                logger.info("Bandit analyzer initialized")
+            else:
+                logger.warning("Bandit is not available, Python analysis will be skipped")
+
+        except ImportError as e:
+            logger.warning(f"Static analysis module not available: {e}")
+            self.static_analysis_enabled = False
+
     def evaluate(self, prompt: str, sample_size: Optional[int] = None, filled_prompts_file: Optional[str] = None) -> EvaluationResult:
         """Evaluate a prompt on the dataset. Optionally log all filled prompt instances."""
         samples = self.dataset.get_samples(sample_size)
@@ -43,8 +77,17 @@ class Evaluator:
         targets = []
         filled_examples = []
 
+        # 收集静态分析统计
+        analysis_stats = {
+            "total_analyzed": 0,
+            "total_vulnerabilities": 0,
+            "high_severity_count": 0,
+            "medium_severity_count": 0,
+            "low_severity_count": 0,
+        }
+
         for idx, sample in enumerate(samples):
-            # Format prompt with sample
+            # Format prompt with sample (may include static analysis)
             formatted_prompt = self._format_prompt(prompt, sample)
 
             # 收集填充实例
@@ -62,6 +105,20 @@ class Evaluator:
             predictions.append(response)
             targets.append(sample.target)
 
+            # 汇总静态分析结果
+            if '_analysis_result' in sample.metadata:
+                result = sample.metadata['_analysis_result']
+                analysis_stats["total_analyzed"] += 1
+                analysis_stats["total_vulnerabilities"] += len(result.vulnerabilities)
+
+                for vuln in result.vulnerabilities:
+                    if vuln.severity == "high":
+                        analysis_stats["high_severity_count"] += 1
+                    elif vuln.severity == "medium":
+                        analysis_stats["medium_severity_count"] += 1
+                    elif vuln.severity == "low":
+                        analysis_stats["low_severity_count"] += 1
+
         # 写入聚合的填充实例（如指定文件）
         if filled_prompts_file is not None and filled_examples:
             try:
@@ -74,20 +131,66 @@ class Evaluator:
         # Calculate metric
         score = self.metric.compute(predictions, targets)
 
-        return EvaluationResult(
-            score=score,
-            details={
-                "num_samples": len(samples),
-                "predictions": predictions[:5],  # Store first 5 for debugging
-                "targets": targets[:5]
-            }
-        )
+        # 构建详细信息
+        details = {
+            "num_samples": len(samples),
+            "predictions": predictions[:5],  # Store first 5 for debugging
+            "targets": targets[:5]
+        }
+
+        # 添加静态分析统计
+        if self.static_analysis_enabled and analysis_stats["total_analyzed"] > 0:
+            details["analysis_stats"] = analysis_stats
+            details["analysis_summary"] = (
+                f"{analysis_stats['total_vulnerabilities']} issues found "
+                f"({analysis_stats['high_severity_count']} high, "
+                f"{analysis_stats['medium_severity_count']} medium, "
+                f"{analysis_stats['low_severity_count']} low) "
+                f"in {analysis_stats['total_analyzed']} samples"
+            )
+
+        return EvaluationResult(score=score, details=details)
         
     def _format_prompt(self, prompt: str, sample) -> str:
-        """Format the prompt with sample data."""
+        """Format the prompt with sample data and optional static analysis.
+
+        Args:
+            prompt: Template prompt with {input} placeholder
+            sample: Sample object with input_text and metadata
+
+        Returns:
+            str: Formatted prompt, optionally enhanced with static analysis results
+        """
+        # 基础格式化
+        formatted = prompt
         if hasattr(sample, 'input_text'):
-            return prompt.replace("{input}", sample.input_text)
-        return prompt
+            formatted = formatted.replace("{input}", sample.input_text)
+
+        # 静态分析增强
+        if self.static_analysis_enabled and hasattr(sample, 'metadata'):
+            lang = sample.metadata.get("lang")
+            analyzer = self.analyzers.get(lang)
+
+            if analyzer:
+                try:
+                    # 使用缓存的分析
+                    result = analyzer.analyze_with_cache(
+                        sample.input_text,
+                        lang,
+                        self.analysis_cache
+                    )
+
+                    if not result.is_empty():
+                        summary = result.get_summary()
+                        formatted = f"{formatted}\n\n### Static Analysis Hints\n{summary}"
+
+                        # 保存到 sample metadata 供后续使用
+                        sample.metadata['_analysis_result'] = result
+
+                except Exception as e:
+                    logger.warning(f"Static analysis failed for sample: {e}")
+
+        return formatted
 
 
 # Legacy evaluator class for backward compatibility
