@@ -54,6 +54,79 @@ class PrimevulDataset(Dataset):
         self._samples = self.load_data(self.data_path)
 
     @staticmethod
+    def _detect_language_from_filename(file_name: Optional[str]) -> Optional[str]:
+        """从文件名提取语言信息"""
+        if not file_name or file_name == "None":
+            return None
+
+        # 扩展名到语言的映射
+        ext_map = {
+            'c': 'c',
+            'h': 'c',  # C头文件
+            'cpp': 'cpp',
+            'cc': 'cpp',
+            'cxx': 'cpp',
+            'hpp': 'cpp',
+            'hxx': 'cpp',
+            'java': 'java',
+            'py': 'python',
+            'js': 'javascript',
+            'ts': 'typescript',
+            'go': 'go',
+            'rs': 'rust',
+        }
+
+        # 提取扩展名
+        if '.' in file_name:
+            ext = file_name.rsplit('.', 1)[-1].lower()
+            return ext_map.get(ext)
+
+        return None
+
+    @staticmethod
+    def _detect_language_from_code(code: str) -> str:
+        """基于代码特征的语言检测（备用方案）"""
+        code_sample = code[:1000]  # 检查前1000字符以提高准确率
+
+        # C/C++ 特征（增强版）
+        c_cpp_indicators = [
+            '#include', 'void ', 'int main', 'malloc', 'free', 'printf',
+            'static ', 'uint32', 'int32', 'uint16', 'uint8',  # 常见C类型
+            'typedef ', 'struct ', 'enum ', 'sizeof(',  # C结构
+        ]
+        cpp_indicators = ['::', 'std::', 'class ', 'namespace ', 'template<']
+
+        # 先检查C++特征
+        if any(ind in code_sample for ind in cpp_indicators):
+            return 'cpp'
+
+        # 检查C特征（更宽松的匹配）
+        if any(ind in code_sample for ind in c_cpp_indicators):
+            return 'c'
+
+        # Java 特征
+        java_indicators = ['public class', 'import java', 'System.out', 'package ', 'extends ', 'implements ']
+        if any(ind in code_sample for ind in java_indicators):
+            return 'java'
+
+        # Python 特征
+        python_indicators = ['def ', 'import ', 'from ', 'if __name__', 'print(']
+        if any(ind in code_sample for ind in python_indicators):
+            return 'python'
+
+        # JavaScript 特征
+        js_indicators = ['function ', 'const ', 'let ', '=>', 'require(', 'module.exports']
+        if any(ind in code_sample for ind in js_indicators):
+            return 'javascript'
+
+        # 最后的启发式判断：如果看起来像系统级代码，可能是C
+        # 检查是否有典型的C风格函数声明
+        if 'static' in code_sample and '(' in code_sample and ')' in code_sample:
+            return 'c'
+
+        return 'unknown'
+
+    @staticmethod
     def _auto_fixed_path(data_path: str):
         """优先查找 _fixed 文件，若无则用原文件名."""
         path_obj = Path(data_path)
@@ -132,6 +205,12 @@ class PrimevulDataset(Dataset):
                                 item.get("target", 0)
                             )  # 0=benign, 1=vulnerable
 
+                            # 两级语言检测：优先file_name，备用代码特征
+                            file_name = item.get("file_name")
+                            lang = self._detect_language_from_filename(file_name)
+                            if not lang:
+                                lang = self._detect_language_from_code(func_code)
+
                             # Create metadata
                             metadata = {
                                 "idx": item.get("idx"),
@@ -140,6 +219,8 @@ class PrimevulDataset(Dataset):
                                 "cwe": item.get("cwe", []),
                                 "cve": item.get("cve"),
                                 "func_hash": item.get("func_hash"),
+                                "file_name": file_name,  # 保留原始文件名
+                                "lang": lang,  # 新增：语言标识
                             }
 
                             sample = Sample(
@@ -162,6 +243,8 @@ class PrimevulDataset(Dataset):
 
                         func_code, target = parts
                         target = target.strip()
+
+                        # 初始化metadata，稍后会补充更多信息
                         metadata = {"line_num": line_num}
 
                         meta_record = None
@@ -199,6 +282,13 @@ class PrimevulDataset(Dataset):
                             raw_code = meta_record.get("func")
                             if isinstance(raw_code, str) and raw_code.strip():
                                 func_code = raw_code.strip()
+
+                        # 两级语言检测
+                        file_name = metadata.get("file_name")
+                        lang = self._detect_language_from_filename(file_name)
+                        if not lang:
+                            lang = self._detect_language_from_code(func_code)
+                        metadata["lang"] = lang
 
                         sample = Sample(
                             input_text=func_code.strip(),
@@ -310,9 +400,15 @@ class BenchmarkDataset(Dataset):
                 )
                 has_vulnerability = bool(normalized_issues)
 
+                # 语言检测：优先使用数据中的lang字段，缺失时使用代码检测
+                lang = item.get("lang")
+                if not lang:
+                    # 使用PrimevulDataset的语言检测方法
+                    lang = PrimevulDataset._detect_language_from_code(code)
+
                 metadata: Dict[str, Any] = {
                     "index": item.get("index", idx),
-                    "lang": item.get("lang"),
+                    "lang": lang,  # 确保lang字段总是有值
                     "source": item.get("source"),
                     "categories": categories,
                     "cwe": cwe_codes,
