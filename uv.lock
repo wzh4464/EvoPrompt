@@ -254,6 +254,21 @@ wheels = [
 ]
 
 [[package]]
+name = "bandit"
+version = "1.8.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "pyyaml" },
+    { name = "rich" },
+    { name = "stevedore" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/b5/7eb834e213d6f73aace21938e5e90425c92e5f42abafaf8a6d5d21beed51/bandit-1.8.6.tar.gz", hash = "sha256:dbfe9c25fc6961c2078593de55fd19f2559f9e45b99f1272341f5b95dea4e56b", size = 4240271 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/48/ca/ba5f909b40ea12ec542d5d7bdd13ee31c4d65f3beed20211ef81c18fa1f3/bandit-1.8.6-py3-none-any.whl", hash = "sha256:3348e934d736fcdb68b6aa4030487097e23a501adf3e7827b63658df464dddd0", size = 133808 },
+]
+
+[[package]]
 name = "bayesian-optimization"
 version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1166,6 +1181,9 @@ docs = [
     { name = "sphinx", version = "8.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "sphinx-rtd-theme" },
 ]
+static-analysis = [
+    { name = "bandit" },
+]
 vulnerability = [
     { name = "bitsandbytes" },
     { name = "comet" },
@@ -1181,6 +1199,7 @@ vulnerability = [
 requires-dist = [
     { name = "accelerate", specifier = ">=0.21.0" },
     { name = "backoff", specifier = ">=2.2.1" },
+    { name = "bandit", marker = "extra == 'static-analysis'", specifier = ">=1.7.0" },
     { name = "bitsandbytes", marker = "extra == 'vulnerability'", specifier = ">=0.41.1" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
     { name = "comet", marker = "extra == 'vulnerability'", specifier = ">=3.1.0" },
@@ -1217,7 +1236,7 @@ requires-dist = [
     { name = "transformers", git = "https://github.com/huggingface/transformers.git" },
     { name = "unbabel-comet", marker = "extra == 'vulnerability'", specifier = ">=2.2.6" },
 ]
-provides-extras = ["dev", "vulnerability", "docs"]
+provides-extras = ["dev", "static-analysis", "vulnerability", "docs"]
 
 [[package]]
 name = "exceptiongroup"
@@ -3975,6 +3994,19 @@ wheels = [
 ]
 
 [[package]]
+name = "rich"
+version = "14.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py" },
+    { name = "pygments" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/d2/8920e102050a0de7bfabeb4c4614a49248cf8d5d7a8d01885fbb24dc767a/rich-14.2.0.tar.gz", hash = "sha256:73ff50c7c0c1c77c8243079283f4edb376f0f6442433aecb8ce7e6d0b92d1fe4", size = 219990 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/25/7a/b0178788f8dc6cafce37a212c99565fa1fe7872c70c6c9c1e1a372d9d88f/rich-14.2.0-py3-none-any.whl", hash = "sha256:76bc51fe2e57d2b1be1f96c524b890b816e334ab4c1e45888799bfaab0021edd", size = 243393 },
+]
+
+[[package]]
 name = "roman-numerals-py"
 version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4428,6 +4460,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/08/47/956a1cdfc1de6777437728a97f60b00deac37e5f48e981e0ab3abba17ada/stanfordnlp-0.2.0.tar.gz", hash = "sha256:a8bd56dfef23cbb1e1c461469ac5bdd4563c24f360befe300a7d97cb51b49a49", size = 119723 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/41/bf/5d2898febb6e993fcccd90484cba3c46353658511a41430012e901824e94/stanfordnlp-0.2.0-py3-none-any.whl", hash = "sha256:66450f0b422e649e8b31f171260930b733324b000ebfe81c436328b424425902", size = 158797 },
+]
+
+[[package]]
+name = "stevedore"
+version = "5.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/5f/8418daad5c353300b7661dd8ce2574b0410a6316a8be650a189d5c68d938/stevedore-5.5.0.tar.gz", hash = "sha256:d31496a4f4df9825e1a1e4f1f74d19abb0154aff311c3b376fcc89dae8fccd73", size = 513878 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/80/c5/0c06759b95747882bb50abda18f5fb48c3e9b0fbfc6ebc0e23550b52415d/stevedore-5.5.0-py3-none-any.whl", hash = "sha256:18363d4d268181e8e8452e71a38cd77630f345b2ef6b4a8d5614dac5ee0d18cf", size = 49518 },
 ]
 
 [[package]]
