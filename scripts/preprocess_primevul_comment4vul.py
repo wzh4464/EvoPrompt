@@ -357,9 +357,12 @@ def convert_primevul_to_comment4vul_format(
         "func": primevul_record["func"]
     }
 
-    # For now, use original function code
-    # TODO: Add LLM comment generation support
-    if use_llm_comments:
+    # Check if input already has LLM-generated comments in 'choices' field
+    if "choices" in primevul_record and primevul_record["choices"] != primevul_record["func"]:
+        # Use existing LLM-generated commented code
+        result["choices"] = primevul_record["choices"]
+        logger.debug(f"Using existing commented code from 'choices' field for sample {result['idx']}")
+    elif use_llm_comments:
         logger.warning("LLM comment generation not yet implemented, using original code")
         result["choices"] = primevul_record["func"]
     elif comment_text:

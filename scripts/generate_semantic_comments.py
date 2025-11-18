@@ -15,7 +15,7 @@ import logging
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from evoprompt.llm.client import create_client
+from evoprompt.llm.client import create_default_client
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -111,7 +111,7 @@ def main():
 
     # Create LLM client
     logger.info("Initializing LLM client...")
-    llm_client = create_client()
+    llm_client = create_default_client()
 
     # Load input data
     logger.info(f"Loading data from {args.input}")
