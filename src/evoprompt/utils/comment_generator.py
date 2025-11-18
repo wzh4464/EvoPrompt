@@ -103,32 +103,51 @@ class CommentGenerator:
         """
         Build prompt for comment generation.
 
-        Following OpenAI's best practices:
-        - Clear role definition
-        - Specific instructions
-        - Example format
+        Optimized for SCALE methodology:
+        - Single-line comments only
+        - Placed directly above control flow statements
+        - Concise and focused
         """
         return f"""You are a code analysis expert specializing in security vulnerability detection.
 
-Your task: Add inline comments to the following {language} code to explain:
-1. What each section does
-2. The purpose of key variables and conditions
-3. Potential security implications or edge cases
+Add SINGLE-LINE comments ONLY for control flow statements in this {language} code.
 
-Guidelines:
-- Use // for single-line comments
-- Place comments ABOVE the relevant code line
-- Be concise but informative
-- Focus on logic and security aspects
-- Do NOT add explanations outside the code
-- Return ONLY the commented code
+IMPORTANT Rules:
+1. Add ONE line comment DIRECTLY ABOVE these statements:
+   - if/else statements
+   - for/while loops
+   - return statements
+   - switch/case statements
 
-Code:
+2. Comment format:
+   - MUST be single line starting with //
+   - Maximum 80 characters
+   - Focus on WHY, not WHAT
+   - Mention security implications if relevant
+
+3. Do NOT add comments for:
+   - Function definitions
+   - Variable declarations
+   - Regular function calls
+   - Closing braces
+
+Example:
+```c
+int check(int x) {{
+    // Validate input is positive to prevent underflow
+    if (x < 0)
+        // Early return on invalid input
+        return -1;
+    return 0;
+}}
+```
+
+Code to comment:
 ```{language.lower()}
 {code}
 ```
 
-Commented code:"""
+Commented code (single-line comments only):"""
 
     def _normalize_llm_output(self, llm_output: str) -> str:
         """

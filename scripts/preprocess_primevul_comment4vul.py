@@ -209,8 +209,10 @@ def print_ast_node(code: str, node, indent: str = "") -> str:
                 if child.type == "parenthesized_expression" and child.start_point[0] == node.start_point[0]:
                     Begin = cpp_loc[child.start_point[0]][:child.start_point[1]]
                     End = cpp_loc[child.start_point[0]][child.end_point[1]:]
+                    original_expr = cpp_loc[child.start_point[0]][child.start_point[1]:child.end_point[1]]
 
-                    New_line = Begin + "(" + comment[1:] + ") " + End
+                    # Preserve original condition, add comment as inline comment
+                    New_line = Begin + original_expr[:-1] + " /* " + comment[1:].strip() + " */" + original_expr[-1:] + End
                     cpp_loc[node.start_point[0]] = New_line
                     code = "\n".join(cpp_loc)
 
@@ -222,8 +224,10 @@ def print_ast_node(code: str, node, indent: str = "") -> str:
                 if child.type == "parenthesized_expression" and child.start_point[0] == node.start_point[0]:
                     Begin = cpp_loc[child.start_point[0]][:child.start_point[1]]
                     End = cpp_loc[child.start_point[0]][child.end_point[1]:]
+                    original_expr = cpp_loc[child.start_point[0]][child.start_point[1]:child.end_point[1]]
 
-                    New_line = Begin + "(" + comment + ") " + End
+                    # Preserve original condition, add comment as inline comment
+                    New_line = Begin + original_expr[:-1] + " /* " + comment.strip() + " */" + original_expr[-1:] + End
                     cpp_loc[node.start_point[0]] = New_line
                     code = "\n".join(cpp_loc)
 
@@ -253,8 +257,10 @@ def print_ast_node(code: str, node, indent: str = "") -> str:
                 if child.type == "parenthesized_expression" and child.start_point[0] == node.start_point[0]:
                     Begin = cpp_loc[child.start_point[0]][:child.start_point[1]]
                     End = cpp_loc[child.start_point[0]][child.end_point[1]:]
+                    original_expr = cpp_loc[child.start_point[0]][child.start_point[1]:child.end_point[1]]
 
-                    New_line = Begin + " (" + comment[1:] + ") " + End
+                    # Preserve original condition, add comment as inline comment
+                    New_line = Begin + original_expr[:-1] + " /* " + comment[1:].strip() + " */" + original_expr[-1:] + End
                     cpp_loc[node.start_point[0]] = New_line
                     code = "\n".join(cpp_loc)
 
