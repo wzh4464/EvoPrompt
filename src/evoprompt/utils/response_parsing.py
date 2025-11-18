@@ -42,3 +42,4 @@ def extract_cwe_major(response: Optional[str]) -> str:
     category = canonicalize_category(normalized)
     return category or "Other"
 
+
