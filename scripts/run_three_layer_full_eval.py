@@ -136,12 +136,44 @@ def evaluate_single_sample(
         }
 
 
+def get_sample_id(item: Dict) -> str:
+    """获取样本唯一ID"""
+    # 优先使用 idx，否则用 func 的 hash
+    if "idx" in item:
+        return str(item["idx"])
+    return str(hash(item.get("func", "")[:200]))
+
+
+def load_checkpoint(checkpoint_file: str) -> Dict[str, Dict]:
+    """加载检查点"""
+    completed = {}
+    if os.path.exists(checkpoint_file):
+        with open(checkpoint_file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    try:
+                        record = json.loads(line)
+                        completed[record["sample_id"]] = record
+                    except:
+                        continue
+    return completed
+
+
+def save_checkpoint(checkpoint_file: str, sample_id: str, result: Dict):
+    """追加保存检查点"""
+    record = {"sample_id": sample_id, **result}
+    with open(checkpoint_file, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
 def evaluate_category_batch(
     category: str,
     samples: List[Dict],
     prompt_set,
     max_samples: Optional[int] = None,
-    use_scale: bool = False
+    use_scale: bool = False,
+    checkpoint_file: Optional[str] = None,
+    completed_ids: Optional[set] = None
 ) -> Dict[str, Any]:
     """评估单个类别的所有样本"""
 
@@ -149,24 +181,40 @@ def evaluate_category_batch(
         return {"category": category, "total": 0, "layer1_correct": 0, "accuracy": 0.0}
 
     eval_samples = samples[:max_samples] if max_samples else samples
+    completed_ids = completed_ids or set()
 
     results = []
     layer1_correct = 0
+    skipped = 0
 
     for item in eval_samples:
+        sample_id = get_sample_id(item)
+
+        # 跳过已完成的样本
+        if sample_id in completed_ids:
+            skipped += 1
+            continue
+
         result = evaluate_single_sample(item, prompt_set, category, use_scale)
         results.append(result)
+
         if result.get("layer1_correct"):
             layer1_correct += 1
 
-    accuracy = layer1_correct / len(eval_samples) if eval_samples else 0
+        # 保存检查点
+        if checkpoint_file:
+            save_checkpoint(checkpoint_file, sample_id, result)
+
+    total_evaluated = len(eval_samples) - skipped
+    accuracy = layer1_correct / total_evaluated if total_evaluated > 0 else 0
 
     return {
         "category": category,
-        "total": len(eval_samples),
+        "total": total_evaluated,
+        "skipped": skipped,
         "layer1_correct": layer1_correct,
         "accuracy": accuracy,
-        "sample_results": results[:5]  # 只保留前5个示例
+        "sample_results": results[:5]
     }
 
 
@@ -175,7 +223,8 @@ def run_concurrent_evaluation(
     max_workers: int = 64,
     max_samples_per_category: Optional[int] = None,
     output_dir: str = "./outputs",
-    use_scale: bool = False
+    use_scale: bool = False,
+    resume: bool = False
 ) -> Dict[str, Any]:
     """并发全量评估"""
 
@@ -186,6 +235,21 @@ def run_concurrent_evaluation(
     if use_scale:
         print("   📊 SCALE Enhancement: ENABLED")
     print("=" * 70)
+
+    # 检查点文件
+    os.makedirs(output_dir, exist_ok=True)
+    checkpoint_file = Path(output_dir) / "eval_checkpoint.jsonl"
+
+    # 加载已完成的样本
+    completed_ids = set()
+    if resume and checkpoint_file.exists():
+        completed = load_checkpoint(str(checkpoint_file))
+        completed_ids = set(completed.keys())
+        print(f"   🔄 Resume: 已加载 {len(completed_ids)} 个已完成样本")
+    elif not resume and checkpoint_file.exists():
+        # 非 resume 模式，清空检查点
+        checkpoint_file.unlink()
+        print("   🗑️  清空旧检查点")
 
     # 加载数据
     samples = load_jsonl_data(data_file)
@@ -224,7 +288,8 @@ def run_concurrent_evaluation(
             if cat_samples:
                 future = executor.submit(
                     evaluate_category_batch,
-                    category, cat_samples, prompt_set, max_samples_per_category, use_scale
+                    category, cat_samples, prompt_set, max_samples_per_category, use_scale,
+                    str(checkpoint_file), completed_ids
                 )
                 futures[future] = category
 
@@ -294,6 +359,7 @@ def main():
     parser.add_argument("--max-samples", type=int, default=None, help="每类最大样本数")
     parser.add_argument("--output", default="./outputs", help="输出目录")
     parser.add_argument("--use-scale", action="store_true", help="启用 SCALE Enhancement")
+    parser.add_argument("--resume", action="store_true", help="从检查点恢复")
 
     args = parser.parse_args()
 
@@ -306,7 +372,8 @@ def main():
         max_workers=args.workers,
         max_samples_per_category=args.max_samples,
         output_dir=args.output,
-        use_scale=args.use_scale
+        use_scale=args.use_scale,
+        resume=args.resume
     )
 
     return 0
