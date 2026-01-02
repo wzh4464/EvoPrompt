@@ -374,3 +374,146 @@ def sample_primevul_1percent(
         "dev_samples": len(dev_data),
         "total_samples": len(sampled_data)
     }
+
+
+class ContrastiveSampler:
+    """对比学习样本采样器
+
+    为每个目标CWE/类别采样三类代码:
+    1. target: 目标漏洞代码
+    2. other_vuln: 其他类型漏洞代码
+    3. benign: 安全代码
+    """
+
+    def __init__(self, seed: int = 42):
+        self.seed = seed
+        random.seed(seed)
+
+    def sample_contrastive_triplet(
+        self,
+        target_cwe: str,
+        dataset_items: List[Dict[str, Any]],
+        samples_per_type: int = 3
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """采样对比三元组
+
+        Args:
+            target_cwe: 目标CWE (如 "CWE-120")
+            dataset_items: 数据集项列表
+            samples_per_type: 每类采样数量
+
+        Returns:
+            {
+                "target": [目标CWE漏洞样本],
+                "other_vuln": [其他CWE漏洞样本],
+                "benign": [安全代码样本]
+            }
+        """
+        target_samples = []
+        other_vuln_samples = []
+        benign_samples = []
+
+        for item in dataset_items:
+            target_val = item.get("target", 0)
+            try:
+                is_vuln = int(target_val) == 1
+            except (TypeError, ValueError):
+                is_vuln = False
+
+            if not is_vuln:
+                benign_samples.append(item)
+            else:
+                cwe_codes = item.get("cwe", [])
+                if isinstance(cwe_codes, str):
+                    cwe_codes = [cwe_codes] if cwe_codes else []
+
+                if target_cwe in cwe_codes:
+                    target_samples.append(item)
+                else:
+                    other_vuln_samples.append(item)
+
+        # 随机采样
+        result = {
+            "target": random.sample(target_samples, min(samples_per_type, len(target_samples))) if target_samples else [],
+            "other_vuln": random.sample(other_vuln_samples, min(samples_per_type, len(other_vuln_samples))) if other_vuln_samples else [],
+            "benign": random.sample(benign_samples, min(samples_per_type, len(benign_samples))) if benign_samples else [],
+        }
+
+        return result
+
+    def sample_contrastive_for_major_category(
+        self,
+        target_major: str,
+        dataset_items: List[Dict[str, Any]],
+        samples_per_type: int = 3
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """为Major Category采样对比三元组
+
+        Args:
+            target_major: 目标大类 (如 "Memory", "Injection")
+            dataset_items: 数据集项列表
+            samples_per_type: 每类采样数量
+
+        Returns:
+            对比三元组
+        """
+        target_samples = []
+        other_vuln_samples = []
+        benign_samples = []
+
+        for item in dataset_items:
+            target_val = item.get("target", 0)
+            try:
+                is_vuln = int(target_val) == 1
+            except (TypeError, ValueError):
+                is_vuln = False
+
+            if not is_vuln:
+                benign_samples.append(item)
+            else:
+                cwe_codes = item.get("cwe", [])
+                if isinstance(cwe_codes, str):
+                    cwe_codes = [cwe_codes] if cwe_codes else []
+
+                item_major = map_cwe_to_major(cwe_codes) if cwe_codes else "Other"
+
+                if item_major == target_major:
+                    target_samples.append(item)
+                else:
+                    other_vuln_samples.append(item)
+
+        result = {
+            "target": random.sample(target_samples, min(samples_per_type, len(target_samples))) if target_samples else [],
+            "other_vuln": random.sample(other_vuln_samples, min(samples_per_type, len(other_vuln_samples))) if other_vuln_samples else [],
+            "benign": random.sample(benign_samples, min(samples_per_type, len(benign_samples))) if benign_samples else [],
+        }
+
+        return result
+
+    def format_samples_for_prompt(
+        self,
+        samples: List[Dict[str, Any]],
+        max_code_length: int = 500
+    ) -> str:
+        """格式化样本用于prompt
+
+        Args:
+            samples: 样本列表
+            max_code_length: 代码最大长度
+
+        Returns:
+            格式化的字符串
+        """
+        if not samples:
+            return "(No samples available)"
+
+        formatted = []
+        for i, sample in enumerate(samples, 1):
+            code = sample.get("func", "")[:max_code_length]
+            cwe = sample.get("cwe", [])
+            if isinstance(cwe, list):
+                cwe = ", ".join(cwe) if cwe else "N/A"
+
+            formatted.append(f"Example {i} (CWE: {cwe}):\n```\n{code}\n```")
+
+        return "\n\n".join(formatted)

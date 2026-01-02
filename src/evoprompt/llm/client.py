@@ -324,11 +324,12 @@ class OpenAICompatibleClient(LLMClient):
                     "model": self.model_name,
                     "messages": messages,
                     "temperature": temperature,
-                    "stream": False  # Non-streaming for simplicity
+                    "stream": False,  # Non-streaming for simplicity
+                    "timeout": 60.0  # 60 second timeout
                 }
                 if max_tokens is not None:
                     params["max_tokens"] = max_tokens
-                    
+
                 response = self.client.chat.completions.create(**params)
                 
                 content = response.choices[0].message.content.strip()

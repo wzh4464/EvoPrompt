@@ -41,10 +41,23 @@ def _format_subcategory_lines(
 def load_layer1_hierarchy() -> Dict[str, Any]:
     """Load and cache the CWE hierarchy derived from cwe_researchview.json."""
     if not CWE_RESEARCHVIEW_PATH.exists():
-        raise FileNotFoundError(
+        # Return minimal hierarchy if file doesn't exist
+        import warnings
+        warnings.warn(
             f"CWE hierarchy file not found: {CWE_RESEARCHVIEW_PATH}. "
-            "Run scripts/convert_cwe_researchview.py to generate it."
+            "Using fallback CWE mapping. Run scripts/convert_cwe_researchview.py for full hierarchy.",
+            UserWarning
         )
+        return {
+            "nodes": [],
+            "id_to_node": {},
+            "children": {},
+            "root_nodes": [],
+            "root_labels": [],
+            "descendant_to_root": {},
+            "alias_map": {"benign": "Benign"},
+            "subcategory_reference": ""
+        }
 
     with CWE_RESEARCHVIEW_PATH.open("r", encoding="utf-8") as f:
         nodes = json.load(f)
