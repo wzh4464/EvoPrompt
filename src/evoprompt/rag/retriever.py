@@ -344,3 +344,101 @@ def create_retriever(
         return EmbeddingRetriever(knowledge_base, **kwargs)
     else:
         raise ValueError(f"Unknown retriever type: {retriever_type}")
+
+
+class MulVulRetriever(CodeSimilarityRetriever):
+    """Retriever for MulVul multi-agent system.
+
+    Provides cross-type contrastive retrieval for Router Agent
+    and category-specific retrieval for Detector Agents.
+    """
+
+    # Major category mapping
+    MAJOR_CATEGORIES = ["Memory", "Injection", "Logic", "Input", "Crypto"]
+
+    def retrieve_contrastive(
+        self,
+        query_code: str,
+        n_per_category: int = 2
+    ) -> List[dict]:
+        """Retrieve cross-type contrastive evidence for Router Agent.
+
+        Retrieves samples from each category to provide contrastive patterns.
+
+        Args:
+            query_code: Code to find similar examples for
+            n_per_category: Number of examples per category
+
+        Returns:
+            List of dicts with code, category, and similarity
+        """
+        results = []
+
+        for category in self.MAJOR_CATEGORIES:
+            samples = self.retrieve_from_category(query_code, category, top_k=n_per_category)
+            results.extend(samples)
+
+        return results
+
+    def retrieve_from_category(
+        self,
+        query_code: str,
+        category: str,
+        top_k: int = 3
+    ) -> List[dict]:
+        """Retrieve examples from a specific category.
+
+        Used by Detector Agents to get category-specific evidence.
+
+        Args:
+            query_code: Code to find similar examples for
+            category: Category to retrieve from
+            top_k: Number of examples to retrieve
+
+        Returns:
+            List of dicts with code, category, cwe, and similarity
+        """
+        # Map category to major category examples
+        category_mapping = {
+            "Memory": ["Memory", "Buffer Overflow", "Use After Free", "Null Pointer"],
+            "Injection": ["Injection", "SQL Injection", "Command Injection", "XSS"],
+            "Logic": ["Logic", "Race Condition", "Access Control", "Information Exposure"],
+            "Input": ["Input", "Path Traversal", "Input Validation"],
+            "Crypto": ["Crypto", "Cryptography", "Weak Crypto"],
+        }
+
+        # Gather examples from matching categories
+        all_examples = []
+        search_categories = category_mapping.get(category, [category])
+
+        for cat in search_categories:
+            examples = self.kb.major_examples.get(cat, [])
+            all_examples.extend(examples)
+
+            # Also check middle examples
+            for key, examples in self.kb.middle_examples.items():
+                if cat.lower() in key.lower():
+                    all_examples.extend(examples)
+
+        if not all_examples:
+            return []
+
+        # Compute similarities and rank
+        scored = []
+        for example in all_examples:
+            similarity = self._compute_similarity(query_code, example.code)
+            scored.append((similarity, example))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        # Return top-k as dicts
+        return [
+            {
+                "code": ex.code,
+                "category": category,
+                "cwe": ex.cwe,
+                "type": ex.category,
+                "similarity": round(score, 4),
+            }
+            for score, ex in scored[:top_k]
+        ]
