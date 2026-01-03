@@ -12,127 +12,136 @@ from typing import Dict, Optional, List
 
 from .base import DetectionResult
 
-# Default prompts for each category
+# Default prompts for each category - 强调对比分析
 CATEGORY_PROMPTS = {
-    "Memory": """You are a memory safety expert. Analyze this code for memory vulnerabilities.
+    "Memory": """You are a memory safety expert. Your task is to determine if the code has memory vulnerabilities.
 
-## Category-Specific Evidence:
+## CRITICAL: Compare with Known Vulnerable Patterns
+Below are CONFIRMED vulnerable code examples from our database. You MUST compare the target code against these patterns:
+
 {evidence}
 
-## Code:
+## Target Code to Analyze:
 ```
 {code}
 ```
 
-## Detect these vulnerability types:
-- Buffer Overflow (CWE-120, CWE-119)
-- Use After Free (CWE-416)
-- Null Pointer Dereference (CWE-476)
-- Integer Overflow (CWE-190)
-- Out-of-bounds Read/Write (CWE-125, CWE-787)
+## Analysis Instructions:
+1. FIRST, identify which patterns from the evidence examples appear in the target code
+2. Look for: Buffer Overflow (CWE-120/119), Use After Free (CWE-416), Null Pointer (CWE-476), Integer Overflow (CWE-190), OOB Read/Write (CWE-125/787)
+3. If the code shares vulnerable patterns with the examples, it is likely VULNERABLE
+4. Only mark as Benign if NO similar patterns exist
 
 ## Output (JSON):
 {{
-  "prediction": "CWE-120" or "Benign",
-  "confidence": 0.85,
-  "evidence": "Line 15: strcpy without bounds check",
-  "subcategory": "Buffer Overflow"
+  "prediction": "CWE-XXX" or "Benign",
+  "confidence": 0.0-1.0,
+  "evidence": "Explain similarity/difference with the example patterns",
+  "subcategory": "vulnerability type"
 }}""",
 
-    "Injection": """You are an injection vulnerability expert. Analyze this code for injection flaws.
+    "Injection": """You are an injection vulnerability expert. Your task is to determine if the code has injection flaws.
 
-## Category-Specific Evidence:
+## CRITICAL: Compare with Known Vulnerable Patterns
+Below are CONFIRMED vulnerable code examples from our database. You MUST compare the target code against these patterns:
+
 {evidence}
 
-## Code:
+## Target Code to Analyze:
 ```
 {code}
 ```
 
-## Detect these vulnerability types:
-- SQL Injection (CWE-89)
-- Command Injection (CWE-78)
-- Code Injection (CWE-94)
-- XSS (CWE-79)
-- LDAP Injection (CWE-90)
+## Analysis Instructions:
+1. FIRST, identify which patterns from the evidence examples appear in the target code
+2. Look for: SQL Injection (CWE-89), Command Injection (CWE-78), Code Injection (CWE-94), XSS (CWE-79)
+3. If the code shares vulnerable patterns with the examples, it is likely VULNERABLE
+4. Only mark as Benign if NO similar patterns exist
 
 ## Output (JSON):
 {{
-  "prediction": "CWE-89" or "Benign",
-  "confidence": 0.85,
-  "evidence": "Line 23: User input directly in SQL query",
-  "subcategory": "SQL Injection"
+  "prediction": "CWE-XXX" or "Benign",
+  "confidence": 0.0-1.0,
+  "evidence": "Explain similarity/difference with the example patterns",
+  "subcategory": "vulnerability type"
 }}""",
 
-    "Logic": """You are a logic vulnerability expert. Analyze this code for logic flaws.
+    "Logic": """You are a logic vulnerability expert. Your task is to determine if the code has logic flaws.
 
-## Category-Specific Evidence:
+## CRITICAL: Compare with Known Vulnerable Patterns
+Below are CONFIRMED vulnerable code examples from our database. You MUST compare the target code against these patterns:
+
 {evidence}
 
-## Code:
+## Target Code to Analyze:
 ```
 {code}
 ```
 
-## Detect these vulnerability types:
-- Race Condition (CWE-362)
-- Improper Access Control (CWE-284)
-- Information Exposure (CWE-200)
-- Missing Authorization (CWE-862)
+## Analysis Instructions:
+1. FIRST, identify which patterns from the evidence examples appear in the target code
+2. Look for: Race Condition (CWE-362), Improper Access Control (CWE-284), Information Exposure (CWE-200)
+3. If the code shares vulnerable patterns with the examples, it is likely VULNERABLE
+4. Only mark as Benign if NO similar patterns exist
 
 ## Output (JSON):
 {{
-  "prediction": "CWE-362" or "Benign",
-  "confidence": 0.85,
-  "evidence": "Line 45: TOCTOU race condition",
-  "subcategory": "Race Condition"
+  "prediction": "CWE-XXX" or "Benign",
+  "confidence": 0.0-1.0,
+  "evidence": "Explain similarity/difference with the example patterns",
+  "subcategory": "vulnerability type"
 }}""",
 
-    "Input": """You are an input validation expert. Analyze this code for input handling flaws.
+    "Input": """You are an input validation expert. Your task is to determine if the code has input handling flaws.
 
-## Category-Specific Evidence:
+## CRITICAL: Compare with Known Vulnerable Patterns
+Below are CONFIRMED vulnerable code examples from our database. You MUST compare the target code against these patterns:
+
 {evidence}
 
-## Code:
+## Target Code to Analyze:
 ```
 {code}
 ```
 
-## Detect these vulnerability types:
-- Path Traversal (CWE-22)
-- Improper Input Validation (CWE-20)
-- Uncontrolled Format String (CWE-134)
+## Analysis Instructions:
+1. FIRST, identify which patterns from the evidence examples appear in the target code
+2. Look for: Path Traversal (CWE-22), Improper Input Validation (CWE-20), Format String (CWE-134)
+3. If the code shares vulnerable patterns with the examples, it is likely VULNERABLE
+4. Only mark as Benign if NO similar patterns exist
 
 ## Output (JSON):
 {{
-  "prediction": "CWE-22" or "Benign",
-  "confidence": 0.85,
-  "evidence": "Line 12: User-controlled path without sanitization",
-  "subcategory": "Path Traversal"
+  "prediction": "CWE-XXX" or "Benign",
+  "confidence": 0.0-1.0,
+  "evidence": "Explain similarity/difference with the example patterns",
+  "subcategory": "vulnerability type"
 }}""",
 
-    "Crypto": """You are a cryptography expert. Analyze this code for cryptographic weaknesses.
+    "Crypto": """You are a cryptography expert. Your task is to determine if the code has cryptographic weaknesses.
 
-## Category-Specific Evidence:
+## CRITICAL: Compare with Known Vulnerable Patterns
+Below are CONFIRMED vulnerable code examples from our database. You MUST compare the target code against these patterns:
+
 {evidence}
 
-## Code:
+## Target Code to Analyze:
 ```
 {code}
 ```
 
-## Detect these vulnerability types:
-- Use of Weak Crypto (CWE-327)
-- Improper Certificate Validation (CWE-295)
-- Hard-coded Credentials (CWE-798)
-- Insufficient Entropy (CWE-331)
+## Analysis Instructions:
+1. FIRST, identify which patterns from the evidence examples appear in the target code
+2. Look for: Weak Crypto (CWE-327), Improper Certificate Validation (CWE-295), Hard-coded Credentials (CWE-798)
+3. If the code shares vulnerable patterns with the examples, it is likely VULNERABLE
+4. Only mark as Benign if NO similar patterns exist
 
 ## Output (JSON):
 {{
-  "prediction": "CWE-327" or "Benign",
-  "confidence": 0.85,
-  "evidence": "Line 8: MD5 used for password hashing",
-  "subcategory": "Weak Cryptography"
+  "prediction": "CWE-XXX" or "Benign",
+  "confidence": 0.0-1.0,
+  "evidence": "Explain similarity/difference with the example patterns",
+  "subcategory": "vulnerability type"
 }}""",
 }
 
@@ -189,17 +198,22 @@ class DetectorAgent:
         )
 
     def _format_evidence(self, evidence: List[Dict]) -> str:
-        """Format evidence for prompt."""
+        """Format evidence for prompt - 强调漏洞模式对比."""
         if not evidence:
-            return "No category-specific evidence available."
+            return "No similar vulnerable examples found in database. Analyze based on general vulnerability patterns."
 
-        lines = []
+        lines = ["### Known Vulnerable Examples (from database):"]
         for i, sample in enumerate(evidence[:3], 1):
             vuln_type = sample.get("cwe", sample.get("type", "Unknown"))
-            snippet = sample.get("code", "")[:300]
-            lines.append(f"Example {i} [{vuln_type}]:\n```\n{snippet}\n```")
+            snippet = sample.get("code", "")[:400]
+            desc = sample.get("description", "")[:100]
+            lines.append(f"\n**Example {i}** - Vulnerability: {vuln_type}")
+            if desc:
+                lines.append(f"Pattern: {desc}")
+            lines.append(f"```\n{snippet}\n```")
 
-        return "\n\n".join(lines)
+        lines.append("\n### Your Task: Find if the target code has SIMILAR patterns to these examples.")
+        return "\n".join(lines)
 
     def _parse_response(self, response: str) -> DetectionResult:
         """Parse LLM response to DetectionResult."""
