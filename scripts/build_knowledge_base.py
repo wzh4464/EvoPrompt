@@ -1,165 +1,156 @@
 #!/usr/bin/env python3
-"""Build knowledge base from Primevul dataset.
+"""从 primevul 训练集构建层级知识库
 
-Creates a knowledge base with sampled examples from training data.
+支持三层结构:
+- Major (5类): Memory, Injection, Logic, Input, Crypto
+- Middle (10类): Buffer Errors, Memory Management, etc.
+- CWE (具体): CWE-119, CWE-416, etc.
 """
 
+import os
 import sys
-import argparse
-from pathlib import Path
+import json
+import random
+from collections import defaultdict
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, "src")
 
-from evoprompt.data.dataset import PrimevulDataset
-from evoprompt.rag.knowledge_base import (
-    KnowledgeBase,
-    KnowledgeBaseBuilder,
-    create_knowledge_base_from_dataset,
+from evoprompt.data.cwe_hierarchy import (
+    cwe_to_major, cwe_to_middle, extract_cwe_id,
+    MAJOR_CATEGORIES, MIDDLE_CATEGORIES
 )
 
 
-def build_from_default():
-    """Build knowledge base with default examples."""
-    print("🏗️  Building Knowledge Base from Default Examples")
-    print("=" * 70)
-
-    kb = KnowledgeBaseBuilder.create_default_kb()
-
-    stats = kb.statistics()
-    print(f"\n✅ Knowledge base created:")
-    print(f"   Total examples: {stats['total_examples']}")
-    print(f"   Major categories: {stats['major_categories']}")
-    print(f"   Middle categories: {stats['middle_categories']}")
-    print(f"   CWE types: {stats['cwe_types']}")
-
-    print("\n📊 Examples per major category:")
-    for cat, count in stats['examples_per_major'].items():
-        print(f"   {cat}: {count}")
-
-    print("\n📊 Examples per middle category:")
-    for cat, count in stats['examples_per_middle'].items():
-        print(f"   {cat}: {count}")
-
-    return kb
+def load_jsonl(path: str):
+    samples = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                try:
+                    samples.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    return samples
 
 
-def build_from_dataset(data_file: str, samples_per_category: int):
-    """Build knowledge base from dataset.
+def build_hierarchical_kb(train_file, output_file, samples_per_category=100, seed=42):
+    """构建层级知识库，按 Major 和 CWE 两个维度组织"""
+    random.seed(seed)
 
-    Args:
-        data_file: Path to dataset file
-        samples_per_category: Number of samples per category
-    """
-    print(f"🏗️  Building Knowledge Base from Dataset: {data_file}")
-    print("=" * 70)
+    print(f"📂 加载训练数据: {train_file}")
+    samples = load_jsonl(train_file)
+    print(f"   总样本数: {len(samples)}")
 
-    # Load dataset
-    dataset = PrimevulDataset(data_file, split="train")
-    print(f"   ✅ Loaded {len(dataset)} samples")
+    # 按 Major 和 CWE 分类
+    major_samples = defaultdict(list)
+    cwe_samples = defaultdict(list)
+    middle_samples = defaultdict(list)
 
-    # Build KB
-    print(f"\n📝 Sampling {samples_per_category} examples per category...")
+    for item in samples:
+        if int(item.get("target", 0)) == 0:
+            continue  # Skip benign
 
-    kb = KnowledgeBase()
+        code = item.get("func", "")
+        if len(code) < 50 or len(code) > 3000:
+            continue
 
-    # Use the create function but don't save yet
-    from evoprompt.rag.knowledge_base import create_knowledge_base_from_dataset
-    import tempfile
-    import os
+        cwe_codes = item.get("cwe", [])
+        if isinstance(cwe_codes, str):
+            cwe_codes = [cwe_codes] if cwe_codes else []
+        if not cwe_codes:
+            continue
 
-    # Create temporary file
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-        temp_path = f.name
+        cwe = cwe_codes[0]
+        major = cwe_to_major(cwe_codes)
+        middle = cwe_to_middle(cwe_codes)
 
-    try:
-        kb = create_knowledge_base_from_dataset(
-            dataset,
-            temp_path,
-            samples_per_category=samples_per_category
-        )
+        sample = {
+            "code": code,
+            "cwe": cwe,
+            "major": major,
+            "middle": middle,
+            "description": item.get("cve_desc", "")[:300],
+        }
 
-        # Load it back
-        kb = KnowledgeBase.load(temp_path)
+        major_samples[major].append(sample)
+        middle_samples[middle].append(sample)
+        cwe_samples[cwe].append(sample)
 
-    finally:
-        # Clean up temp file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+    # 打印统计
+    print("\n📊 Major 类别分布:")
+    for cat in ["Memory", "Injection", "Logic", "Input", "Crypto"]:
+        print(f"   {cat:12s}: {len(major_samples[cat]):5d}")
 
-    return kb
+    print("\n📊 Middle 类别分布 (top 10):")
+    sorted_middle = sorted(middle_samples.items(), key=lambda x: len(x[1]), reverse=True)
+    for cat, samples_list in sorted_middle[:10]:
+        print(f"   {cat:20s}: {len(samples_list):5d}")
+
+    print("\n📊 CWE 分布 (top 15):")
+    sorted_cwe = sorted(cwe_samples.items(), key=lambda x: len(x[1]), reverse=True)
+    for cwe, samples_list in sorted_cwe[:15]:
+        print(f"   {cwe:12s}: {len(samples_list):5d}")
+
+    # 构建知识库
+    knowledge_base = {
+        "by_major": {},
+        "by_middle": {},
+        "by_cwe": {},
+    }
+
+    # 按 Major 采样
+    print("\n✅ 按 Major 采样:")
+    for major, samples_list in major_samples.items():
+        n = min(samples_per_category, len(samples_list))
+        knowledge_base["by_major"][major] = random.sample(samples_list, n)
+        print(f"   {major}: {n}")
+
+    # 按 Middle 采样
+    print("\n✅ 按 Middle 采样:")
+    for middle, samples_list in middle_samples.items():
+        n = min(samples_per_category // 2, len(samples_list))
+        if n > 0:
+            knowledge_base["by_middle"][middle] = random.sample(samples_list, n)
+            print(f"   {middle}: {n}")
+
+    # 按 CWE 采样 (top 30)
+    print("\n✅ 按 CWE 采样 (top 30):")
+    for cwe, samples_list in sorted_cwe[:30]:
+        n = min(20, len(samples_list))
+        knowledge_base["by_cwe"][cwe] = random.sample(samples_list, n)
+        print(f"   {cwe}: {n}")
+
+    # 保存
+    os.makedirs(os.path.dirname(output_file) or ".", exist_ok=True)
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(knowledge_base, f, indent=2, ensure_ascii=False)
+
+    total_major = sum(len(v) for v in knowledge_base["by_major"].values())
+    total_middle = sum(len(v) for v in knowledge_base["by_middle"].values())
+    total_cwe = sum(len(v) for v in knowledge_base["by_cwe"].values())
+
+    print(f"\n💾 知识库已保存: {output_file}")
+    print(f"   by_major: {total_major} samples")
+    print(f"   by_middle: {total_middle} samples")
+    print(f"   by_cwe: {total_cwe} samples")
+
+    return knowledge_base
 
 
 def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Build knowledge base for RAG-enhanced detection"
-    )
-
-    parser.add_argument(
-        "--source",
-        choices=["default", "dataset"],
-        default="default",
-        help="Source for building KB (default: default)"
-    )
-
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        help="Path to dataset file (required if source=dataset)"
-    )
-
-    parser.add_argument(
-        "--samples-per-category",
-        type=int,
-        default=2,
-        help="Number of samples per category (default: 2)"
-    )
-
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="./outputs/knowledge_base.json",
-        help="Output path for knowledge base (default: ./outputs/knowledge_base.json)"
-    )
-
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--train", default="./data/primevul/primevul/primevul_train.jsonl")
+    parser.add_argument("--output", default="./data/knowledge_base_hierarchical.json")
+    parser.add_argument("--samples-per-category", type=int, default=100)
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
-    # Validate args
-    if args.source == "dataset" and not args.dataset:
-        parser.error("--dataset is required when source=dataset")
+    if not os.path.exists(args.train):
+        print(f"❌ 训练文件不存在: {args.train}")
+        return 1
 
-    # Build KB
-    if args.source == "default":
-        kb = build_from_default()
-    else:
-        if not Path(args.dataset).exists():
-            print(f"❌ Dataset file not found: {args.dataset}")
-            return 1
-
-        kb = build_from_dataset(args.dataset, args.samples_per_category)
-
-    # Save KB
-    output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    kb.save(str(output_path))
-
-    print(f"\n💾 Knowledge base saved to: {output_path}")
-
-    # Show final stats
-    stats = kb.statistics()
-    print(f"\n📊 Final Statistics:")
-    print(f"   Total examples: {stats['total_examples']}")
-    print(f"   Major categories: {stats['major_categories']}")
-    print(f"   Middle categories: {stats['middle_categories']}")
-    print(f"   CWE types: {stats['cwe_types']}")
-
-    print("\n✨ Done!")
-    print("\nNext steps:")
-    print("   1. Use this KB with RAGThreeLayerDetector")
-    print("   2. Run: uv run python scripts/demo_rag_detection.py")
-    print("   3. Experiment with different retrieval strategies")
-
+    build_hierarchical_kb(args.train, args.output, args.samples_per_category, args.seed)
     return 0
 
 
