@@ -178,38 +178,52 @@ def main():
 
     elapsed = time.time() - start_time
 
-    # Calculate metrics
-    binary_correct = sum(1 for r in results if r["correct_binary"])
-    cwe_correct = sum(1 for r in results if r["correct_cwe"])
+    # Calculate multi-class metrics
+    all_gts = [r["gt_cwe"] for r in results]
+    all_preds = [r["pred_cwe"] for r in results]
+    all_classes = set(all_gts + all_preds)
 
-    # Binary confusion matrix
-    tp = sum(1 for r in results if r["gt_binary"] == "Vulnerable" and r["pred_binary"] == "Vulnerable")
-    tn = sum(1 for r in results if r["gt_binary"] == "Benign" and r["pred_binary"] == "Benign")
-    fp = sum(1 for r in results if r["gt_binary"] == "Benign" and r["pred_binary"] == "Vulnerable")
-    fn = sum(1 for r in results if r["gt_binary"] == "Vulnerable" and r["pred_binary"] == "Benign")
+    class_metrics = {}
+    for cls in all_classes:
+        tp = sum(1 for g, p in zip(all_gts, all_preds) if g == cls and p == cls)
+        fp = sum(1 for g, p in zip(all_gts, all_preds) if g != cls and p == cls)
+        fn = sum(1 for g, p in zip(all_gts, all_preds) if g == cls and p != cls)
+        prec = tp / (tp + fp) if (tp + fp) > 0 else 0
+        rec = tp / (tp + fn) if (tp + fn) > 0 else 0
+        f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0
+        class_metrics[cls] = {"precision": prec, "recall": rec, "f1": f1, "support": tp + fn}
 
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+    # Macro metrics (classes with support > 0)
+    classes_with_support = [c for c, m in class_metrics.items() if m["support"] > 0]
+    macro_prec = sum(class_metrics[c]["precision"] for c in classes_with_support) / len(classes_with_support)
+    macro_rec = sum(class_metrics[c]["recall"] for c in classes_with_support) / len(classes_with_support)
+    macro_f1 = sum(class_metrics[c]["f1"] for c in classes_with_support) / len(classes_with_support)
+
+    # Weighted metrics
+    total_support = sum(m["support"] for m in class_metrics.values())
+    weighted_f1 = sum(class_metrics[c]["f1"] * class_metrics[c]["support"] for c in class_metrics) / total_support
+    weighted_prec = sum(class_metrics[c]["precision"] * class_metrics[c]["support"] for c in class_metrics) / total_support
+    weighted_rec = sum(class_metrics[c]["recall"] * class_metrics[c]["support"] for c in class_metrics) / total_support
+
+    # Accuracy
+    accuracy = sum(1 for g, p in zip(all_gts, all_preds) if g == p) / len(results)
 
     # Print results
     print("\n" + "=" * 70)
-    print("RESULTS")
+    print("RESULTS (Multi-class CWE Classification)")
     print("=" * 70)
 
-    print(f"\n Binary Classification:")
-    print(f"   Accuracy:  {binary_correct / len(results):.2%} ({binary_correct}/{len(results)})")
-    print(f"   Precision: {precision:.2%}")
-    print(f"   Recall:    {recall:.2%}")
-    print(f"   F1 Score:  {f1:.2%}")
+    print(f"\n| Method | Accuracy | Macro-F1 | Weighted-F1 | Precision | Recall |")
+    print(f"|--------|----------|----------|-------------|-----------|--------|")
+    print(f"| GPT-4o Zero-shot | {accuracy:.2%} | {macro_f1:.2%} | {weighted_f1:.2%} | {macro_prec:.2%} | {macro_rec:.2%} |")
 
-    print(f"\n CWE Classification:")
-    print(f"   Accuracy:  {cwe_correct / len(results):.2%} ({cwe_correct}/{len(results)})")
-
-    print(f"\n Confusion Matrix (Binary):")
-    print(f"                 Pred Vul    Pred Benign")
-    print(f"   Actual Vul    {tp:>8}    {fn:>11}")
-    print(f"   Actual Benign {fp:>8}    {tn:>11}")
+    print(f"\n Detailed Metrics:")
+    print(f"   Accuracy:      {accuracy:.2%}")
+    print(f"   Macro-F1:      {macro_f1:.2%}")
+    print(f"   Weighted-F1:   {weighted_f1:.2%}")
+    print(f"   Macro-Prec:    {macro_prec:.2%}")
+    print(f"   Macro-Recall:  {macro_rec:.2%}")
+    print(f"   Classes:       {len(classes_with_support)}")
 
     print(f"\n Performance:")
     print(f"   Time: {elapsed:.1f}s")
@@ -228,15 +242,14 @@ def main():
                 "seed": args.seed,
             },
             "metrics": {
-                "binary_accuracy": binary_correct / len(results),
-                "binary_precision": precision,
-                "binary_recall": recall,
-                "binary_f1": f1,
-                "cwe_accuracy": cwe_correct / len(results),
+                "accuracy": accuracy,
+                "macro_f1": macro_f1,
+                "weighted_f1": weighted_f1,
+                "macro_precision": macro_prec,
+                "macro_recall": macro_rec,
             },
-            "confusion": {"tp": tp, "tn": tn, "fp": fp, "fn": fn},
             "elapsed": elapsed,
-            "sample_results": results[:100],
+            "all_results": results,
         }, f, indent=2, ensure_ascii=False)
 
     print(f"\n Results saved to: {output_file}")
