@@ -346,99 +346,120 @@ def create_retriever(
         raise ValueError(f"Unknown retriever type: {retriever_type}")
 
 
-class MulVulRetriever(CodeSimilarityRetriever):
+class MulVulRetriever:
     """Retriever for MulVul multi-agent system.
 
-    Provides cross-type contrastive retrieval for Router Agent
-    and category-specific retrieval for Detector Agents.
+    Supports hierarchical knowledge base with three levels:
+    - by_major: Memory, Injection, Logic, Input, Crypto
+    - by_middle: Buffer Errors, Memory Management, etc.
+    - by_cwe: CWE-119, CWE-416, etc.
     """
 
-    # Major category mapping
     MAJOR_CATEGORIES = ["Memory", "Injection", "Logic", "Input", "Crypto"]
 
-    def retrieve_contrastive(
-        self,
-        query_code: str,
-        n_per_category: int = 2
-    ) -> List[dict]:
-        """Retrieve cross-type contrastive evidence for Router Agent.
-
-        Retrieves samples from each category to provide contrastive patterns.
+    def __init__(self, knowledge_base_path: str = None, knowledge_base: KnowledgeBase = None):
+        """Initialize retriever.
 
         Args:
-            query_code: Code to find similar examples for
-            n_per_category: Number of examples per category
-
-        Returns:
-            List of dicts with code, category, and similarity
+            knowledge_base_path: Path to JSON knowledge base file
+            knowledge_base: Legacy KnowledgeBase object
         """
-        results = []
+        self.by_major = {}
+        self.by_middle = {}
+        self.by_cwe = {}
 
+        if knowledge_base_path:
+            self._load_from_json(knowledge_base_path)
+        elif knowledge_base:
+            self._load_from_kb(knowledge_base)
+
+    def _load_from_json(self, path: str):
+        """Load from hierarchical JSON knowledge base file."""
+        import json
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Support both flat and hierarchical formats
+        if "by_major" in data:
+            self.by_major = data.get("by_major", {})
+            self.by_middle = data.get("by_middle", {})
+            self.by_cwe = data.get("by_cwe", {})
+        else:
+            # Flat format (legacy)
+            self.by_major = data
+
+        total = sum(len(v) for v in self.by_major.values())
+        total += sum(len(v) for v in self.by_middle.values())
+        total += sum(len(v) for v in self.by_cwe.values())
+        print(f"📚 Loaded knowledge base: {total} samples")
+
+    def _load_from_kb(self, kb: KnowledgeBase):
+        """Load from legacy KnowledgeBase object."""
+        for cat, examples in kb.major_examples.items():
+            self.by_major[cat] = [
+                {"code": ex.code, "major": cat, "cwe": ex.cwe, "description": ex.description}
+                for ex in examples
+            ]
+
+    def retrieve_contrastive(self, query_code: str, n_per_category: int = 2) -> List[dict]:
+        """Retrieve cross-type contrastive evidence for Router Agent."""
+        results = []
         for category in self.MAJOR_CATEGORIES:
             samples = self.retrieve_from_category(query_code, category, top_k=n_per_category)
             results.extend(samples)
-
         return results
 
-    def retrieve_from_category(
-        self,
-        query_code: str,
-        category: str,
-        top_k: int = 3
-    ) -> List[dict]:
-        """Retrieve examples from a specific category.
-
-        Used by Detector Agents to get category-specific evidence.
-
-        Args:
-            query_code: Code to find similar examples for
-            category: Category to retrieve from
-            top_k: Number of examples to retrieve
-
-        Returns:
-            List of dicts with code, category, cwe, and similarity
-        """
-        # Map category to major category examples
-        category_mapping = {
-            "Memory": ["Memory", "Buffer Overflow", "Use After Free", "Null Pointer"],
-            "Injection": ["Injection", "SQL Injection", "Command Injection", "XSS"],
-            "Logic": ["Logic", "Race Condition", "Access Control", "Information Exposure"],
-            "Input": ["Input", "Path Traversal", "Input Validation"],
-            "Crypto": ["Crypto", "Cryptography", "Weak Crypto"],
-        }
-
-        # Gather examples from matching categories
-        all_examples = []
-        search_categories = category_mapping.get(category, [category])
-
-        for cat in search_categories:
-            examples = self.kb.major_examples.get(cat, [])
-            all_examples.extend(examples)
-
-            # Also check middle examples
-            for key, examples in self.kb.middle_examples.items():
-                if cat.lower() in key.lower():
-                    all_examples.extend(examples)
-
-        if not all_examples:
+    def retrieve_from_category(self, query_code: str, category: str, top_k: int = 3) -> List[dict]:
+        """Retrieve examples from a specific major category."""
+        samples = self.by_major.get(category, [])
+        if not samples:
             return []
+        return self._rank_and_return(query_code, samples, category, top_k)
 
-        # Compute similarities and rank
+    def retrieve_from_middle(self, query_code: str, middle: str, top_k: int = 3) -> List[dict]:
+        """Retrieve examples from a specific middle category."""
+        samples = self.by_middle.get(middle, [])
+        if not samples:
+            return []
+        return self._rank_and_return(query_code, samples, middle, top_k)
+
+    def retrieve_from_cwe(self, query_code: str, cwe: str, top_k: int = 3) -> List[dict]:
+        """Retrieve examples from a specific CWE."""
+        samples = self.by_cwe.get(cwe, [])
+        if not samples:
+            return []
+        return self._rank_and_return(query_code, samples, cwe, top_k)
+
+    def _rank_and_return(self, query_code: str, samples: List[dict], category: str, top_k: int) -> List[dict]:
+        """Rank samples by similarity and return top-k."""
         scored = []
-        for example in all_examples:
-            similarity = self._compute_similarity(query_code, example.code)
-            scored.append((similarity, example))
+        for sample in samples:
+            similarity = self._compute_similarity(query_code, sample.get("code", ""))
+            scored.append((similarity, sample))
 
         scored.sort(key=lambda x: x[0], reverse=True)
 
-        # Return top-k as dicts
         return [
             {
-                "code": ex.code,
+                "code": s["code"],
                 "category": category,
-                "cwe": ex.cwe,
-                "type": ex.category,
+                "cwe": s.get("cwe", ""),
+                "middle": s.get("middle", ""),
+                "major": s.get("major", ""),
+                "description": s.get("description", ""),
                 "similarity": round(score, 4),
             }
-            for score, ex in scored[:top_k]
+            for score, s in scored[:top_k]
         ]
+
+    def _compute_similarity(self, code1: str, code2: str) -> float:
+        """Compute Jaccard similarity on token sets."""
+        tokens1 = set(re.findall(r'\w+', code1.lower()))
+        tokens2 = set(re.findall(r'\w+', code2.lower()))
+
+        if not tokens1 or not tokens2:
+            return 0.0
+
+        intersection = len(tokens1 & tokens2)
+        union = len(tokens1 | tokens2)
+        return intersection / union if union > 0 else 0.0
