@@ -164,3 +164,67 @@ Improved prompt:"""
             
         # Fallback: return original individual
         return Individual(individual.prompt)
+
+    @classmethod
+    def with_seed_prompts(
+        cls, 
+        config: Dict[str, Any],
+        layer: int = 1,
+        category: str = None,
+    ) -> "GeneticAlgorithm":
+        """Create GA with seed prompts pre-loaded.
+        
+        Args:
+            config: GA configuration dict
+            layer: Detection layer for seeds (1, 2, or 3)
+            category: Specific category to focus on
+            
+        Returns:
+            Configured GeneticAlgorithm instance with seed prompts
+        """
+        from ..prompts.seed_loader import load_seeds_for_ga
+        
+        ga = cls(config)
+        population_size = config.get("population_size", 10)
+        
+        # Load seeds
+        seeds = load_seeds_for_ga(population_size, layer, category)
+        ga._seed_prompts = seeds
+        
+        return ga
+    
+    def evolve_with_seeds(
+        self, 
+        evaluator, 
+        llm_client: LLMClient,
+        layer: int = 1,
+        category: str = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Run evolution using seed prompts as initial population.
+        
+        Args:
+            evaluator: Prompt evaluator
+            llm_client: LLM client for operations
+            layer: Detection layer (1, 2, or 3)
+            category: Optional category focus
+            **kwargs: Additional evolution parameters
+            
+        Returns:
+            Evolution results dict
+        """
+        from ..prompts.seed_loader import load_seeds_for_ga
+        
+        # Load seeds if not already loaded
+        if not hasattr(self, '_seed_prompts') or not self._seed_prompts:
+            self._seed_prompts = load_seeds_for_ga(
+                self.population_size, layer, category
+            )
+        
+        # Run evolution with seeds as initial prompts
+        return self.evolve(
+            evaluator, 
+            llm_client, 
+            initial_prompts=self._seed_prompts,
+            **kwargs
+        )
