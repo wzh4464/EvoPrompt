@@ -24,7 +24,8 @@ EvoPrompt/
 │   ├── llm/                 # LLM客户端 (同步/异步)
 │   ├── utils/               # ResponseParser, checkpoint
 │   ├── evaluators/          # 漏洞评估
-│   ├── detectors/           # 三层检测器
+│   ├── detectors/           # 三层检测器, 并行分层检测
+│   ├── meta/                # Meta-learning (错误累积, prompt调优)
 │   ├── rag/                 # RAG知识库
 │   ├── multiagent/          # 多智能体协调
 │   └── workflows/           # 检测工作流
@@ -113,3 +114,61 @@ outputs/<experiment>/
 2. **API密钥安全**: .env 文件已在 .gitignore 中
 3. **异常处理**: 开发阶段少用 try/except，让异常直接抛出便于调试
 4. **测试**: 修改代码后运行 `uv run pytest tests/`
+
+## 并行分层检测系统
+
+### 架构
+
+```
+Code → Comment4Vul增强 → Layer1 (并行, top-k) → Layer2 (并行) → Layer3 (CWE) → 选择策略
+                                                                              ↓
+                                                          ErrorAccumulator → MetaLearning
+```
+
+### 核心组件
+
+- `detectors/scoring.py` - ScoredPrediction, DetectionPath, SelectionStrategy
+- `detectors/parallel_hierarchical_detector.py` - 并行分层检测器
+- `detectors/hierarchical_coordinator.py` - 协调器 (含 meta-learning)
+- `meta/error_accumulator.py` - 错误累积和模式识别
+- `meta/prompt_tuner.py` - Meta-learning prompt 优化
+
+### 使用示例
+
+```python
+from evoprompt.llm.async_client import AsyncLLMClient
+from evoprompt.detectors import create_coordinator
+
+# 创建协调器
+client = AsyncLLMClient()
+coordinator = create_coordinator(client, enable_meta_learning=True)
+
+# 检测单个样本
+result = coordinator.detect_single(code, ground_truth="CWE-120")
+
+# 批量检测
+results = coordinator.detect_batch(codes, ground_truths)
+
+# 获取统计
+print(coordinator.get_statistics_summary())
+```
+
+## TODO: Selection Strategies
+
+- [ ] WeightedVotingSelection - 加权投票 (考虑不同层级、不同类别的权重)
+- [ ] EnsembleSelection - 多策略组合 (组合多个策略的结果)
+- [ ] Layer-specific weights - 层级权重调整 (基于历史准确率动态调整)
+- [ ] ConfidenceCalibration - 置信度校准 (基于验证集校准输出概率)
+
+## TODO: Meta-Learning Enhancements
+
+- [ ] Contrastive examples - 在 tuning 时加入对比示例
+- [ ] Few-shot prompt injection - 动态注入少量示例
+- [ ] Prompt template evolution - 使用进化算法优化模板结构
+- [ ] Multi-objective optimization - 同时优化准确率和特异性
+
+## TODO: Code Enhancement
+
+- [ ] Comment4Vul integration - 集成代码注释增强
+- [ ] Static analysis hints - 集成静态分析结果
+- [ ] Dataflow annotations - 添加数据流标注
