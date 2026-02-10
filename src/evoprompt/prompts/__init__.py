@@ -5,9 +5,11 @@ from .hierarchical import (
     CWECategory,
     PromptHierarchy,
 )
+from .mop_manager import MoPromptManager
 
 __all__ = [
     "HierarchicalPrompt",
     "CWECategory",
     "PromptHierarchy",
+    "MoPromptManager",
 ]
