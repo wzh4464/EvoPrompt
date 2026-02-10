@@ -25,10 +25,19 @@ def extract_vulnerability_label(response: Optional[str]) -> str:
     if not text:
         return "0"
 
-    if "vulnerable" in text:
-        return "1"
+    # Check benign first - takes priority
     if "benign" in text:
         return "0"
+
+    # Check for negated vulnerability patterns (e.g., "no vulnerability", "not vulnerable")
+    negation_patterns = ["no vulnerab", "not vulnerab", "without vulnerab", "free of vulnerab"]
+    for pattern in negation_patterns:
+        if pattern in text:
+            return "0"
+
+    # Check for vulnerability indicators
+    if "vulnerab" in text:  # matches "vulnerable", "vulnerability", etc.
+        return "1"
 
     if text.startswith("1") or text.startswith("yes") or "yes" in text:
         return "1"
@@ -41,5 +50,6 @@ def extract_cwe_major(response: Optional[str]) -> str:
     normalized = normalize_text(response)
     category = canonicalize_category(normalized)
     return category or "Other"
+
 
 
