@@ -22,6 +22,16 @@ from .seed_loader import (
     get_hierarchical_seeds,
 )
 
+# Task-aware evolution prompts
+from .evolution_prompts import (
+    TaskContext,
+    TASK_CONTEXTS,
+    get_task_context,
+    build_crossover_prompt,
+    build_mutation_prompt,
+    build_initialization_prompt,
+)
+
 __all__ = [
     "HierarchicalPrompt",
     "CWECategory",
@@ -38,4 +48,11 @@ __all__ = [
     "SeedPromptConfig",
     "load_seeds_for_ga",
     "get_hierarchical_seeds",
+    # Evolution prompts
+    "TaskContext",
+    "TASK_CONTEXTS",
+    "get_task_context",
+    "build_crossover_prompt",
+    "build_mutation_prompt",
+    "build_initialization_prompt",
 ]

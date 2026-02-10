@@ -89,14 +89,26 @@ class GeneticAlgorithm(EvolutionAlgorithm):
         return random.sample(population.individuals, 2)
         
     def crossover(self, parents: List[Individual], llm_client: LLMClient) -> List[Individual]:
-        """Perform crossover operation using LLM."""
+        """Perform crossover operation using LLM.
+        
+        If task_context is set, uses task-aware prompts for better evolution.
+        """
         if len(parents) < 2 or random.random() > self.crossover_rate:
             return []
             
         parent1, parent2 = parents[0], parents[1]
         
-        # Create crossover prompt for LLM
-        crossover_prompt = f"""
+        # Use task-aware prompt if context available
+        if hasattr(self, '_task_context') and self._task_context:
+            from ..prompts.evolution_prompts import build_crossover_prompt
+            crossover_prompt = build_crossover_prompt(
+                parent1.prompt, 
+                parent2.prompt, 
+                self._task_context
+            )
+        else:
+            # Fallback to generic prompt
+            crossover_prompt = f"""
 Given these two prompts for the same task, create a new prompt that combines the best elements of both:
 
 Prompt 1: {parent1.prompt}
@@ -132,8 +144,22 @@ New combined prompt:"""
         return [Individual(parent1.prompt)]
         
     def mutate(self, individual: Individual, llm_client: LLMClient) -> Individual:
-        """Perform mutation operation using LLM."""
-        mutation_prompt = f"""
+        """Perform mutation operation using LLM.
+        
+        If task_context is set, uses task-aware prompts for better evolution.
+        """
+        # Use task-aware prompt if context available
+        if hasattr(self, '_task_context') and self._task_context:
+            from ..prompts.evolution_prompts import build_mutation_prompt
+            error_patterns = getattr(self, '_error_patterns', None)
+            mutation_prompt = build_mutation_prompt(
+                individual.prompt,
+                self._task_context,
+                error_patterns
+            )
+        else:
+            # Fallback to generic prompt
+            mutation_prompt = f"""
 Improve the following prompt by making small modifications while keeping its core purpose:
 
 Original prompt: {individual.prompt}
@@ -172,7 +198,7 @@ Improved prompt:"""
         layer: int = 1,
         category: str = None,
     ) -> "GeneticAlgorithm":
-        """Create GA with seed prompts pre-loaded.
+        """Create GA with seed prompts and task context pre-loaded.
         
         Args:
             config: GA configuration dict
@@ -180,9 +206,10 @@ Improved prompt:"""
             category: Specific category to focus on
             
         Returns:
-            Configured GeneticAlgorithm instance with seed prompts
+            Configured GeneticAlgorithm instance with seed prompts and task context
         """
         from ..prompts.seed_loader import load_seeds_for_ga
+        from ..prompts.evolution_prompts import get_task_context
         
         ga = cls(config)
         population_size = config.get("population_size", 10)
@@ -190,6 +217,14 @@ Improved prompt:"""
         # Load seeds
         seeds = load_seeds_for_ga(population_size, layer, category)
         ga._seed_prompts = seeds
+        
+        # Load task context for task-aware evolution
+        if category:
+            ga._task_context = get_task_context(category)
+        else:
+            ga._task_context = None
+        
+        ga._error_patterns = None  # Will be updated during evolution
         
         return ga
     
@@ -199,27 +234,39 @@ Improved prompt:"""
         llm_client: LLMClient,
         layer: int = 1,
         category: str = None,
+        error_patterns: List[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """Run evolution using seed prompts as initial population.
+        
+        Uses task-aware crossover/mutation for better evolution.
         
         Args:
             evaluator: Prompt evaluator
             llm_client: LLM client for operations
             layer: Detection layer (1, 2, or 3)
             category: Optional category focus
+            error_patterns: Recent error patterns to address in mutation
             **kwargs: Additional evolution parameters
             
         Returns:
             Evolution results dict
         """
         from ..prompts.seed_loader import load_seeds_for_ga
+        from ..prompts.evolution_prompts import get_task_context
         
         # Load seeds if not already loaded
         if not hasattr(self, '_seed_prompts') or not self._seed_prompts:
             self._seed_prompts = load_seeds_for_ga(
                 self.population_size, layer, category
             )
+        
+        # Set task context for task-aware evolution
+        if category and (not hasattr(self, '_task_context') or not self._task_context):
+            self._task_context = get_task_context(category)
+        
+        # Set error patterns for mutation guidance
+        self._error_patterns = error_patterns
         
         # Run evolution with seeds as initial prompts
         return self.evolve(
@@ -228,3 +275,21 @@ Improved prompt:"""
             initial_prompts=self._seed_prompts,
             **kwargs
         )
+
+    def set_task_context(self, category: str, error_patterns: List[str] = None) -> None:
+        """Set task context for task-aware evolution.
+        
+        Args:
+            category: Target vulnerability category
+            error_patterns: Recent detection errors to address
+        """
+        from ..prompts.evolution_prompts import get_task_context
+        
+        self._task_context = get_task_context(category)
+        self._error_patterns = error_patterns
+        
+        if self._task_context:
+            print(f"Task context set for: {category}")
+            print(f"  Description: {self._task_context.description[:80]}...")
+        else:
+            print(f"Warning: No task context found for category '{category}'")
