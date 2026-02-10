@@ -130,48 +130,33 @@ def map_cwe_to_major(cwe_codes: List[str]) -> str:
 def canonicalize_category(text: str) -> Optional[str]:
     """Normalize model output to one of CWE_MAJOR_CATEGORIES if possible.
 
+    This function handles:
     - Exact case-insensitive match to category name
-    - If contains a CWE ID, map to major
-    - Common synonyms handling can be added here if needed
+    - CWE ID extraction and mapping
+
+    For full keyword-based matching, use
+    ``evoprompt.utils.response_parsing.ResponseParser.extract_cwe_category()``.
+
+    Args:
+        text: Raw text to parse
+
+    Returns:
+        Matching category name, or None if no match
     """
     normalized = text.strip().lower()
     if not normalized:
         return None
 
-    # Try exact category match (case-insensitive)
+    # Priority 1: Exact category match (case-insensitive)
     for cat in CWE_MAJOR_CATEGORIES:
         if normalized == cat.lower():
             return cat
 
-    # Try to detect any CWE ID and map
+    # Priority 2: CWE ID extraction and mapping
     ids = _extract_cwe_ids([text])
     if ids:
-        # Prefer the first detected id
         major = _CWE_ID_TO_MAJOR.get(ids[0])
         if major:
             return major
-
-    # Simple keyword helps
-    if "buffer" in normalized or "out-of-bounds" in normalized:
-        return "Buffer Errors"
-    if "inject" in normalized or "sql" in normalized or "command" in normalized:
-        return "Injection"
-    if "use after free" in normalized or "double free" in normalized or "memory leak" in normalized:
-        return "Memory Management"
-    if "null pointer" in normalized or "pointer deref" in normalized:
-        return "Pointer Dereference"
-    if "integer" in normalized or "overflow" in normalized or "underflow" in normalized:
-        return "Integer Errors"
-    if "race" in normalized or "concurrency" in normalized:
-        return "Concurrency Issues"
-    if "path traversal" in normalized or "directory traversal" in normalized:
-        return "Path Traversal"
-    if "crypto" in normalized or "encryption" in normalized or "cipher" in normalized:
-        return "Cryptography Issues"
-    if "information exposure" in normalized or "leak" in normalized:
-        return "Information Exposure"
-
-    if "benign" in normalized or "no vulnerability" in normalized or "no vuln" in normalized:
-        return "Benign"
 
     return None

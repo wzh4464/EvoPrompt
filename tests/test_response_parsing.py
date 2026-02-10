@@ -1,14 +1,19 @@
 """Tests for response parsing utilities.
 
 Covers:
+- ResponseParser class (unified parsing interface)
 - Vulnerability label extraction (binary classification)
 - CWE major category extraction
 - Edge cases and real API response formats
+- Backward-compatible function aliases
 """
 import os
 import pytest
 
 from evoprompt.utils.response_parsing import (
+    ResponseParser,
+    ParsedResponse,
+    # Backward-compatible aliases
     extract_cwe_major,
     extract_vulnerability_label,
     normalize_text,
@@ -27,9 +32,9 @@ pytestmark = pytest.mark.skipif(
 
 
 # =============================================================================
-# normalize_text tests
+# ResponseParser.normalize tests
 # =============================================================================
-class TestNormalizeText:
+class TestNormalize:
     @pytest.mark.parametrize(
         "input_text,expected",
         [
@@ -40,12 +45,17 @@ class TestNormalizeText:
             ("no change", "no change"),
         ],
     )
-    def test_normalize_text(self, input_text, expected):
-        assert normalize_text(input_text) == expected
+    def test_normalize(self, input_text, expected):
+        assert ResponseParser.normalize(input_text) == expected
+
+    def test_backward_compat_normalize_text(self):
+        """Test backward-compatible function alias."""
+        assert normalize_text("  test  ") == "test"
+        assert normalize_text(None) == ""
 
 
 # =============================================================================
-# Vulnerability label extraction tests
+# ResponseParser.extract_vulnerability_label tests
 # =============================================================================
 class TestExtractVulnerabilityLabel:
     """Test binary vulnerability classification from LLM responses."""
@@ -58,6 +68,9 @@ class TestExtractVulnerabilityLabel:
             ("This function is VULNERABLE to buffer overflow", "1"),
             ("vulnerable", "1"),
             ("VULNERABLE", "1"),
+            # "vulnerability" keyword (bug fix)
+            ("This code has a vulnerability", "1"),
+            ("buffer overflow vulnerability detected", "1"),
             # Explicit "benign" keyword
             ("BENIGN sample with no issues detected", "0"),
             ("The code appears benign", "0"),
@@ -78,11 +91,16 @@ class TestExtractVulnerabilityLabel:
         ],
     )
     def test_basic_labels(self, response, expected):
-        assert extract_vulnerability_label(response) == expected
+        assert ResponseParser.extract_vulnerability_label(response) == expected
 
     @pytest.mark.parametrize(
         "response,expected",
         [
+            # Negated vulnerability patterns
+            ("no vulnerability found", "0"),
+            ("not vulnerable to attacks", "0"),
+            ("This code is free of vulnerabilities", "0"),
+            ("no security issues detected", "0"),
             # Real API response formats (multi-line)
             (
                 "Analysis: This code contains a buffer overflow vulnerability.\n"
@@ -103,13 +121,18 @@ class TestExtractVulnerabilityLabel:
         ],
     )
     def test_real_api_formats(self, response, expected):
-        assert extract_vulnerability_label(response) == expected
+        assert ResponseParser.extract_vulnerability_label(response) == expected
+
+    def test_backward_compat_function(self):
+        """Test backward-compatible function alias."""
+        assert extract_vulnerability_label("vulnerable") == "1"
+        assert extract_vulnerability_label("benign") == "0"
 
 
 # =============================================================================
-# CWE major category extraction tests
+# ResponseParser.extract_cwe_category tests
 # =============================================================================
-class TestExtractCweMajor:
+class TestExtractCweCategory:
     """Test CWE major category classification."""
 
     @pytest.mark.parametrize(
@@ -134,7 +157,7 @@ class TestExtractCweMajor:
         ],
     )
     def test_direct_category_names(self, response, expected):
-        assert extract_cwe_major(response) == expected
+        assert ResponseParser.extract_cwe_category(response) == expected
 
     @pytest.mark.parametrize(
         "response,expected",
@@ -158,7 +181,7 @@ class TestExtractCweMajor:
         ],
     )
     def test_cwe_id_parsing(self, response, expected):
-        assert extract_cwe_major(response) == expected
+        assert ResponseParser.extract_cwe_category(response) == expected
 
     @pytest.mark.parametrize(
         "response,expected",
@@ -187,7 +210,7 @@ class TestExtractCweMajor:
         ],
     )
     def test_keyword_detection(self, response, expected):
-        assert extract_cwe_major(response) == expected
+        assert ResponseParser.extract_cwe_category(response) == expected
 
     @pytest.mark.parametrize(
         "response,expected",
@@ -200,11 +223,52 @@ class TestExtractCweMajor:
         ],
     )
     def test_fallback_to_other(self, response, expected):
-        assert extract_cwe_major(response) == expected
+        assert ResponseParser.extract_cwe_category(response) == expected
+
+    def test_backward_compat_function(self):
+        """Test backward-compatible function alias."""
+        assert extract_cwe_major("CWE-120") == "Buffer Errors"
+        assert extract_cwe_major("benign") == "Benign"
 
 
 # =============================================================================
-# CWE category mapping tests (from cwe_categories.py)
+# ResponseParser.parse tests
+# =============================================================================
+class TestParsedResponse:
+    """Test the unified parse() method."""
+
+    def test_parse_vulnerable_with_category(self):
+        response = "This code has a CWE-120 buffer overflow vulnerability"
+        result = ResponseParser.parse(response)
+
+        assert isinstance(result, ParsedResponse)
+        assert result.raw == response
+        assert result.is_vulnerable is True
+        assert result.vulnerability_label == "1"
+        assert result.cwe_category == "Buffer Errors"
+
+    def test_parse_benign(self):
+        response = "The code is benign and safe"
+        result = ResponseParser.parse(response)
+
+        assert result.is_vulnerable is False
+        assert result.vulnerability_label == "0"
+        assert result.cwe_category == "Benign"
+
+    def test_parse_empty(self):
+        result = ResponseParser.parse("")
+        assert result.is_vulnerable is False
+        assert result.vulnerability_label == "0"
+        assert result.cwe_category == "Other"
+
+    def test_parse_none(self):
+        result = ResponseParser.parse(None)
+        assert result.raw == ""
+        assert result.is_vulnerable is False
+
+
+# =============================================================================
+# CWE category data tests
 # =============================================================================
 class TestCweCategories:
     """Test CWE ID to major category mapping."""
@@ -252,20 +316,20 @@ class TestCweCategories:
     @pytest.mark.parametrize(
         "text,expected",
         [
-            # Category names
+            # Exact category names
             ("Buffer Errors", "Buffer Errors"),
             ("injection", "Injection"),
-            # CWE IDs in text
-            ("CWE-120 detected", "Buffer Errors"),
-            # Keywords
-            ("buffer overflow", "Buffer Errors"),
-            ("sql injection", "Injection"),
-            # None cases
+            # CWE IDs
+            ("CWE-120", "Buffer Errors"),
+            ("CWE-89", "Injection"),
+            # None cases (keywords now handled by ResponseParser)
             ("", None),
             ("random gibberish xyz", None),
+            ("buffer overflow", None),  # keyword matching removed from canonicalize
         ],
     )
     def test_canonicalize_category(self, text, expected):
+        """Test canonicalize_category (now only exact match + CWE ID)."""
         assert canonicalize_category(text) == expected
 
 
@@ -306,5 +370,24 @@ class TestRealWorldResponses:
         ],
     )
     def test_combined_extraction(self, response, expected_label, expected_category):
-        assert extract_vulnerability_label(response) == expected_label
-        assert extract_cwe_major(response) == expected_category
+        assert ResponseParser.extract_vulnerability_label(response) == expected_label
+        assert ResponseParser.extract_cwe_category(response) == expected_category
+
+    def test_full_parse_integration(self):
+        """Test full parse() with realistic response."""
+        response = """
+        ## Security Analysis
+
+        After reviewing the code, I identified a **buffer overflow vulnerability**.
+
+        - **CWE**: CWE-120 (Classic Buffer Overflow)
+        - **Location**: Line 42, memcpy() call
+        - **Severity**: High
+
+        The code does not validate the input length before copying to a fixed-size buffer.
+        """
+        result = ResponseParser.parse(response)
+
+        assert result.is_vulnerable is True
+        assert result.vulnerability_label == "1"
+        assert result.cwe_category == "Buffer Errors"
