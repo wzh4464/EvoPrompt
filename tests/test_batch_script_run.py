@@ -157,63 +157,49 @@ def test_batch_integration():
         print(f"   LLM批大小: {config['llm_batch_size']}")
         print(f"   反馈批大小: {config['feedback_batch_size']}")
         
-        try:
-            # 4. 导入并运行函数（但不真正执行LLM调用）
-            from run_primevul_concurrent_optimized import (
-                evaluate_on_dataset, 
-                sample_wise_feedback_training
-            )
-            from evoprompt.data.dataset import PrimevulDataset
-            
-            # 5. 测试数据集加载
-            print(f"\n📊 测试数据集加载...")
-            dev_file = Path(mock_data_dir) / "dev.txt"
-            dataset = PrimevulDataset(str(dev_file), "dev")
-            samples = dataset.get_samples()
-            print(f"   ✅ 加载 {len(samples)} 个开发样本")
-            
-            # 6. 测试配置参数提取
-            print(f"\n⚙️ 测试配置参数提取...")
-            enable_batch = config.get('enable_batch_processing', False)
-            batch_size = config.get('llm_batch_size', 8)
-            
-            if not enable_batch:
-                print("   ❌ 批处理未启用")
-                return False
-                
-            if batch_size != 2:
-                print(f"   ❌ 批大小错误: {batch_size} != 2")
-                return False
-                
-            print(f"   ✅ 批处理参数正确: enable={enable_batch}, batch_size={batch_size}")
-            
-            # 7. 测试样本处理逻辑（不调用真实LLM）
-            print(f"\n🔄 测试样本处理逻辑...")
-            
-            # 创建模拟的批处理查询
-            test_prompt = "Analyze this code for vulnerabilities: {input}"
-            batch_queries = []
-            batch_samples = []
-            
-            for i, sample in enumerate(samples):
-                code = sample.input_text
-                query = safe_format(test_prompt, input=code[:100])  # 截取前100字符
-                batch_queries.append(query)
-                batch_samples.append(sample)
-            
-            print(f"   ✅ 准备了 {len(batch_queries)} 个批处理查询")
-            
-            # 8. 验证批处理分组逻辑
-            expected_batches = (len(batch_queries) + batch_size - 1) // batch_size
-            print(f"   ✅ 预期批次数: {expected_batches} (总查询: {len(batch_queries)}, 批大小: {batch_size})")
-            
-            return True
-            
-        except Exception as e:
-            print(f"   ❌ 测试失败: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
+        # 4. 导入并运行函数（但不真正执行LLM调用）
+        from run_primevul_concurrent_optimized import (
+            evaluate_on_dataset,
+            sample_wise_feedback_training
+        )
+        from evoprompt.data.dataset import PrimevulDataset
+
+        # 5. 测试数据集加载
+        print(f"\n📊 测试数据集加载...")
+        dev_file = Path(mock_data_dir) / "dev.txt"
+        dataset = PrimevulDataset(str(dev_file), "dev")
+        samples = dataset.get_samples()
+        print(f"   ✅ 加载 {len(samples)} 个开发样本")
+
+        # 6. 测试配置参数提取
+        print(f"\n⚙️ 测试配置参数提取...")
+        enable_batch = config.get('enable_batch_processing', False)
+        batch_size = config.get('llm_batch_size', 8)
+
+        assert enable_batch, "批处理未启用"
+        assert batch_size == 2, f"批大小错误: {batch_size} != 2"
+
+        print(f"   ✅ 批处理参数正确: enable={enable_batch}, batch_size={batch_size}")
+
+        # 7. 测试样本处理逻辑（不调用真实LLM）
+        print(f"\n🔄 测试样本处理逻辑...")
+
+        # 创建模拟的批处理查询
+        test_prompt = "Analyze this code for vulnerabilities: {input}"
+        batch_queries = []
+        batch_samples = []
+
+        for i, sample in enumerate(samples):
+            code = sample.input_text
+            query = safe_format(test_prompt, input=code[:100])  # 截取前100字符
+            batch_queries.append(query)
+            batch_samples.append(sample)
+
+        print(f"   ✅ 准备了 {len(batch_queries)} 个批处理查询")
+
+        # 8. 验证批处理分组逻辑
+        expected_batches = (len(batch_queries) + batch_size - 1) // batch_size
+        print(f"   ✅ 预期批次数: {expected_batches} (总查询: {len(batch_queries)}, 批大小: {batch_size})")
 
 
 def main():

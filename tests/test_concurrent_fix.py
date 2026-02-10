@@ -21,10 +21,8 @@ def test_openai_client_concurrent():
     client = create_default_client()
     
     # 检查是否有并发方法
-    if not hasattr(client, '_process_batch_concurrent'):
-        print("   ❌ 客户端缺少_process_batch_concurrent方法")
-        return False
-    
+    assert hasattr(client, '_process_batch_concurrent'), "客户端缺少_process_batch_concurrent方法"
+
     print("   ✅ 客户端包含并发处理方法")
     
     # 创建测试数据
@@ -38,53 +36,47 @@ def test_openai_client_concurrent():
     # 测试顺序处理
     print("   🔄 测试顺序处理...")
     start_time = time.time()
-    
-    try:
-        sequential_results = client.batch_generate(
-            test_prompts,
-            batch_size=8,
-            concurrent=False,  # 顺序处理
-            max_tokens=10
-        )
-        sequential_time = time.time() - start_time
-        sequential_success = sum(1 for r in sequential_results if r != "error")
-        
-        print(f"      ⏱️ 顺序处理耗时: {sequential_time:.2f}秒")
-        print(f"      ✅ 成功: {sequential_success}/{len(test_prompts)}")
-        
-        # 测试并发处理
-        print("   🚀 测试并发处理...")
-        start_time = time.time()
-        
-        concurrent_results = client.batch_generate(
-            test_prompts,
-            batch_size=8, 
-            concurrent=True,   # 并发处理
-            max_tokens=10
-        )
-        concurrent_time = time.time() - start_time
-        concurrent_success = sum(1 for r in concurrent_results if r != "error")
-        
-        print(f"      ⏱️ 并发处理耗时: {concurrent_time:.2f}秒")
-        print(f"      ✅ 成功: {concurrent_success}/{len(test_prompts)}")
-        
-        # 性能对比
-        if sequential_time > 0 and concurrent_time > 0:
-            speedup = sequential_time / concurrent_time
-            print(f"      📈 加速比: {speedup:.2f}x")
-            
-            if speedup > 1.2:
-                print("      🎉 并发处理明显更快！")
-            else:
-                print("      ℹ️ 性能提升不明显（可能由于API或网络限制）")
-        
-        return True
-        
-    except Exception as e:
-        print(f"   ❌ 测试失败: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+
+    sequential_results = client.batch_generate(
+        test_prompts,
+        batch_size=8,
+        concurrent=False,  # 顺序处理
+        max_tokens=10
+    )
+    sequential_time = time.time() - start_time
+    sequential_success = sum(1 for r in sequential_results if r != "error")
+
+    print(f"      ⏱️ 顺序处理耗时: {sequential_time:.2f}秒")
+    print(f"      ✅ 成功: {sequential_success}/{len(test_prompts)}")
+
+    # 测试并发处理
+    print("   🚀 测试并发处理...")
+    start_time = time.time()
+
+    concurrent_results = client.batch_generate(
+        test_prompts,
+        batch_size=8,
+        concurrent=True,   # 并发处理
+        max_tokens=10
+    )
+    concurrent_time = time.time() - start_time
+    concurrent_success = sum(1 for r in concurrent_results if r != "error")
+
+    print(f"      ⏱️ 并发处理耗时: {concurrent_time:.2f}秒")
+    print(f"      ✅ 成功: {concurrent_success}/{len(test_prompts)}")
+
+    # 性能对比
+    if sequential_time > 0 and concurrent_time > 0:
+        speedup = sequential_time / concurrent_time
+        print(f"      📈 加速比: {speedup:.2f}x")
+
+        if speedup > 1.2:
+            print("      🎉 并发处理明显更快！")
+        else:
+            print("      ℹ️ 性能提升不明显（可能由于API或网络限制）")
+
+    assert sequential_success > 0, "顺序处理无成功结果"
+    assert concurrent_success > 0, "并发处理无成功结果"
 
 
 def test_config_and_params():
@@ -105,12 +97,10 @@ def test_config_and_params():
     print(f"      批大小: {batch_size}")
     print(f"      并发启用: {enable_concurrent}")
     
-    if enable_batch and batch_size == 8 and enable_concurrent:
-        print("   ✅ 配置正确")
-        return True
-    else:
-        print("   ❌ 配置有误")
-        return False
+    assert enable_batch, "批处理未启用"
+    assert batch_size == 8, f"批大小错误: {batch_size}"
+    assert enable_concurrent, "并发未启用"
+    print("   ✅ 配置正确")
 
 
 def main():

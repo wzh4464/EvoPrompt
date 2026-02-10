@@ -28,16 +28,12 @@ def test_default_concurrent_config():
     }
 
     print("📋 检查配置项:")
-    all_correct = True
 
     for key, expected_value in required_config.items():
         actual_value = config.get(key)
         status = "✅" if actual_value == expected_value else "❌"
         print(f"   {status} {key}: {actual_value} (期望: {expected_value})")
-        if actual_value != expected_value:
-            all_correct = False
-
-    return all_correct
+        assert actual_value == expected_value, f"{key}: {actual_value} != {expected_value}"
 
 
 def test_concurrent_parameter_flow():
@@ -60,50 +56,38 @@ def test_concurrent_parameter_flow():
     print(f"   并发启用: {enable_concurrent}")
 
     # 验证参数正确性
-    if enable_batch and batch_size == 8 and enable_concurrent:
-        print("   ✅ 参数提取正确")
-        return True
-    else:
-        print("   ❌ 参数提取有误")
-        return False
+    assert enable_batch, "批处理未启用"
+    assert batch_size == 8, f"批大小错误: {batch_size}"
+    assert enable_concurrent, "并发未启用"
+    print("   ✅ 参数提取正确")
 
 
 def test_sven_client_concurrent_support():
     """测试SVEN客户端并发支持"""
     print("\n🤖 测试SVEN客户端并发支持...")
 
-    try:
-        from sven_llm_client import sven_llm_query
+    from sven_llm_client import sven_llm_query
 
-        # 检查函数参数
+    # 检查函数参数
+    sig = inspect.signature(sven_llm_query)
+    params = list(sig.parameters.keys())
 
-        sig = inspect.signature(sven_llm_query)
-        params = list(sig.parameters.keys())
+    assert "concurrent" in params, "sven_llm_query缺少concurrent参数"
 
-        if "concurrent" not in params:
-            print("   ❌ sven_llm_query缺少concurrent参数")
-            return False
+    print("   ✅ sven_llm_query支持concurrent参数")
 
-        print("   ✅ sven_llm_query支持concurrent参数")
+    # 检查默认值（从兼容函数）
+    from evoprompt.llm.client import llm_query
 
-        # 检查默认值（从兼容函数）
-        from evoprompt.llm.client import llm_query
+    sig2 = inspect.signature(llm_query)
+    concurrent_param = sig2.parameters.get("concurrent")
 
-        sig2 = inspect.signature(llm_query)
-        concurrent_param = sig2.parameters.get("concurrent")
-
-        if concurrent_param and concurrent_param.default:
-            print("   ✅ llm_query默认concurrent=True")
-        else:
-            print(
-                f"   ⚠️ llm_query concurrent默认值: {concurrent_param.default if concurrent_param else 'None'}"
-            )
-
-        return True
-
-    except Exception as e:
-        print(f"   ❌ 测试失败: {e}")
-        return False
+    if concurrent_param and concurrent_param.default:
+        print("   ✅ llm_query默认concurrent=True")
+    else:
+        print(
+            f"   ⚠️ llm_query concurrent默认值: {concurrent_param.default if concurrent_param else 'None'}"
+        )
 
 
 def test_batch_processing_info():
@@ -120,13 +104,8 @@ def test_batch_processing_info():
 
     expected_text = "使用批处理模式，LLM batch_size=8 (并发)"
 
-    if info_text == expected_text:
-        print(f"   ✅ 信息显示正确: {info_text}")
-        return True
-    else:
-        print(f"   ❌ 信息显示错误: {info_text}")
-        print(f"       期望: {expected_text}")
-        return False
+    assert info_text == expected_text, f"信息显示错误: {info_text}, 期望: {expected_text}"
+    print(f"   ✅ 信息显示正确: {info_text}")
 
 
 def main():
