@@ -30,6 +30,7 @@ from evoprompt.llm.client import load_env_vars, create_llm_client
 from evoprompt.multiagent.agents import create_detection_agent, create_meta_agent
 from evoprompt.multiagent.coordinator import MultiAgentCoordinator, CoordinatorConfig
 from evoprompt.algorithms.coevolution import CoevolutionaryAlgorithm
+from evoprompt.utils.trace import TraceManager, TraceConfig, trace_enabled_from_env
 
 
 def setup_environment():
@@ -155,7 +156,7 @@ def create_detector(prompt_set, llm_client, kb, args):
     return detector
 
 
-def run_evaluation(detector, dataset, args):
+def run_evaluation(detector, dataset, args, trace_manager: TraceManager = None):
     """运行评估
 
     Args:
@@ -171,7 +172,8 @@ def run_evaluation(detector, dataset, args):
 
     evaluator = ThreeLayerEvaluator(detector, dataset)
 
-    print(f"   🔍 Evaluating on {args.eval_samples} samples...")
+    eval_count = args.eval_samples if args.eval_samples is not None else "all"
+    print(f"   🔍 Evaluating on {eval_count} samples...")
     start = time.time()
 
     # 使用verbose=True打印详细的Macro/Weighted/Micro F1
@@ -181,10 +183,20 @@ def run_evaluation(detector, dataset, args):
 
     print(f"\n   ✅ Evaluation completed in {elapsed:.1f}s")
 
+    if trace_manager and trace_manager.enabled:
+        trace_manager.log_event(
+            "evaluation",
+            {
+                "mode": "baseline" if not args.train else "evaluation",
+                "metrics": metrics,
+                "eval_samples": args.eval_samples,
+            },
+        )
+
     return metrics
 
 
-def run_training(initial_prompt_set, detector, dataset, kb, args):
+def run_training(initial_prompt_set, detector, dataset, kb, args, trace_manager: TraceManager = None):
     """运行训练
 
     Args:
@@ -219,7 +231,8 @@ def run_training(initial_prompt_set, detector, dataset, kb, args):
     coordinator = MultiAgentCoordinator(
         detection_agent=detection_agent,
         meta_agent=meta_agent,
-        config=coordinator_config
+        config=coordinator_config,
+        trace_manager=trace_manager,
     )
 
     # 创建进化算法配置
@@ -261,6 +274,13 @@ def run_training(initial_prompt_set, detector, dataset, kb, args):
     # TODO: 未来应该支持完整的三层prompt集合优化
     initial_prompts = [initial_prompt_set.layer1_prompt]
 
+    if trace_manager and trace_manager.enabled:
+        trace_manager.save_prompt_snapshot(
+            "initial_layer1_prompt",
+            initial_prompt_set.layer1_prompt,
+            metadata={"stage": "initialization"},
+        )
+
     best_individual = algorithm.evolve(initial_prompts=initial_prompts)
 
     print()
@@ -269,6 +289,14 @@ def run_training(initial_prompt_set, detector, dataset, kb, args):
 
     # TODO: 将best_individual.prompt转换回ThreeLayerPromptSet
     # 目前返回初始prompt集合
+    if trace_manager and trace_manager.enabled:
+        trace_manager.log_event(
+            "training_complete",
+            {
+                "best_fitness": getattr(best_individual, "fitness", None),
+            },
+        )
+
     return initial_prompt_set
 
 
@@ -348,19 +376,19 @@ def main():
     # 数据集参数
     parser.add_argument(
         "--train-file",
-        default="./data/primevul_1percent_sample/train.txt",
+        default="./data/primevul/primevul/dev.jsonl",
         help="训练数据文件"
     )
     parser.add_argument(
         "--eval-file",
-        default="./data/primevul_1percent_sample/dev.txt",
+        default="./data/primevul/primevul/primevul_test.jsonl",
         help="评估数据文件"
     )
     parser.add_argument(
         "--eval-samples",
         type=int,
-        default=50,
-        help="评估样本数量"
+        default=None,
+        help="评估样本数量 (默认全量)"
     )
 
     # RAG参数
@@ -453,6 +481,11 @@ def main():
         default=2,
         help="每次Meta优化个体数"
     )
+    parser.add_argument(
+        "--release",
+        action="store_true",
+        help="关闭详细追踪输出 (默认开启)",
+    )
 
     # 输出参数
     parser.add_argument(
@@ -462,6 +495,9 @@ def main():
 
     args = parser.parse_args()
 
+    if args.release:
+        os.environ["EVOPROMPT_RELEASE"] = "1"
+
     # 设置输出目录
     if not args.output_dir:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -469,6 +505,15 @@ def main():
         rag_suffix = "_rag" if args.use_rag else ""
         scale_suffix = "_scale" if args.use_scale else ""
         args.output_dir = f"./outputs/three_layer_{mode}{rag_suffix}{scale_suffix}_{timestamp}"
+
+    trace_enabled = not args.release if args.release else trace_enabled_from_env()
+    trace_manager = TraceManager(
+        TraceConfig(
+            enabled=trace_enabled,
+            base_dir=Path(args.output_dir),
+            experiment_id=Path(args.output_dir).name,
+        )
+    )
 
     # 开始
     print("🏗️  Three-Layer Detection Training System")
@@ -518,17 +563,17 @@ def main():
     # 评估基线
     print("\n📊 Baseline Evaluation")
     print("=" * 70)
-    baseline_metrics = run_evaluation(detector, eval_dataset, args)
+    baseline_metrics = run_evaluation(detector, eval_dataset, args, trace_manager=trace_manager)
 
     # 训练
     if args.train:
-        prompt_set = run_training(prompt_set, detector, train_dataset, kb, args)
+        prompt_set = run_training(prompt_set, detector, train_dataset, kb, args, trace_manager=trace_manager)
 
         # 重新创建检测器并评估
         print("\n📊 Final Evaluation")
         print("=" * 70)
         detector = create_detector(prompt_set, llm_client, kb, args)
-        final_metrics = run_evaluation(detector, eval_dataset, args)
+        final_metrics = run_evaluation(detector, eval_dataset, args, trace_manager=trace_manager)
 
         # 保存最终结果
         save_results(args.output_dir, final_metrics, prompt_set, args)

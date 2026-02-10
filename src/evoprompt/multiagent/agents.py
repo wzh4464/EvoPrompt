@@ -7,7 +7,7 @@ This module defines two main agent types:
 
 from enum import Enum
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 from ..llm.client import LLMClient
 from ..evaluators.statistics import DetectionStatistics
@@ -77,7 +77,13 @@ class DetectionAgent(Agent):
             raise ValueError("DetectionAgent must have role=DETECTION")
         super().__init__(config, llm_client)
 
-    def detect(self, prompt: str, code_samples: List[str]) -> List[str]:
+    def detect(
+        self,
+        prompt: str,
+        code_samples: List[str],
+        return_raw: bool = False,
+        return_prompts: bool = False,
+    ) -> Union[List[str], Dict[str, List[str]]]:
         """Perform vulnerability detection on code samples.
 
         Args:
@@ -94,7 +100,7 @@ class DetectionAgent(Agent):
         ]
 
         # Batch generate predictions
-        predictions = self.llm_client.batch_generate(
+        raw_responses = self.llm_client.batch_generate(
             formatted_prompts,
             temperature=self.config.temperature,
             max_tokens=self.config.max_tokens,
@@ -103,7 +109,7 @@ class DetectionAgent(Agent):
 
         # Normalize predictions
         normalized = []
-        for pred in predictions:
+        for pred in raw_responses:
             pred_lower = pred.lower().strip()
             if "vulnerable" in pred_lower:
                 normalized.append("vulnerable")
@@ -113,7 +119,15 @@ class DetectionAgent(Agent):
                 # Default to benign if unclear
                 normalized.append("benign")
 
-        return normalized
+        if not return_raw and not return_prompts:
+            return normalized
+
+        payload: Dict[str, List[str]] = {"predictions": normalized}
+        if return_raw:
+            payload["responses"] = raw_responses
+        if return_prompts:
+            payload["prompts"] = formatted_prompts
+        return payload
 
     def detect_single(self, prompt: str, code: str) -> str:
         """Detect vulnerability in a single code sample.

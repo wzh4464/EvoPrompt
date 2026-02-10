@@ -8,6 +8,7 @@ from typing import Dict, List, Any, Optional
 from pathlib import Path
 import logging
 
+from ..utils.trace import TraceConfig, TraceManager, trace_enabled_from_env
 logger = logging.getLogger(__name__)
 
 
@@ -62,7 +63,12 @@ class PromptSnapshot:
 class PromptTracker:
     """Tracks and logs prompt evolution during the optimization process."""
     
-    def __init__(self, output_dir: str, experiment_id: Optional[str] = None):
+    def __init__(
+        self,
+        output_dir: str,
+        experiment_id: Optional[str] = None,
+        trace_manager: Optional[TraceManager] = None,
+    ):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
@@ -76,6 +82,18 @@ class PromptTracker:
         self.prompt_log_file = self.exp_dir / "prompt_evolution.jsonl"
         self.summary_file = self.exp_dir / "experiment_summary.json"
         self.best_prompts_file = self.exp_dir / "best_prompts.txt"
+
+        # Trace manager (default enabled unless release)
+        if trace_manager is not None:
+            self.trace = trace_manager
+        else:
+            self.trace = TraceManager(
+                TraceConfig(
+                    enabled=trace_enabled_from_env(),
+                    base_dir=self.exp_dir,
+                    experiment_id=self.experiment_id,
+                )
+            )
         
         # In-memory storage
         self.snapshots: List[PromptSnapshot] = []
@@ -128,6 +146,10 @@ class PromptTracker:
         
         # Save to file immediately for real-time tracking
         self._append_to_log(snapshot)
+
+        # Trace event for prompt snapshot
+        if getattr(self, "trace", None) and self.trace.enabled:
+            self.trace.log_event("prompt_snapshot", snapshot.to_dict())
         
     def log_population(
         self,
