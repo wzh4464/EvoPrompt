@@ -24,10 +24,10 @@ EvoPrompt/
 │   ├── llm/                 # LLM客户端 (同步/异步), LLMRuntime, ResponseCache, DeterministicStubClient
 │   ├── utils/               # ResponseParser, checkpoint
 │   ├── evaluators/          # 漏洞评估
-│   ├── detectors/           # 三层检测器(deprecated), DetectionPipeline, 并行分层检测
+│   ├── detectors/           # 三层检测器(deprecated), DetectionPipeline, 并行分层检测 (含RAG支持)
 │   ├── prompts/             # PromptTemplate, PromptSet, PromptContract, seed prompts
 │   ├── meta/                # Meta-learning (错误累积, prompt调优)
-│   ├── rag/                 # RAG知识库
+│   ├── rag/                 # RAG知识库, 检索器 (含 string-accept wrappers)
 │   ├── multiagent/          # 多智能体协调
 │   └── workflows/           # 检测工作流
 ├── scripts/                 # 工具脚本
@@ -153,6 +153,50 @@ results = coordinator.detect_batch(codes, ground_truths)
 # 获取统计
 print(coordinator.get_statistics_summary())
 ```
+
+## RAG-Enhanced Parallel Detection
+
+The `ParallelHierarchicalDetector` supports native RAG via `enable_rag=True`. RAG examples are retrieved per-layer and prepended to prompts.
+
+### Usage via Factory
+
+```python
+from evoprompt.detectors import create_parallel_detector
+from evoprompt.rag.knowledge_base import KnowledgeBase
+
+kb = KnowledgeBase.load("outputs/knowledge_base.json")
+detector = create_parallel_detector(
+    llm_client=async_client,
+    knowledge_base=kb,
+    enable_rag=True,
+    rag_top_k=2,
+    rag_retriever_type="lexical",
+)
+paths = await detector.detect_async(code)
+# paths[0].metadata["rag"] contains retrieval metadata
+```
+
+### Usage via Training Script
+
+```bash
+./scripts/train_three_layer.py --detector parallel --use-rag --rag-top-k 2
+```
+
+### Architecture
+
+```
+Code → Enhance → [RAG Retrieve per layer] → Prepend examples → LLM (parallel) → Parse → Paths
+                        ↓
+           Layer 1: retrieve_for_major_category (1 call, shared across all 6 prompts)
+           Layer 2: retrieve_for_middle_category_by_name (1 call per selected major)
+           Layer 3: retrieve_for_cwe_by_name (1 call per selected middle)
+```
+
+Key features:
+- Sync retriever wrapped with `asyncio.to_thread()` for async compatibility
+- Per-detect retrieval cache (keyed by code hash + layer + category)
+- Graceful fallback: retrieval failure → continue without RAG
+- RAG metadata stored in `DetectionPath.metadata["rag"]` for tracing
 
 ## 统一架构模块 (New)
 

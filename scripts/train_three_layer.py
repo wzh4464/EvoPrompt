@@ -142,7 +142,7 @@ def create_detector(prompt_set, llm_client, kb, args):
         print(f"   📊 Layer3 top-k: {args.layer3_top_k}")
         print(f"   🚦 Max concurrency: {args.parallel_max_concurrency}")
         if args.use_rag:
-            print("   ⚠️  Parallel detector 当前不支持 RAG，--use-rag 将被忽略")
+            print(f"   🔍 RAG: enabled (top_k={args.rag_top_k}, retriever={args.rag_retriever_type})")
 
         async_client = AsyncLLMClient(
             api_base=os.getenv("API_BASE_URL"),
@@ -159,6 +159,10 @@ def create_detector(prompt_set, llm_client, kb, args):
             layer2_top_k=args.layer2_top_k,
             layer3_top_k=args.layer3_top_k,
             max_concurrent_requests=args.parallel_max_concurrency,
+            knowledge_base=kb,
+            enable_rag=args.use_rag,
+            rag_top_k=args.rag_top_k,
+            rag_retriever_type=args.rag_retriever_type,
         )
     elif args.use_rag and kb is not None:
         print(f"   🎯 Type: RAG-Enhanced Three-Layer")
@@ -701,7 +705,7 @@ def main():
     print(f"   Scale: {'✅ Enabled' if args.use_scale else '❌ Disabled'}")
     print(f"   Output: {args.output_dir}")
     if args.detector == "parallel" and args.use_rag:
-        print("   ⚠️  Parallel detector 当前不支持 RAG，运行时将忽略 --use-rag")
+        print(f"   🔍 RAG-enhanced parallel detection enabled")
 
     # 环境设置
     if not setup_environment():

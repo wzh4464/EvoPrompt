@@ -9,6 +9,7 @@ Supports optional code enhancement via Comment4Vul or similar enhancers.
 """
 
 import asyncio
+import hashlib
 import logging
 import re
 from abc import ABC, abstractmethod
@@ -16,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Protocol, Tuple, Any, runtime_checkable
 
 from ..llm.async_client import AsyncLLMClient
+from ..rag.retriever import CodeSimilarityRetriever, RetrievalResult
 from ..prompts.hierarchical_three_layer import (
     MajorCategory,
     MiddleCategory,
@@ -245,7 +247,7 @@ Output format:
 @dataclass
 class ParallelDetectorConfig:
     """Configuration for parallel hierarchical detector.
-    
+
     Attributes:
         layer1_top_k: Number of top categories to select from Layer 1
         layer2_top_k: Number of top categories to select from Layer 2
@@ -253,6 +255,9 @@ class ParallelDetectorConfig:
         max_concurrent_requests: Maximum concurrent LLM requests
         default_confidence: Default confidence for parse failures
         enable_enhancement: Whether to use code enhancement
+        enable_rag: Whether to enable RAG-based prompt enhancement
+        rag_top_k: Number of RAG examples to retrieve per layer
+        rag_retriever_type: Type of retriever ("lexical" or "embedding")
     """
     layer1_top_k: int = 2
     layer2_top_k: int = 2
@@ -260,6 +265,9 @@ class ParallelDetectorConfig:
     max_concurrent_requests: int = 20
     default_confidence: float = 0.0
     enable_enhancement: bool = True
+    enable_rag: bool = False
+    rag_top_k: int = 2
+    rag_retriever_type: str = "lexical"
 
 
 class ParallelHierarchicalDetector:
@@ -280,74 +288,158 @@ class ParallelHierarchicalDetector:
         config: Optional[ParallelDetectorConfig] = None,
         enhancer: Optional[CodeEnhancer] = None,
         selection_strategy: Optional[SelectionStrategy] = None,
+        retriever: Optional[CodeSimilarityRetriever] = None,
     ):
         """Initialize the detector.
-        
+
         Args:
             llm_client: Async LLM client for API calls
             prompt_set: Hierarchical prompt set
             config: Detector configuration
             enhancer: Optional code enhancer (e.g., Comment4Vul)
             selection_strategy: Strategy for final path selection
+            retriever: Optional RAG retriever for prompt enhancement
+
+        Raises:
+            ValueError: If config.enable_rag is True but no retriever is provided
         """
         self.llm_client = llm_client
         self.prompt_set = prompt_set
         self.config = config or ParallelDetectorConfig()
         self.enhancer = enhancer or NoOpEnhancer()
         self.selection_strategy = selection_strategy or MaxConfidenceSelection()
-        
+        self.retriever = retriever
+
+        if self.config.enable_rag and self.retriever is None:
+            raise ValueError("enable_rag=True requires a retriever to be provided")
+
         # Semaphore for controlling concurrent requests
         self._semaphore = asyncio.Semaphore(self.config.max_concurrent_requests)
+
+        # Per-detect RAG metadata and cache
+        self._last_rag_metadata: Dict[str, Any] = {}
+        self._rag_cache: Dict[Tuple[str, int, Optional[str]], RetrievalResult] = {}
     
+    def _code_hash(self, code: str) -> str:
+        """Compute a short hash of code for caching."""
+        return hashlib.md5(code.encode("utf-8", errors="replace")).hexdigest()[:16]
+
+    async def _retrieve_async(
+        self,
+        query_code: str,
+        layer: int,
+        category_name: Optional[str] = None,
+    ) -> Optional[RetrievalResult]:
+        """Retrieve RAG examples asynchronously, with per-detect caching.
+
+        Args:
+            query_code: Code to find similar examples for
+            layer: Detection layer (1, 2, or 3)
+            category_name: Category name for layer 2/3 retrieval
+
+        Returns:
+            RetrievalResult or None if RAG disabled or retrieval fails
+        """
+        if not self.config.enable_rag or self.retriever is None:
+            return None
+
+        cache_key = (self._code_hash(query_code), layer, category_name)
+        if cache_key in self._rag_cache:
+            return self._rag_cache[cache_key]
+
+        try:
+            if layer == 1:
+                result = await asyncio.to_thread(
+                    self.retriever.retrieve_for_major_category,
+                    query_code,
+                    self.config.rag_top_k,
+                )
+            elif layer == 2:
+                result = await asyncio.to_thread(
+                    self.retriever.retrieve_for_middle_category_by_name,
+                    query_code,
+                    category_name or "",
+                    self.config.rag_top_k,
+                )
+            elif layer == 3:
+                result = await asyncio.to_thread(
+                    self.retriever.retrieve_for_cwe_by_name,
+                    query_code,
+                    category_name or "",
+                    self.config.rag_top_k,
+                )
+            else:
+                return None
+
+            self._rag_cache[cache_key] = result
+            return result
+        except Exception as e:
+            logger.warning(f"RAG retrieval failed for layer {layer}: {e}")
+            empty = RetrievalResult(
+                examples=[], formatted_text="", similarity_scores=[],
+                debug_info={"error": str(e), "pool_size": 0, "num_retrieved": 0},
+            )
+            self._rag_cache[cache_key] = empty
+            return empty
+
     async def detect_async(self, code: str) -> List[DetectionPath]:
         """Perform hierarchical detection on code.
-        
+
         Args:
             code: Source code to analyze
-            
+
         Returns:
             List of detection paths sorted by confidence
         """
+        # Reset per-detect state
+        self._last_rag_metadata = {}
+        self._rag_cache = {}
+
         # Step 1: Optionally enhance code
         if self.config.enable_enhancement:
             enhanced_code = await self.enhancer.enhance_async(code)
         else:
             enhanced_code = code
-        
+
         # Step 2: Layer 1 - Parallel classification into major categories
         layer1_predictions = await self._classify_layer1_parallel(enhanced_code)
-        
+
         # Select top-k from Layer 1
         top_layer1 = sorted(
-            layer1_predictions, 
-            key=lambda p: p.confidence, 
+            layer1_predictions,
+            key=lambda p: p.confidence,
             reverse=True
         )[:self.config.layer1_top_k]
-        
+
         logger.debug(f"Layer 1 top-{self.config.layer1_top_k}: {[p.category for p in top_layer1]}")
-        
+
         # Step 3: Layer 2 - Parallel classification for each selected major category
         layer2_predictions = await self._classify_layer2_parallel(
-            enhanced_code, 
+            enhanced_code,
             [p.category for p in top_layer1]
         )
-        
+
         # Step 4: Layer 3 - Parallel CWE classification
         layer3_predictions = await self._classify_layer3_parallel(
             enhanced_code,
             layer2_predictions
         )
-        
+
         # Step 5: Build detection paths
         paths = self._build_detection_paths(
             layer1_predictions,
             layer2_predictions,
             layer3_predictions
         )
-        
-        # Step 6: Apply selection strategy
+
+        # Step 6: Inject RAG metadata into paths
+        if self._last_rag_metadata:
+            for path in paths:
+                path.metadata["rag"] = self._last_rag_metadata
+
+        # Step 7: Apply selection strategy
         selected_paths = self.selection_strategy.select(paths, top_k=self.config.layer3_top_k)
-        
+
         return selected_paths
     
     def detect(self, code: str) -> List[DetectionPath]:
@@ -379,29 +471,40 @@ class ParallelHierarchicalDetector:
         return results
     
     async def _classify_layer1_parallel(
-        self, 
+        self,
         code: str
     ) -> List[ScoredPrediction]:
         """Classify code into major categories in parallel.
-        
+
         Args:
             code: Enhanced source code
-            
+
         Returns:
             List of scored predictions for each major category
         """
         prompts = self.prompt_set.get_layer1_prompts()
         categories = list(prompts.keys())
-        
-        # Prepare prompts with code
+
+        # RAG: retrieve once for all Layer 1 prompts
+        rag_prefix = ""
+        if self.config.enable_rag:
+            rag_result = await self._retrieve_async(code, layer=1)
+            if rag_result and rag_result.formatted_text:
+                rag_prefix = rag_result.formatted_text + "\n\n"
+                self._last_rag_metadata["layer1"] = {
+                    "num_examples": len(rag_result.examples),
+                    "debug_info": rag_result.debug_info,
+                }
+
+        # Prepare prompts with code (and optional RAG prefix)
         filled_prompts = [
-            prompt.replace("{CODE}", code).replace("{{CODE}}", code)
+            rag_prefix + prompt.replace("{CODE}", code).replace("{{CODE}}", code)
             for prompt in prompts.values()
         ]
-        
+
         # Execute in parallel
         responses = await self._batch_generate_with_semaphore(filled_prompts)
-        
+
         # Parse responses
         predictions = []
         for category, response in zip(categories, responses):
@@ -412,41 +515,61 @@ class ParallelHierarchicalDetector:
                 layer=1,
                 raw_response=response
             ))
-        
+
         return predictions
     
     async def _classify_layer2_parallel(
-        self, 
+        self,
         code: str,
         selected_majors: List[str]
     ) -> List[ScoredPrediction]:
         """Classify code into middle categories for selected majors.
-        
+
         Args:
             code: Enhanced source code
             selected_majors: List of selected major category names
-            
+
         Returns:
             List of scored predictions for middle categories
         """
+        # RAG: retrieve per selected major in parallel
+        rag_prefixes: Dict[str, str] = {}
+        if self.config.enable_rag:
+            rag_tasks = {
+                major: self._retrieve_async(code, layer=2, category_name=major)
+                for major in selected_majors
+            }
+            rag_results = await asyncio.gather(*rag_tasks.values())
+            layer2_rag_meta = {}
+            for major, result in zip(rag_tasks.keys(), rag_results):
+                if result and result.formatted_text:
+                    rag_prefixes[major] = result.formatted_text + "\n\n"
+                    layer2_rag_meta[major] = {
+                        "num_examples": len(result.examples),
+                        "debug_info": result.debug_info,
+                    }
+            if layer2_rag_meta:
+                self._last_rag_metadata["layer2"] = layer2_rag_meta
+
         all_prompts = []
         all_categories = []
         parent_map = []
-        
+
         for major in selected_majors:
+            prefix = rag_prefixes.get(major, "")
             layer2_prompts = self.prompt_set.get_layer2_prompts_for_major(major)
             for middle, prompt in layer2_prompts.items():
-                filled = prompt.replace("{CODE}", code).replace("{{CODE}}", code)
+                filled = prefix + prompt.replace("{CODE}", code).replace("{{CODE}}", code)
                 all_prompts.append(filled)
                 all_categories.append(middle)
                 parent_map.append(major)
-        
+
         if not all_prompts:
             return []
-        
+
         # Execute in parallel
         responses = await self._batch_generate_with_semaphore(all_prompts)
-        
+
         # Parse responses
         predictions = []
         for category, parent, response in zip(all_categories, parent_map, responses):
@@ -458,20 +581,20 @@ class ParallelHierarchicalDetector:
                 parent_category=parent,
                 raw_response=response
             ))
-        
+
         return predictions
     
     async def _classify_layer3_parallel(
-        self, 
+        self,
         code: str,
         layer2_predictions: List[ScoredPrediction]
     ) -> List[ScoredPrediction]:
         """Classify code into specific CWEs for relevant middle categories.
-        
+
         Args:
             code: Enhanced source code
             layer2_predictions: Predictions from Layer 2
-            
+
         Returns:
             List of scored predictions for CWEs
         """
@@ -481,25 +604,46 @@ class ParallelHierarchicalDetector:
             key=lambda p: p.confidence,
             reverse=True
         )[:self.config.layer2_top_k * self.config.layer1_top_k]  # Account for multiple majors
-        
+
+        # RAG: retrieve per selected middle in parallel
+        selected_middle_names = list({pred.category for pred in top_middles})
+        rag_prefixes: Dict[str, str] = {}
+        if self.config.enable_rag and selected_middle_names:
+            rag_tasks = {
+                middle: self._retrieve_async(code, layer=3, category_name=middle)
+                for middle in selected_middle_names
+            }
+            rag_results = await asyncio.gather(*rag_tasks.values())
+            layer3_rag_meta = {}
+            for middle, result in zip(rag_tasks.keys(), rag_results):
+                if result and result.formatted_text:
+                    rag_prefixes[middle] = result.formatted_text + "\n\n"
+                    layer3_rag_meta[middle] = {
+                        "num_examples": len(result.examples),
+                        "debug_info": result.debug_info,
+                    }
+            if layer3_rag_meta:
+                self._last_rag_metadata["layer3"] = layer3_rag_meta
+
         all_prompts = []
         all_cwes = []
         parent_map = []
-        
+
         for pred in top_middles:
+            prefix = rag_prefixes.get(pred.category, "")
             layer3_prompts = self.prompt_set.get_layer3_prompts_for_middle(pred.category)
             for cwe, prompt in layer3_prompts.items():
-                filled = prompt.replace("{CODE}", code).replace("{{CODE}}", code)
+                filled = prefix + prompt.replace("{CODE}", code).replace("{{CODE}}", code)
                 all_prompts.append(filled)
                 all_cwes.append(cwe)
                 parent_map.append(pred.category)
-        
+
         if not all_prompts:
             return []
-        
+
         # Execute in parallel
         responses = await self._batch_generate_with_semaphore(all_prompts)
-        
+
         # Parse responses
         predictions = []
         for cwe, parent, response in zip(all_cwes, parent_map, responses):
@@ -511,7 +655,7 @@ class ParallelHierarchicalDetector:
                 parent_category=parent,
                 raw_response=response
             ))
-        
+
         return predictions
     
     async def _batch_generate_with_semaphore(
@@ -655,30 +799,42 @@ def create_parallel_detector(
     llm_client: AsyncLLMClient,
     prompt_set: Optional[ThreeLayerPromptSet] = None,
     enhancer: Optional[CodeEnhancer] = None,
+    knowledge_base: Optional[Any] = None,
     **config_kwargs
 ) -> ParallelHierarchicalDetector:
     """Factory function to create a parallel hierarchical detector.
-    
+
     Args:
         llm_client: Async LLM client
         prompt_set: Optional ThreeLayerPromptSet (creates default if not provided)
         enhancer: Optional code enhancer
-        **config_kwargs: Configuration parameters
-        
+        knowledge_base: Optional KnowledgeBase for RAG enhancement
+        **config_kwargs: Configuration parameters (including enable_rag, rag_top_k, rag_retriever_type)
+
     Returns:
         Configured ParallelHierarchicalDetector
     """
     from ..prompts.hierarchical_three_layer import ThreeLayerPromptFactory
-    
+
     if prompt_set is None:
         prompt_set = ThreeLayerPromptFactory.create_default_prompt_set()
-    
+
     hierarchical_prompts = HierarchicalPromptSet.from_three_layer_set(prompt_set)
     config = ParallelDetectorConfig(**config_kwargs)
-    
+
+    # Create retriever if RAG is enabled and KB is provided
+    retriever = None
+    if config.enable_rag and knowledge_base is not None:
+        from ..rag.retriever import create_retriever
+        retriever = create_retriever(
+            knowledge_base,
+            retriever_type=config.rag_retriever_type,
+        )
+
     return ParallelHierarchicalDetector(
         llm_client=llm_client,
         prompt_set=hierarchical_prompts,
         config=config,
         enhancer=enhancer,
+        retriever=retriever,
     )

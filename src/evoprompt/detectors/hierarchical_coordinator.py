@@ -20,6 +20,7 @@ from .parallel_hierarchical_detector import (
     CodeEnhancer,
 )
 from .scoring import DetectionPath, SelectionStrategy
+from ..rag.retriever import CodeSimilarityRetriever
 
 
 logger = logging.getLogger(__name__)
@@ -94,9 +95,10 @@ class HierarchicalDetectionCoordinator:
         selection_strategy: Optional[SelectionStrategy] = None,
         error_accumulator: Optional[ErrorAccumulator] = None,
         prompt_tuner: Optional[MetaLearningPromptTuner] = None,
+        retriever: Optional[CodeSimilarityRetriever] = None,
     ):
         """Initialize the coordinator.
-        
+
         Args:
             llm_client: Async LLM client
             prompt_set: Hierarchical prompt set
@@ -106,11 +108,13 @@ class HierarchicalDetectionCoordinator:
             selection_strategy: Selection strategy for final prediction
             error_accumulator: Error accumulator (created if not provided)
             prompt_tuner: Prompt tuner (created if not provided)
+            retriever: Optional RAG retriever for prompt enhancement
         """
         self.llm_client = llm_client
         self.prompt_set = prompt_set
         self.config = coordinator_config or CoordinatorConfig()
-        
+        self.detector_config = detector_config
+
         # Initialize detector
         self.detector = ParallelHierarchicalDetector(
             llm_client=llm_client,
@@ -118,6 +122,7 @@ class HierarchicalDetectionCoordinator:
             config=detector_config,
             enhancer=enhancer,
             selection_strategy=selection_strategy,
+            retriever=retriever,
         )
         
         # Initialize meta-learning components
@@ -430,7 +435,16 @@ class HierarchicalDetectionCoordinator:
                 "tuner_summary": self.prompt_tuner.get_summary(),
             },
         }
-        
+
+        # Add RAG stats if enabled
+        det_config = self.detector_config or ParallelDetectorConfig()
+        if det_config.enable_rag:
+            summary["rag"] = {
+                "enabled": True,
+                "top_k": det_config.rag_top_k,
+                "retriever_type": det_config.rag_retriever_type,
+            }
+
         return summary
     
     def get_recent_errors(self, limit: int = 10) -> List[Dict[str, Any]]:
@@ -466,41 +480,56 @@ class HierarchicalDetectionCoordinator:
 def create_coordinator(
     llm_client: AsyncLLMClient,
     enable_meta_learning: bool = True,
+    knowledge_base=None,
     **kwargs
 ) -> HierarchicalDetectionCoordinator:
     """Factory function to create a detection coordinator.
-    
+
     Args:
         llm_client: Async LLM client
         enable_meta_learning: Whether to enable meta-learning
-        **kwargs: Additional configuration
-        
+        knowledge_base: Optional KnowledgeBase for RAG enhancement
+        **kwargs: Additional configuration (including enable_rag, rag_top_k, rag_retriever_type)
+
     Returns:
         Configured HierarchicalDetectionCoordinator
     """
     from ..prompts.hierarchical_three_layer import ThreeLayerPromptFactory
-    
+
     # Create default prompt set
     base_prompt_set = ThreeLayerPromptFactory.create_default_prompt_set()
     hierarchical_prompts = HierarchicalPromptSet.from_three_layer_set(base_prompt_set)
-    
+
     # Create configurations
     detector_config = ParallelDetectorConfig(
         layer1_top_k=kwargs.get("layer1_top_k", 2),
         layer2_top_k=kwargs.get("layer2_top_k", 2),
         layer3_top_k=kwargs.get("layer3_top_k", 1),
+        enable_rag=kwargs.get("enable_rag", False),
+        rag_top_k=kwargs.get("rag_top_k", 2),
+        rag_retriever_type=kwargs.get("rag_retriever_type", "lexical"),
     )
-    
+
     coordinator_config = CoordinatorConfig(
         enable_meta_learning=enable_meta_learning,
         meta_learning_check_interval=kwargs.get("meta_learning_check_interval", 100),
         save_checkpoints=kwargs.get("save_checkpoints", True),
         verbose=kwargs.get("verbose", False),
     )
-    
+
+    # Create retriever if RAG is enabled and KB is provided
+    retriever = None
+    if detector_config.enable_rag and knowledge_base is not None:
+        from ..rag.retriever import create_retriever
+        retriever = create_retriever(
+            knowledge_base,
+            retriever_type=detector_config.rag_retriever_type,
+        )
+
     return HierarchicalDetectionCoordinator(
         llm_client=llm_client,
         prompt_set=hierarchical_prompts,
         detector_config=detector_config,
         coordinator_config=coordinator_config,
+        retriever=retriever,
     )
