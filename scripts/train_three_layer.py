@@ -24,9 +24,14 @@ from evoprompt.prompts.hierarchical_three_layer import (
 )
 from evoprompt.detectors.three_layer_detector import ThreeLayerDetector, ThreeLayerEvaluator
 from evoprompt.detectors.rag_three_layer_detector import RAGThreeLayerDetector
+from evoprompt.detectors.parallel_hierarchical_detector import (
+    ParallelHierarchicalDetector,
+    create_parallel_detector,
+)
 from evoprompt.rag.knowledge_base import KnowledgeBase, KnowledgeBaseBuilder
 from evoprompt.data.dataset import PrimevulDataset
 from evoprompt.llm.client import load_env_vars, create_llm_client
+from evoprompt.llm.async_client import AsyncLLMClient
 from evoprompt.multiagent.agents import create_detection_agent, create_meta_agent
 from evoprompt.multiagent.coordinator import MultiAgentCoordinator, CoordinatorConfig
 from evoprompt.algorithms.coevolution import CoevolutionaryAlgorithm
@@ -129,7 +134,33 @@ def create_detector(prompt_set, llm_client, kb, args):
     print("\n🔧 Creating Detector")
     print("=" * 70)
 
-    if args.use_rag and kb is not None:
+    if args.detector == "parallel":
+        print("   🎯 Type: Parallel Hierarchical Detector")
+        print(f"   ⚡ Scale enhancement: {args.use_scale}")
+        print(f"   📊 Layer1 top-k: {args.layer1_top_k}")
+        print(f"   📊 Layer2 top-k: {args.layer2_top_k}")
+        print(f"   📊 Layer3 top-k: {args.layer3_top_k}")
+        print(f"   🚦 Max concurrency: {args.parallel_max_concurrency}")
+        if args.use_rag:
+            print("   ⚠️  Parallel detector 当前不支持 RAG，--use-rag 将被忽略")
+
+        async_client = AsyncLLMClient(
+            api_base=os.getenv("API_BASE_URL"),
+            api_key=os.getenv("API_KEY"),
+            model_name=os.getenv("MODEL_NAME", "gpt-4"),
+            max_concurrency=args.parallel_max_concurrency,
+        )
+
+        detector = create_parallel_detector(
+            llm_client=async_client,
+            prompt_set=prompt_set,
+            enable_enhancement=args.use_scale,
+            layer1_top_k=args.layer1_top_k,
+            layer2_top_k=args.layer2_top_k,
+            layer3_top_k=args.layer3_top_k,
+            max_concurrent_requests=args.parallel_max_concurrency,
+        )
+    elif args.use_rag and kb is not None:
         print(f"   🎯 Type: RAG-Enhanced Three-Layer")
         print(f"   📊 RAG top-k: {args.rag_top_k}")
         print(f"   🔍 Retriever: {args.rag_retriever_type}")
@@ -170,14 +201,16 @@ def run_evaluation(detector, dataset, args, trace_manager: TraceManager = None):
     print("\n📊 Running Evaluation")
     print("=" * 70)
 
-    evaluator = ThreeLayerEvaluator(detector, dataset)
-
     eval_count = args.eval_samples if args.eval_samples is not None else "all"
     print(f"   🔍 Evaluating on {eval_count} samples...")
     start = time.time()
 
-    # 使用verbose=True打印详细的Macro/Weighted/Micro F1
-    metrics = evaluator.evaluate(sample_size=args.eval_samples, verbose=True)
+    if isinstance(detector, ParallelHierarchicalDetector):
+        metrics = run_parallel_evaluation(detector, dataset, args)
+    else:
+        evaluator = ThreeLayerEvaluator(detector, dataset)
+        # 使用verbose=True打印详细的Macro/Weighted/Micro F1
+        metrics = evaluator.evaluate(sample_size=args.eval_samples, verbose=True)
 
     elapsed = time.time() - start
 
@@ -192,6 +225,113 @@ def run_evaluation(detector, dataset, args, trace_manager: TraceManager = None):
                 "eval_samples": args.eval_samples,
             },
         )
+
+    return metrics
+
+
+def run_parallel_evaluation(detector, dataset, args):
+    """并行检测器评估。
+
+    复用三层评估口径，便于和串行检测器对齐对比。
+    """
+    from evoprompt.prompts.hierarchical_three_layer import get_full_path
+    from evoprompt.evaluators.multiclass_metrics import MultiClassMetrics
+
+    samples = dataset.get_samples(args.eval_samples)
+
+    layer1_metrics = MultiClassMetrics()
+    layer2_metrics = MultiClassMetrics()
+    layer3_metrics = MultiClassMetrics()
+
+    stats = {
+        "total": 0,
+        "full_path_correct": 0,
+    }
+    results = []
+
+    for sample in samples:
+        cwes = sample.metadata.get("cwe", []) if hasattr(sample, "metadata") else []
+        if not cwes:
+            continue
+
+        actual_cwe = cwes[0]
+        actual_major, actual_middle, _ = get_full_path(actual_cwe)
+        if not actual_major or not actual_middle:
+            continue
+
+        paths = detector.detect(sample.input_text)
+        top_path = paths[0] if paths else None
+
+        predicted_major = top_path.layer1_category if top_path else "Unknown"
+        predicted_middle = top_path.layer2_category if (top_path and top_path.layer2_category) else "Unknown"
+        predicted_cwe = top_path.layer3_cwe if (top_path and top_path.layer3_cwe) else "Unknown"
+
+        stats["total"] += 1
+
+        layer1_metrics.add_prediction(predicted_major, actual_major.value)
+        layer2_metrics.add_prediction(predicted_middle, actual_middle.value)
+        layer3_metrics.add_prediction(predicted_cwe, actual_cwe)
+
+        if (
+            predicted_major == actual_major.value
+            and predicted_middle == actual_middle.value
+            and predicted_cwe == actual_cwe
+        ):
+            stats["full_path_correct"] += 1
+
+        results.append(
+            {
+                "actual_major": actual_major.value,
+                "actual_middle": actual_middle.value,
+                "actual_cwe": actual_cwe,
+                "predicted_major": predicted_major,
+                "predicted_middle": predicted_middle,
+                "predicted_cwe": predicted_cwe,
+            }
+        )
+
+    metrics = {
+        "total_samples": stats["total"],
+        "layer1": {
+            "accuracy": round(layer1_metrics.accuracy, 4),
+            "macro_f1": round(layer1_metrics.compute_macro_f1(), 4),
+            "weighted_f1": round(layer1_metrics.compute_weighted_f1(), 4),
+            "micro_f1": round(layer1_metrics.compute_micro_f1(), 4),
+            "macro_precision": round(layer1_metrics.compute_macro_precision(), 4),
+            "macro_recall": round(layer1_metrics.compute_macro_recall(), 4),
+        },
+        "layer2": {
+            "accuracy": round(layer2_metrics.accuracy, 4),
+            "macro_f1": round(layer2_metrics.compute_macro_f1(), 4),
+            "weighted_f1": round(layer2_metrics.compute_weighted_f1(), 4),
+            "micro_f1": round(layer2_metrics.compute_micro_f1(), 4),
+            "macro_precision": round(layer2_metrics.compute_macro_precision(), 4),
+            "macro_recall": round(layer2_metrics.compute_macro_recall(), 4),
+        },
+        "layer3": {
+            "accuracy": round(layer3_metrics.accuracy, 4),
+            "macro_f1": round(layer3_metrics.compute_macro_f1(), 4),
+            "weighted_f1": round(layer3_metrics.compute_weighted_f1(), 4),
+            "micro_f1": round(layer3_metrics.compute_micro_f1(), 4),
+            "macro_precision": round(layer3_metrics.compute_macro_precision(), 4),
+            "macro_recall": round(layer3_metrics.compute_macro_recall(), 4),
+        },
+        "full_path_accuracy": round(
+            stats["full_path_correct"] / stats["total"] if stats["total"] > 0 else 0,
+            4,
+        ),
+        "sample_results": results[:10],
+        "detector_mode": "parallel",
+    }
+
+    print("\n" + "=" * 70)
+    print("PARALLEL DETECTOR EVALUATION RESULTS")
+    print("=" * 70)
+    print(f"\nTotal Samples: {metrics['total_samples']}")
+    print(f"Full Path Accuracy: {metrics['full_path_accuracy']:.4f}")
+    print(f"Layer1 Accuracy: {metrics['layer1']['accuracy']:.4f}")
+    print(f"Layer2 Accuracy: {metrics['layer2']['accuracy']:.4f}")
+    print(f"Layer3 Accuracy: {metrics['layer3']['accuracy']:.4f}")
 
     return metrics
 
@@ -317,10 +457,15 @@ def save_results(output_dir, metrics, prompt_set, args):
 
     # 保存配置
     config = {
+        "detector": args.detector,
         "use_rag": args.use_rag,
         "use_scale": args.use_scale,
         "rag_top_k": args.rag_top_k if args.use_rag else None,
         "rag_retriever_type": args.rag_retriever_type if args.use_rag else None,
+        "layer1_top_k": args.layer1_top_k if args.detector == "parallel" else None,
+        "layer2_top_k": args.layer2_top_k if args.detector == "parallel" else None,
+        "layer3_top_k": args.layer3_top_k if args.detector == "parallel" else None,
+        "parallel_max_concurrency": args.parallel_max_concurrency if args.detector == "parallel" else None,
         "train": args.train,
         "population_size": args.population_size if args.train else None,
         "max_generations": args.max_generations if args.train else None,
@@ -389,6 +534,36 @@ def main():
         type=int,
         default=None,
         help="评估样本数量 (默认全量)"
+    )
+    parser.add_argument(
+        "--detector",
+        choices=["serial", "parallel"],
+        default="parallel",
+        help="检测器模式: serial=原三层串行, parallel=并行层级检测器",
+    )
+    parser.add_argument(
+        "--layer1-top-k",
+        type=int,
+        default=2,
+        help="并行检测器 Layer1 top-k",
+    )
+    parser.add_argument(
+        "--layer2-top-k",
+        type=int,
+        default=2,
+        help="并行检测器 Layer2 top-k",
+    )
+    parser.add_argument(
+        "--layer3-top-k",
+        type=int,
+        default=1,
+        help="并行检测器 Layer3 top-k",
+    )
+    parser.add_argument(
+        "--parallel-max-concurrency",
+        type=int,
+        default=20,
+        help="并行检测器最大并发请求数",
     )
 
     # RAG参数
@@ -521,9 +696,12 @@ def main():
     print()
     print("📋 Configuration:")
     print(f"   Mode: {'Training' if args.train else 'Evaluation Only'}")
+    print(f"   Detector: {'Parallel' if args.detector == 'parallel' else 'Serial'}")
     print(f"   RAG: {'✅ Enabled' if args.use_rag else '❌ Disabled'}")
     print(f"   Scale: {'✅ Enabled' if args.use_scale else '❌ Disabled'}")
     print(f"   Output: {args.output_dir}")
+    if args.detector == "parallel" and args.use_rag:
+        print("   ⚠️  Parallel detector 当前不支持 RAG，运行时将忽略 --use-rag")
 
     # 环境设置
     if not setup_environment():
