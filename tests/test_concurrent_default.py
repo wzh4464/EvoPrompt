@@ -66,28 +66,20 @@ def test_sven_client_concurrent_support():
     """测试SVEN客户端并发支持"""
     print("\n🤖 测试SVEN客户端并发支持...")
 
-    from sven_llm_client import sven_llm_query
+    from evoprompt.llm.client import create_default_client
 
-    # 检查函数参数
-    sig = inspect.signature(sven_llm_query)
-    params = list(sig.parameters.keys())
+    # 检查batch_generate是否支持concurrent参数（通过kwargs）
+    client = create_default_client()
+    assert hasattr(client, 'batch_generate'), "客户端缺少batch_generate方法"
 
-    assert "concurrent" in params, "sven_llm_query缺少concurrent参数"
+    print("   ✅ 客户端支持batch_generate方法")
 
-    print("   ✅ sven_llm_query支持concurrent参数")
+    # 检查batch_generate源码是否处理concurrent参数
+    import inspect
+    source = inspect.getsource(client.batch_generate)
+    assert "concurrent" in source, "batch_generate未处理concurrent参数"
 
-    # 检查默认值（从兼容函数）
-    from evoprompt.llm.client import llm_query
-
-    sig2 = inspect.signature(llm_query)
-    concurrent_param = sig2.parameters.get("concurrent")
-
-    if concurrent_param and concurrent_param.default:
-        print("   ✅ llm_query默认concurrent=True")
-    else:
-        print(
-            f"   ⚠️ llm_query concurrent默认值: {concurrent_param.default if concurrent_param else 'None'}"
-        )
+    print("   ✅ batch_generate支持concurrent参数")
 
 
 def test_batch_processing_info():

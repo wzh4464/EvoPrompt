@@ -158,7 +158,7 @@ def test_batch_integration():
         print(f"   反馈批大小: {config['feedback_batch_size']}")
         
         # 4. 导入并运行函数（但不真正执行LLM调用）
-        from run_primevul_concurrent_optimized import (
+        from scripts.run_primevul_concurrent_optimized import (
             evaluate_on_dataset,
             sample_wise_feedback_training
         )
