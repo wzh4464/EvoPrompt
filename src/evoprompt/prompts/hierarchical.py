@@ -5,6 +5,7 @@ This module implements a hierarchical prompt system with:
 - Minor category detection (specific CWE types)
 """
 
+import warnings
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from enum import Enum
@@ -48,6 +49,13 @@ class HierarchicalPrompt:
     router_prompt: str
     category_prompts: Dict[CWECategory, str] = field(default_factory=dict)
     metadata: Dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        warnings.warn(
+            "HierarchicalPrompt is deprecated. Use PromptTemplate instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     def get_detection_prompt(self, category: CWECategory) -> Optional[str]:
         """Get detection prompt for a specific category."""

@@ -7,6 +7,7 @@ Pipeline:
 4. Layer 3: Classify to specific CWE (CWE-120/CWE-89/etc.)
 """
 
+import warnings
 from typing import Optional, Tuple, Dict, List
 import logging
 
@@ -41,6 +42,11 @@ class ThreeLayerDetector:
             llm_client: LLM client for detection
             use_scale_enhancement: Whether to use scale enhancement
         """
+        warnings.warn(
+            "ThreeLayerDetector is deprecated. Use DetectionPipeline instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.prompt_set = prompt_set
         self.llm_client = llm_client
         self.use_scale_enhancement = use_scale_enhancement

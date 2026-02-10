@@ -4,6 +4,7 @@ Unit tests for multi-agent components.
 This tests the core functionality without requiring API calls.
 """
 
+import warnings
 import pytest
 from unittest.mock import Mock, MagicMock
 
@@ -30,6 +31,7 @@ from evoprompt.multiagent.agents import (
 )
 
 
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 class TestHierarchicalPrompts:
     """Test hierarchical prompt structure."""
 

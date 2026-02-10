@@ -41,6 +41,20 @@ from .code_enhancer import (
     create_comment4vul_enhancer,
 )
 
+# Unified detection pipeline
+from .pipeline import (
+    DetectionContext,
+    PipelineStep,
+    CodeEnhancementStep,
+    PromptBuildStep,
+    LLMInferenceStep,
+    ResponseParseStep,
+    PathSelectionStep,
+    DetectionPipeline,
+    SequentialStrategy,
+    ParallelStrategy,
+)
+
 __all__ = [
     # Original detectors
     "ThreeLayerDetector",
@@ -75,4 +89,15 @@ __all__ = [
     "ChainedEnhancer",
     "EnhancementConfig",
     "create_comment4vul_enhancer",
+    # Unified detection pipeline
+    "DetectionContext",
+    "PipelineStep",
+    "CodeEnhancementStep",
+    "PromptBuildStep",
+    "LLMInferenceStep",
+    "ResponseParseStep",
+    "PathSelectionStep",
+    "DetectionPipeline",
+    "SequentialStrategy",
+    "ParallelStrategy",
 ]

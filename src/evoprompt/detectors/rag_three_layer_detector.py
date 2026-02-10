@@ -6,6 +6,7 @@ Extends ThreeLayerDetector with retrieval-augmented generation:
 - Maintains all functionality of base detector
 """
 
+import warnings
 from typing import Optional, Tuple, Dict, List
 import logging
 
@@ -49,6 +50,11 @@ class RAGThreeLayerDetector(ThreeLayerDetector):
             top_k: Number of examples to retrieve per layer
             **retriever_kwargs: Additional arguments for retriever
         """
+        warnings.warn(
+            "RAGThreeLayerDetector is deprecated. Use DetectionPipeline instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(prompt_set, llm_client, use_scale_enhancement)
 
         self.knowledge_base = knowledge_base

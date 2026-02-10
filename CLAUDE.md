@@ -18,13 +18,14 @@ uv run pytest tests/
 ```
 EvoPrompt/
 ├── src/evoprompt/           # 核心包
-│   ├── algorithms/          # GA, DE, Coevolution
-│   ├── core/                # 进化引擎, prompt追踪
+│   ├── algorithms/          # GA, DE, Coevolution, MultiLayerEvolution
+│   ├── core/                # 进化引擎, prompt追踪, BaselineManager, ExperimentManager
 │   ├── data/                # 数据集, 采样器, CWE分类
-│   ├── llm/                 # LLM客户端 (同步/异步)
+│   ├── llm/                 # LLM客户端 (同步/异步), LLMRuntime, ResponseCache, DeterministicStubClient
 │   ├── utils/               # ResponseParser, checkpoint
 │   ├── evaluators/          # 漏洞评估
-│   ├── detectors/           # 三层检测器, 并行分层检测
+│   ├── detectors/           # 三层检测器(deprecated), DetectionPipeline, 并行分层检测
+│   ├── prompts/             # PromptTemplate, PromptSet, PromptContract, seed prompts
 │   ├── meta/                # Meta-learning (错误累积, prompt调优)
 │   ├── rag/                 # RAG知识库
 │   ├── multiagent/          # 多智能体协调
@@ -152,6 +153,79 @@ results = coordinator.detect_batch(codes, ground_truths)
 # 获取统计
 print(coordinator.get_statistics_summary())
 ```
+
+## 统一架构模块 (New)
+
+### Prompt Template 系统
+
+```python
+from evoprompt.prompts import PromptTemplate, PromptSet, PromptContract
+
+# 从原始 prompt 创建模板 (自动检测 trainable 标记)
+template = PromptTemplate.from_raw_prompt(raw_prompt)
+rendered = template.render(input=code_snippet)
+
+# 不可变更新 trainable section
+new_template = template.set_trainable_content("trainable_0", new_text)
+
+# 验证 prompt 合约
+result = PromptContractValidator.validate(prompt_text)
+# result.is_valid, result.errors (硬错误), result.warnings (软警告)
+```
+
+### Detection Pipeline
+
+```python
+from evoprompt.detectors import DetectionPipeline
+
+# 组合式检测流水线 (替代旧的 ThreeLayerDetector)
+pipeline = DetectionPipeline(llm_client=client, prompt_set=prompt_set)
+result = pipeline.detect(code)
+```
+
+### LLM Runtime
+
+```python
+from evoprompt.llm import LLMRuntime, LLMRuntimeConfig, DeterministicStubClient
+
+# 统一 LLM 运行时 (含缓存、重试)
+runtime = LLMRuntime(backend=client, config=LLMRuntimeConfig(enable_cache=True))
+
+# 测试用确定性 stub
+stub = DeterministicStubClient(default_response="Benign")
+stub.add_response(r"buffer overflow", "Vulnerable")
+```
+
+### Multi-Layer Evolution
+
+```python
+from evoprompt.algorithms import MultiLayerEvolution, MultiLayerIndividual
+
+# 多层 prompt 同时进化
+evolution = MultiLayerEvolution(config=config, llm_client=client)
+best = evolution.evolve_multilayer(initial_prompt_sets, evaluate_fn)
+```
+
+### Experiment Manager
+
+```python
+from evoprompt.core import ExperimentManager, ExperimentConfig
+
+# 实验生命周期管理
+manager = ExperimentManager(base_dir="outputs")
+manager.save_config(config)
+manager.save_prompt_snapshot(prompt_set, label="gen_0")
+manager.save_metrics({"accuracy": 0.85}, label="gen_0")
+manager.finalize()
+```
+
+### 弃用说明
+
+以下类已标记为 deprecated，建议迁移到新 API：
+- `ThreeLayerDetector` → `DetectionPipeline`
+- `RAGThreeLayerDetector` → `DetectionPipeline` + `PromptAugmentationStep`
+- `TopKThreeLayerDetector` → `DetectionPipeline`
+- `HierarchicalPrompt` → `PromptTemplate`
 
 ## TODO: Selection Strategies
 

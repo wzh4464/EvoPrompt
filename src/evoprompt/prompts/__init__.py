@@ -32,6 +32,17 @@ from .evolution_prompts import (
     build_initialization_prompt,
 )
 
+# Prompt contract validation
+from .contract import (
+    PromptContract,
+    PromptContractValidator,
+    ValidationResult,
+)
+
+# Unified prompt template architecture
+from .template import PromptTemplate, PromptSection, PromptMetadata
+from .prompt_set import PromptSet
+
 __all__ = [
     "HierarchicalPrompt",
     "CWECategory",
@@ -55,4 +66,13 @@ __all__ = [
     "build_crossover_prompt",
     "build_mutation_prompt",
     "build_initialization_prompt",
+    # Prompt contract
+    "PromptContract",
+    "PromptContractValidator",
+    "ValidationResult",
+    # Unified prompt template
+    "PromptTemplate",
+    "PromptSection",
+    "PromptMetadata",
+    "PromptSet",
 ]
