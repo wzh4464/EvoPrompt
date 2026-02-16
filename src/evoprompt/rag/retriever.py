@@ -32,17 +32,34 @@ class CodeSimilarityRetriever:
 
     For production use, consider using embeddings (e.g., CodeBERT, OpenAI embeddings).
     This implementation uses fast lexical similarity for efficiency.
+
+    Supports contrastive retrieval (SCALE-style) by retrieving both vulnerable
+    and clean examples for comparison.
     """
 
-    def __init__(self, knowledge_base: KnowledgeBase, debug: bool = False):
+    def __init__(
+        self,
+        knowledge_base: KnowledgeBase,
+        contrastive: bool = False,
+        clean_pool_frac: float = 1.0,
+        clean_pool_seed: int = 42,
+        debug: bool = False
+    ):
         """Initialize retriever.
 
         Args:
             knowledge_base: Knowledge base containing examples
+            contrastive: Enable contrastive retrieval mode
+            clean_pool_frac: Fraction of clean pool to subsample (0.0 to 1.0)
+            clean_pool_seed: Random seed for clean pool subsampling
             debug: Enable debug output
         """
         self.kb = knowledge_base
+        self.contrastive = contrastive
+        self.clean_pool_frac = clean_pool_frac
+        self.clean_pool_seed = clean_pool_seed
         self.debug = debug
+        self._subsampled_clean_pool: Optional[List[CodeExample]] = None
 
     def retrieve_for_major_category(
         self,
@@ -258,6 +275,107 @@ class CodeSimilarityRetriever:
             debug_info=debug_info
         )
 
+    def _get_clean_pool(self) -> List[CodeExample]:
+        """Get (possibly subsampled) clean pool.
+
+        Returns:
+            List of clean examples, subsampled if clean_pool_frac < 1.0
+        """
+        if self._subsampled_clean_pool is not None:
+            return self._subsampled_clean_pool
+
+        if not self.kb.clean_examples or self.clean_pool_frac >= 1.0:
+            self._subsampled_clean_pool = self.kb.clean_examples
+        else:
+            import random
+            rng = random.Random(self.clean_pool_seed)
+            n_samples = int(len(self.kb.clean_examples) * self.clean_pool_frac)
+            self._subsampled_clean_pool = rng.sample(self.kb.clean_examples, n_samples)
+
+        return self._subsampled_clean_pool
+
+    def retrieve_contrastive(
+        self,
+        query_code: str,
+        vulnerable_top_k: int = 2,
+        clean_top_k: int = 1
+    ) -> RetrievalResult:
+        """Retrieve both vulnerable AND clean examples for contrastive learning.
+
+        This implements SCALE-style retrieval where both positive (vulnerable)
+        and negative (clean) examples are retrieved to help the model understand
+        the contrast between vulnerable and safe code patterns.
+
+        Args:
+            query_code: Code to find similar examples for
+            vulnerable_top_k: Number of vulnerable examples to retrieve
+            clean_top_k: Number of clean examples to retrieve
+
+        Returns:
+            Retrieval result with both vulnerable and clean examples
+        """
+        # Get vulnerable examples
+        vuln_result = self.retrieve_for_major_category(query_code, vulnerable_top_k)
+
+        # Get clean examples
+        clean_pool = self._get_clean_pool()
+        clean_result = self._retrieve_from_pool(query_code, clean_pool, clean_top_k)
+
+        # Combine examples and scores
+        all_examples = vuln_result.examples + clean_result.examples
+        all_scores = vuln_result.similarity_scores + clean_result.similarity_scores
+
+        # Format with contrastive IDs
+        formatted = self._format_contrastive_examples(
+            vuln_result.examples, clean_result.examples
+        )
+
+        debug_info = {
+            "vulnerable_count": len(vuln_result.examples),
+            "clean_count": len(clean_result.examples),
+            "clean_pool_size": len(clean_pool),
+            "clean_pool_frac": self.clean_pool_frac,
+            "vulnerable_top_similarity": vuln_result.debug_info.get("top_similarity", 0.0) if vuln_result.debug_info else 0.0,
+            "clean_top_similarity": clean_result.debug_info.get("top_similarity", 0.0) if clean_result.debug_info else 0.0,
+        }
+
+        return RetrievalResult(
+            examples=all_examples,
+            formatted_text=formatted,
+            similarity_scores=all_scores,
+            debug_info=debug_info
+        )
+
+    def _format_contrastive_examples(
+        self,
+        vulnerable: List[CodeExample],
+        clean: List[CodeExample]
+    ) -> str:
+        """Format examples with IDs for contrastive retrieval.
+
+        Args:
+            vulnerable: List of vulnerable examples
+            clean: List of clean examples
+
+        Returns:
+            Formatted string with [VUL-n] and [CLEAN-n] prefixes
+        """
+        parts = ["Retrieved vulnerability knowledge:\n"]
+
+        # Vulnerable examples
+        for i, ex in enumerate(vulnerable, 1):
+            parts.append(f"[VUL-{i}] Category: {ex.category}")
+            if ex.cwe:
+                parts.append(f" | CWE: {ex.cwe}")
+            parts.append(f"\nCode: {ex.code}\nDescription: {ex.description}\n")
+
+        # Clean examples
+        for i, ex in enumerate(clean, 1):
+            parts.append(f"[CLEAN-{i}] Category: {ex.category}")
+            parts.append(f"\nCode: {ex.code}\nDescription: {ex.description}\n")
+
+        return "\n".join(parts)
+
     def _print_debug(self, debug_info: dict) -> None:
         """Print debug information about retrieval."""
         print("\n" + "=" * 60)
@@ -357,15 +475,29 @@ class EmbeddingRetriever(CodeSimilarityRetriever):
     def __init__(
         self,
         knowledge_base: KnowledgeBase,
-        embedding_model: Optional[str] = None
+        embedding_model: Optional[str] = None,
+        contrastive: bool = False,
+        clean_pool_frac: float = 1.0,
+        clean_pool_seed: int = 42,
+        debug: bool = False
     ):
         """Initialize embedding retriever.
 
         Args:
             knowledge_base: Knowledge base
             embedding_model: Name of embedding model (not yet implemented)
+            contrastive: Enable contrastive retrieval mode
+            clean_pool_frac: Fraction of clean pool to subsample (0.0 to 1.0)
+            clean_pool_seed: Random seed for clean pool subsampling
+            debug: Enable debug output
         """
-        super().__init__(knowledge_base)
+        super().__init__(
+            knowledge_base,
+            contrastive=contrastive,
+            clean_pool_frac=clean_pool_frac,
+            clean_pool_seed=clean_pool_seed,
+            debug=debug
+        )
         self.embedding_model = embedding_model
 
         if embedding_model:
@@ -395,13 +527,13 @@ def create_retriever(
     Args:
         knowledge_base: Knowledge base to use
         retriever_type: Type of retriever ("lexical" or "embedding")
-        **kwargs: Additional arguments for retriever
+        **kwargs: Additional arguments for retriever (contrastive, clean_pool_frac, etc.)
 
     Returns:
         Configured retriever
     """
     if retriever_type == "lexical":
-        return CodeSimilarityRetriever(knowledge_base)
+        return CodeSimilarityRetriever(knowledge_base, **kwargs)
     elif retriever_type == "embedding":
         return EmbeddingRetriever(knowledge_base, **kwargs)
     else:
