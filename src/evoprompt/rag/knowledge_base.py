@@ -73,6 +73,7 @@ class KnowledgeBase:
     major_examples: Dict[str, List[CodeExample]] = field(default_factory=dict)
     middle_examples: Dict[str, List[CodeExample]] = field(default_factory=dict)
     cwe_examples: Dict[str, List[CodeExample]] = field(default_factory=dict)
+    clean_examples: List[CodeExample] = field(default_factory=list)
 
     def add_major_example(self, category: MajorCategory, example: CodeExample):
         """Add example for major category."""
@@ -93,6 +94,10 @@ class KnowledgeBase:
         if cwe not in self.cwe_examples:
             self.cwe_examples[cwe] = []
         self.cwe_examples[cwe].append(example)
+
+    def add_clean_example(self, example: CodeExample):
+        """Add a clean/benign example for contrastive retrieval."""
+        self.clean_examples.append(example)
 
     def get_major_examples(self, category: MajorCategory) -> List[CodeExample]:
         """Get examples for major category."""
@@ -132,6 +137,7 @@ class KnowledgeBase:
                 cwe: [ex.to_dict() for ex in examples]
                 for cwe, examples in self.cwe_examples.items()
             },
+            "clean_examples": [ex.to_dict() for ex in self.clean_examples],
         }
 
         with open(filepath, "w", encoding="utf-8") as f:
@@ -157,6 +163,10 @@ class KnowledgeBase:
         for cwe, examples in data.get("cwe_examples", {}).items():
             kb.cwe_examples[cwe] = [CodeExample.from_dict(ex) for ex in examples]
 
+        # Load clean examples
+        for ex in data.get("clean_examples", []):
+            kb.clean_examples.append(CodeExample.from_dict(ex))
+
         return kb
 
     def statistics(self) -> Dict:
@@ -166,6 +176,7 @@ class KnowledgeBase:
             "major_categories": len(self.major_examples),
             "middle_categories": len(self.middle_examples),
             "cwe_types": len(self.cwe_examples),
+            "clean_examples": len(self.clean_examples),
             "examples_per_major": {
                 cat: len(examples) for cat, examples in self.major_examples.items()
             },
