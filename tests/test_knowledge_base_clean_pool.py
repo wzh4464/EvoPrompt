@@ -60,3 +60,35 @@ def test_save_and_load_with_clean_examples():
         assert loaded_kb.clean_examples[0].code == "safe code here"
     finally:
         os.unlink(temp_path)
+
+
+def test_build_clean_pool_from_dataset():
+    """Should build clean pool from dataset benign samples."""
+    from unittest.mock import MagicMock
+    from evoprompt.rag.knowledge_base import build_clean_pool_from_dataset
+
+    # Mock dataset with benign samples
+    mock_dataset = MagicMock()
+    mock_sample1 = MagicMock()
+    mock_sample1.input_text = "int safe_func() { return 0; }"
+    mock_sample1.target = "0"  # benign
+    mock_sample1.metadata = {"idx": 1}
+
+    mock_sample2 = MagicMock()
+    mock_sample2.input_text = "void vuln() { strcpy(buf, input); }"
+    mock_sample2.target = "1"  # vulnerable
+    mock_sample2.metadata = {"idx": 2, "cwe": ["CWE-120"]}
+
+    mock_sample3 = MagicMock()
+    mock_sample3.input_text = "int another_safe() { return 1; }"
+    mock_sample3.target = "0"  # benign
+    mock_sample3.metadata = {"idx": 3}
+
+    mock_dataset.get_samples.return_value = [mock_sample1, mock_sample2, mock_sample3]
+
+    kb = KnowledgeBase()
+    build_clean_pool_from_dataset(kb, mock_dataset, max_samples=10, seed=42)
+
+    # Should only have benign samples
+    assert len(kb.clean_examples) == 2
+    assert all(ex.category == "Benign" for ex in kb.clean_examples)

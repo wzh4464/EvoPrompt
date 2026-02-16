@@ -544,3 +544,42 @@ def create_knowledge_base_from_dataset(dataset, output_path: str, samples_per_ca
     print(f"   Statistics: {kb.statistics()}")
 
     return kb
+
+
+def build_clean_pool_from_dataset(
+    kb: KnowledgeBase,
+    dataset,
+    max_samples: int = 5000,
+    seed: int = 42
+) -> None:
+    """Build clean/benign pool from dataset.
+
+    Args:
+        kb: KnowledgeBase to add clean examples to
+        dataset: Dataset with samples (must have input_text, target, metadata)
+        max_samples: Maximum number of clean samples to add
+        seed: Random seed for reproducibility
+    """
+    import random
+    rng = random.Random(seed)
+
+    # Collect benign samples (target == "0" or target == 0)
+    benign_samples = []
+    for sample in dataset.get_samples():
+        target = str(sample.target)
+        if target == "0":
+            benign_samples.append(sample)
+
+    # Shuffle and limit
+    rng.shuffle(benign_samples)
+    selected = benign_samples[:max_samples]
+
+    # Add to knowledge base
+    for sample in selected:
+        example = CodeExample(
+            code=sample.input_text,
+            category="Benign",
+            description="Clean code sample from training set",
+            metadata={"source_idx": sample.metadata.get("idx")}
+        )
+        kb.add_clean_example(example)
