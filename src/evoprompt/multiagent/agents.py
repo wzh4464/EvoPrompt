@@ -99,12 +99,13 @@ class DetectionAgent(Agent):
             for code in code_samples
         ]
 
-        # Batch generate predictions
+        # Batch generate predictions (use async for parallel API calls)
         raw_responses = self.llm_client.batch_generate(
             formatted_prompts,
             temperature=self.config.temperature,
             max_tokens=self.config.max_tokens,
             batch_size=self.config.batch_size,
+            use_async=True,
         )
 
         # Normalize predictions

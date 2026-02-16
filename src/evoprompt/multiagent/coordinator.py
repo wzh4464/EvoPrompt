@@ -13,6 +13,7 @@ from .agents import DetectionAgent, MetaAgent
 from ..evaluators.statistics import DetectionStatistics, BatchStatistics, StatisticsCollector
 from ..data.dataset import Dataset
 from ..utils.trace import TraceManager, compute_text_hash
+from ..core.prompt_change_logger import PromptChangeLogger
 
 
 class CoordinationStrategy(Enum):
@@ -55,6 +56,7 @@ class MultiAgentCoordinator:
         meta_agent: MetaAgent,
         config: Optional[CoordinatorConfig] = None,
         trace_manager: Optional[TraceManager] = None,
+        prompt_change_logger: Optional[PromptChangeLogger] = None,
     ):
         """Initialize coordinator.
 
@@ -62,11 +64,13 @@ class MultiAgentCoordinator:
             detection_agent: Agent for vulnerability detection
             meta_agent: Agent for meta-level optimization
             config: Coordinator configuration
+            prompt_change_logger: Always-on prompt change logger
         """
         self.detection_agent = detection_agent
         self.meta_agent = meta_agent
         self.config = config or CoordinatorConfig()
         self.trace = trace_manager
+        self.prompt_change_logger = prompt_change_logger
 
         # Statistics tracking
         self.statistics_collector = StatisticsCollector()
@@ -265,7 +269,8 @@ class MultiAgentCoordinator:
         prompt: str,
         dataset: Dataset,
         generation: int = 0,
-        historical_stats: Optional[List[DetectionStatistics]] = None
+        historical_stats: Optional[List[DetectionStatistics]] = None,
+        sample_size: Optional[int] = None,
     ) -> Tuple[str, DetectionStatistics]:
         """Collaboratively improve a prompt using detection + meta agents.
 
@@ -286,14 +291,14 @@ class MultiAgentCoordinator:
         """
         # Evaluate current prompt
         if self.config.enable_batch_feedback:
-            stats, batch_stats = self.evaluate_with_batches(prompt, dataset)
+            stats, batch_stats = self.evaluate_with_batches(prompt, dataset, sample_size=sample_size)
             # Track batch statistics
             self.batch_history.extend(batch_stats)
             # Keep only recent batches
             if len(self.batch_history) > self.config.statistics_window * 10:
                 self.batch_history = self.batch_history[-self.config.statistics_window * 10:]
         else:
-            stats = self.evaluate_prompt(prompt, dataset)
+            stats = self.evaluate_prompt(prompt, dataset, sample_size=sample_size)
             batch_stats = []
 
         # Get improvement suggestions from statistics
@@ -309,7 +314,7 @@ class MultiAgentCoordinator:
             generation=generation
         )
         # Evaluate improved prompt to get actual performance
-        improved_stats = self.evaluate_prompt(improved_prompt, dataset)
+        improved_stats = self.evaluate_prompt(improved_prompt, dataset, sample_size=sample_size)
 
         if self.trace and self.trace.enabled:
             payload = {
@@ -332,6 +337,18 @@ class MultiAgentCoordinator:
                     metadata={"operation": "meta_improve", "generation": generation},
                 )
 
+        if self.prompt_change_logger:
+            self.prompt_change_logger.log_change(
+                operation="meta_improve",
+                prompt_before=prompt,
+                prompt_after=improved_prompt,
+                generation=generation,
+                trigger_reason="evolutionary_operator",
+                context={"improvement_suggestions": suggestions},
+                metrics_before=stats.get_summary(),
+                metrics_after=improved_stats.get_summary(),
+            )
+
         return improved_prompt, improved_stats
 
     def collaborative_crossover(
@@ -339,7 +356,8 @@ class MultiAgentCoordinator:
         parent1: str,
         parent2: str,
         dataset: Dataset,
-        generation: int = 0
+        generation: int = 0,
+        sample_size: Optional[int] = None,
     ) -> Tuple[str, DetectionStatistics]:
         """Perform collaborative crossover of two parent prompts.
 
@@ -353,8 +371,8 @@ class MultiAgentCoordinator:
             Tuple of (offspring prompt, evaluation statistics)
         """
         # Evaluate both parents
-        stats1 = self.evaluate_prompt(parent1, dataset)
-        stats2 = self.evaluate_prompt(parent2, dataset)
+        stats1 = self.evaluate_prompt(parent1, dataset, sample_size=sample_size)
+        stats2 = self.evaluate_prompt(parent2, dataset, sample_size=sample_size)
 
         # Meta-agent creates offspring
         offspring = self.meta_agent.crossover_prompts(
@@ -362,7 +380,7 @@ class MultiAgentCoordinator:
         )
 
         # Evaluate offspring
-        offspring_stats = self.evaluate_prompt(offspring, dataset)
+        offspring_stats = self.evaluate_prompt(offspring, dataset, sample_size=sample_size)
 
         if self.trace and self.trace.enabled:
             payload = {
@@ -387,13 +405,29 @@ class MultiAgentCoordinator:
                     metadata={"operation": "meta_crossover", "generation": generation},
                 )
 
+        if self.prompt_change_logger:
+            self.prompt_change_logger.log_change(
+                operation="meta_crossover",
+                prompt_before=parent1,
+                prompt_after=offspring,
+                generation=generation,
+                trigger_reason="evolutionary_operator",
+                context={
+                    "parent1_hash": compute_text_hash(parent1),
+                    "parent2_hash": compute_text_hash(parent2),
+                },
+                metrics_before=stats1.get_summary(),
+                metrics_after=offspring_stats.get_summary(),
+            )
+
         return offspring, offspring_stats
 
     def collaborative_mutate(
         self,
         prompt: str,
         dataset: Dataset,
-        generation: int = 0
+        generation: int = 0,
+        sample_size: Optional[int] = None,
     ) -> Tuple[str, DetectionStatistics]:
         """Perform collaborative mutation of a prompt.
 
@@ -406,13 +440,13 @@ class MultiAgentCoordinator:
             Tuple of (mutated prompt, evaluation statistics)
         """
         # Evaluate current prompt
-        stats = self.evaluate_prompt(prompt, dataset)
+        stats = self.evaluate_prompt(prompt, dataset, sample_size=sample_size)
 
         # Meta-agent mutates prompt
         mutated = self.meta_agent.mutate_prompt(prompt, stats, generation)
 
         # Evaluate mutated prompt
-        mutated_stats = self.evaluate_prompt(mutated, dataset)
+        mutated_stats = self.evaluate_prompt(mutated, dataset, sample_size=sample_size)
 
         if self.trace and self.trace.enabled:
             payload = {
@@ -433,6 +467,18 @@ class MultiAgentCoordinator:
                     mutated,
                     metadata={"operation": "meta_mutate", "generation": generation},
                 )
+
+        if self.prompt_change_logger:
+            self.prompt_change_logger.log_change(
+                operation="meta_mutate",
+                prompt_before=prompt,
+                prompt_after=mutated,
+                generation=generation,
+                trigger_reason="evolutionary_operator",
+                context={},
+                metrics_before=stats.get_summary(),
+                metrics_after=mutated_stats.get_summary(),
+            )
 
         return mutated, mutated_stats
 

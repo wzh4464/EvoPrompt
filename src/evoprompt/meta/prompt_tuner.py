@@ -15,6 +15,11 @@ from ..llm.async_client import AsyncLLMClient
 from ..detectors.parallel_hierarchical_detector import HierarchicalPromptSet
 from .error_accumulator import ErrorAccumulator, ErrorPattern
 
+# Lazy import to avoid circular dependency
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ..core.prompt_change_logger import PromptChangeLogger
+
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +85,8 @@ class TuningResult:
         return {
             "layer": self.layer,
             "category": self.category,
+            "original_prompt": self.original_prompt,
+            "tuned_prompt": self.tuned_prompt,
             "success": self.success,
             "error_message": self.error_message,
             "patterns_addressed": [
@@ -103,20 +110,23 @@ class MetaLearningPromptTuner:
         min_pattern_count: int = 3,
         max_prompts_per_tuning: int = 5,
         temperature: float = 0.7,
+        prompt_change_logger: Optional["PromptChangeLogger"] = None,
     ):
         """Initialize the tuner.
-        
+
         Args:
             llm_client: LLM client for generating improved prompts
             min_pattern_count: Minimum errors for a pattern to trigger tuning
             max_prompts_per_tuning: Maximum prompts to tune in one session
             temperature: LLM temperature for creative generation
+            prompt_change_logger: Always-on prompt change logger
         """
         self.llm_client = llm_client
         self.min_pattern_count = min_pattern_count
         self.max_prompts_per_tuning = max_prompts_per_tuning
         self.temperature = temperature
-        
+        self.prompt_change_logger = prompt_change_logger
+
         # Tuning history
         self._tuning_history: List[TuningResult] = []
     
@@ -336,7 +346,23 @@ class MetaLearningPromptTuner:
                 new_prompt=tuned_prompt,
                 parent=parent,
             )
-            
+
+            if self.prompt_change_logger:
+                self.prompt_change_logger.log_change(
+                    operation="meta_tune",
+                    prompt_before=current_prompt,
+                    prompt_after=tuned_prompt,
+                    layer=layer,
+                    category=category,
+                    trigger_reason="error_pattern",
+                    context={
+                        "patterns_addressed": [
+                            (p.predicted_category, p.actual_category) for p in patterns
+                        ],
+                        "parent_category": parent,
+                    },
+                )
+
             logger.info(f"Successfully tuned Layer {layer} prompt for '{category}'")
             
             return TuningResult(

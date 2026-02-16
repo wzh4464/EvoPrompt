@@ -104,8 +104,8 @@ class TestDetectWithoutRag:
 
 
 class TestDetectWithRag:
-    def test_prepends_to_prompts(self):
-        """When RAG is enabled, prompts sent to LLM should start with RAG text."""
+    def test_injects_rag_into_prompts(self):
+        """When RAG is enabled, prompts sent to LLM should contain RAG text."""
         llm = _make_mock_llm()
         prompt_set = _make_prompt_set()
         retriever = StubRetriever("INJECTED_RAG_TEXT")
@@ -117,11 +117,11 @@ class TestDetectWithRag:
         )
         asyncio.run(detector.detect_async("int x = 0;"))
 
-        # Check that at least one call to generate_async had the RAG prefix
+        # Check that at least one call to generate_async contains RAG text
         prompts_sent = [
             call.args[0] for call in llm.generate_async.call_args_list
         ]
-        rag_prompts = [p for p in prompts_sent if p.startswith("INJECTED_RAG_TEXT")]
+        rag_prompts = [p for p in prompts_sent if "INJECTED_RAG_TEXT" in p]
         assert len(rag_prompts) > 0
 
     def test_layer1_retrieves_once(self):

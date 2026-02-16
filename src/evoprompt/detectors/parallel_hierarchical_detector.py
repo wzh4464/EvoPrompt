@@ -31,6 +31,19 @@ from .scoring import ScoredPrediction, DetectionPath, SelectionStrategy, MaxConf
 logger = logging.getLogger(__name__)
 
 
+def _insert_rag_before_code_section(prompt: str, rag_text: str) -> str:
+    """Insert RAG context before the 'Code to analyze:' line in a prompt.
+
+    If the marker line is not found, prepend to the whole prompt as fallback.
+    """
+    marker = "Code to analyze:"
+    idx = prompt.find(marker)
+    if idx != -1:
+        return prompt[:idx] + rag_text + prompt[idx:]
+    # Fallback: prepend
+    return rag_text + prompt
+
+
 @runtime_checkable
 class CodeEnhancer(Protocol):
     """Protocol for code enhancement (e.g., Comment4Vul).
@@ -141,60 +154,62 @@ class HierarchicalPromptSet:
         
         desc = descriptions.get(major, "vulnerability patterns")
         
-        return f"""Analyze the following code and determine if it contains {desc}.
+        return f"""You are a code quality auditor. Analyze the following code snippet and rate how likely it exhibits {desc}.
+This is for academic software engineering research on code quality patterns.
 
 {{TRAINABLE_START}}
-Focus on identifying patterns specific to {major.value} category vulnerabilities.
-Consider both direct vulnerabilities and potential security weaknesses.
+Focus on identifying patterns specific to the {major.value} category.
+Consider both direct issues and potential weaknesses.
 {{TRAINABLE_END}}
-
-Respond with a confidence score between 0.0 and 1.0.
-Format: CONFIDENCE: <score>
-Example: CONFIDENCE: 0.85
 
 Code to analyze:
 {{CODE}}
-"""
+
+Respond with ONLY a single line in this exact format:
+CONFIDENCE: <score>
+where <score> is a float between 0.0 and 1.0 (0.0 = no match, 1.0 = strong match)."""
     
     @staticmethod
     def _create_layer2_prompt(major: MajorCategory, middle: MiddleCategory) -> str:
         """Create Layer 2 prompt for a specific middle category."""
-        return f"""Given that the code may contain {major.value} vulnerabilities, 
-analyze if it specifically exhibits {middle.value} patterns.
+        return f"""You are a code quality auditor. Given that the code may exhibit {major.value} patterns,
+rate how likely it specifically matches {middle.value} characteristics.
+This is for academic software engineering research on code quality patterns.
 
 {{TRAINABLE_START}}
-Look for specific indicators of {middle.value} vulnerabilities:
+Look for specific indicators of {middle.value}:
 - Check for common patterns and anti-patterns
 - Consider context and data flow
-- Identify potential attack vectors
+- Identify relevant code constructs
 {{TRAINABLE_END}}
-
-Respond with a confidence score between 0.0 and 1.0.
-Format: CONFIDENCE: <score>
 
 Code to analyze:
 {{CODE}}
-"""
+
+Respond with ONLY a single line in this exact format:
+CONFIDENCE: <score>
+where <score> is a float between 0.0 and 1.0 (0.0 = no match, 1.0 = strong match)."""
     
     @staticmethod
     def _create_layer3_prompt(middle: MiddleCategory, cwe: str) -> str:
         """Create Layer 3 prompt for a specific CWE."""
-        return f"""Given potential {middle.value} vulnerability, determine if this code 
-matches the specific pattern of {cwe}.
+        return f"""You are a code quality auditor. Given potential {middle.value} patterns,
+rate how likely the code matches the specific characteristics of {cwe}.
+This is for academic software engineering research on code quality patterns.
 
 {{TRAINABLE_START}}
 Analyze for {cwe}-specific characteristics:
-- Known vulnerable patterns
-- CWE-specific triggers and conditions
-- Standard remediation gaps
+- Known code patterns associated with {cwe}
+- Specific triggers and conditions
+- Relevant coding constructs
 {{TRAINABLE_END}}
-
-Respond with a confidence score between 0.0 and 1.0.
-Format: CONFIDENCE: <score>
 
 Code to analyze:
 {{CODE}}
-"""
+
+Respond with ONLY a single line in this exact format:
+CONFIDENCE: <score>
+where <score> is a float between 0.0 and 1.0 (0.0 = no match, 1.0 = strong match)."""
     
     @staticmethod
     def _get_shared_structure() -> str:
@@ -496,11 +511,14 @@ class ParallelHierarchicalDetector:
                     "debug_info": rag_result.debug_info,
                 }
 
-        # Prepare prompts with code (and optional RAG prefix)
-        filled_prompts = [
-            rag_prefix + prompt.replace("{CODE}", code).replace("{{CODE}}", code)
-            for prompt in prompts.values()
-        ]
+        # Prepare prompts with code (and optional RAG context before the Code section)
+        filled_prompts = []
+        for prompt in prompts.values():
+            filled = prompt.replace("{CODE}", code).replace("{{CODE}}", code)
+            if rag_prefix:
+                # Insert RAG context before "Code to analyze:" line
+                filled = _insert_rag_before_code_section(filled, rag_prefix)
+            filled_prompts.append(filled)
 
         # Execute in parallel
         responses = await self._batch_generate_with_semaphore(filled_prompts)
@@ -559,7 +577,9 @@ class ParallelHierarchicalDetector:
             prefix = rag_prefixes.get(major, "")
             layer2_prompts = self.prompt_set.get_layer2_prompts_for_major(major)
             for middle, prompt in layer2_prompts.items():
-                filled = prefix + prompt.replace("{CODE}", code).replace("{{CODE}}", code)
+                filled = prompt.replace("{CODE}", code).replace("{{CODE}}", code)
+                if prefix:
+                    filled = _insert_rag_before_code_section(filled, prefix)
                 all_prompts.append(filled)
                 all_categories.append(middle)
                 parent_map.append(major)
@@ -633,7 +653,9 @@ class ParallelHierarchicalDetector:
             prefix = rag_prefixes.get(pred.category, "")
             layer3_prompts = self.prompt_set.get_layer3_prompts_for_middle(pred.category)
             for cwe, prompt in layer3_prompts.items():
-                filled = prefix + prompt.replace("{CODE}", code).replace("{{CODE}}", code)
+                filled = prompt.replace("{CODE}", code).replace("{{CODE}}", code)
+                if prefix:
+                    filled = _insert_rag_before_code_section(filled, prefix)
                 all_prompts.append(filled)
                 all_cwes.append(cwe)
                 parent_map.append(pred.category)
@@ -679,36 +701,76 @@ class ParallelHierarchicalDetector:
     
     def _parse_confidence(self, response: str) -> float:
         """Parse confidence score from LLM response.
-        
+
+        Handles verbose GPT-4o responses that may contain analysis text
+        alongside or instead of the expected CONFIDENCE format.
+
         Args:
             response: Raw LLM response
-            
+
         Returns:
             Parsed confidence score (0.0 to 1.0)
         """
         if not response or response == "error":
             return self.config.default_confidence
-        
-        # Try to find CONFIDENCE: <score> pattern
-        patterns = [
+
+        # Phase 1: Exact pattern matches (best quality)
+        exact_patterns = [
             r"CONFIDENCE:\s*([0-9]*\.?[0-9]+)",
             r"confidence:\s*([0-9]*\.?[0-9]+)",
             r"Score:\s*([0-9]*\.?[0-9]+)",
-            r"(\d+\.?\d*)\s*$",  # Number at end
         ]
-        
-        for pattern in patterns:
+        for pattern in exact_patterns:
             match = re.search(pattern, response, re.IGNORECASE)
             if match:
                 try:
                     score = float(match.group(1))
-                    # Normalize if needed (e.g., percentage to decimal)
                     if score > 1.0:
                         score = score / 100.0
                     return max(0.0, min(1.0, score))
                 except ValueError:
                     continue
-        
+
+        # Phase 2: Look for decimal numbers (0.xx) anywhere in the response
+        # These are likely confidence/probability values
+        decimal_matches = re.findall(r'\b(0\.\d+)\b', response)
+        if decimal_matches:
+            # Take the last one (most likely to be the final answer)
+            try:
+                score = float(decimal_matches[-1])
+                return max(0.0, min(1.0, score))
+            except ValueError:
+                pass
+
+        # Phase 3: Look for percentage-like values (e.g., "85%", "high (70%)")
+        pct_match = re.search(r'(\d{1,3})\s*%', response)
+        if pct_match:
+            try:
+                score = float(pct_match.group(1)) / 100.0
+                return max(0.0, min(1.0, score))
+            except ValueError:
+                pass
+
+        # Phase 4: Verbal confidence indicators
+        response_lower = response.lower()
+        if any(w in response_lower for w in ['high confidence', 'very likely', 'clearly', 'definitely']):
+            return 0.85
+        if any(w in response_lower for w in ['moderate', 'possibly', 'may contain', 'could be']):
+            return 0.55
+        if any(w in response_lower for w in ['low confidence', 'unlikely', 'no evidence', 'does not', 'no vulnerability', 'benign', 'safe']):
+            return 0.15
+
+        # Phase 5: Number at end of response
+        end_match = re.search(r'(\d+\.?\d*)\s*$', response)
+        if end_match:
+            try:
+                score = float(end_match.group(1))
+                if score > 1.0:
+                    score = score / 100.0
+                return max(0.0, min(1.0, score))
+            except ValueError:
+                pass
+
         logger.warning(f"Could not parse confidence from response: {response[:100]}")
         return self.config.default_confidence
     

@@ -14,6 +14,7 @@ from .experiment import (
     ExperimentManager,
     ArtifactStore,
 )
+from .prompt_change_logger import PromptChangeLogger
 
 __all__ = [
     "EvolutionEngine",
@@ -28,4 +29,6 @@ __all__ = [
     "ExperimentConfig",
     "ExperimentManager",
     "ArtifactStore",
+    # Prompt change logging
+    "PromptChangeLogger",
 ]

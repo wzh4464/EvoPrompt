@@ -8,6 +8,7 @@
 - 层级训练策略
 """
 
+import asyncio
 import os
 import sys
 import json
@@ -36,6 +37,7 @@ from evoprompt.multiagent.agents import create_detection_agent, create_meta_agen
 from evoprompt.multiagent.coordinator import MultiAgentCoordinator, CoordinatorConfig
 from evoprompt.algorithms.coevolution import CoevolutionaryAlgorithm
 from evoprompt.utils.trace import TraceManager, TraceConfig, trace_enabled_from_env
+from evoprompt.core.prompt_change_logger import PromptChangeLogger
 
 
 def setup_environment():
@@ -241,7 +243,28 @@ def run_parallel_evaluation(detector, dataset, args):
     from evoprompt.prompts.hierarchical_three_layer import get_full_path
     from evoprompt.evaluators.multiclass_metrics import MultiClassMetrics
 
-    samples = dataset.get_samples(args.eval_samples)
+    all_samples = dataset.get_samples()
+
+    # Filter to samples with valid CWE + resolvable full path
+    valid_samples = []
+    for s in all_samples:
+        cwes = s.metadata.get("cwe", []) if hasattr(s, "metadata") else []
+        if not cwes:
+            continue
+        major, middle, _ = get_full_path(cwes[0])
+        if major and middle:
+            valid_samples.append(s)
+
+    if args.eval_samples is not None:
+        samples = valid_samples[: args.eval_samples]
+    else:
+        samples = valid_samples
+
+    print(f"   📋 CWE-labeled samples: {len(valid_samples)} / {len(all_samples)}, evaluating {len(samples)}")
+
+    # Batch detect using a single event loop to avoid aiohttp session issues
+    codes = [s.input_text for s in samples]
+    all_paths = asyncio.run(detector.detect_batch_async(codes, show_progress=True))
 
     layer1_metrics = MultiClassMetrics()
     layer2_metrics = MultiClassMetrics()
@@ -253,17 +276,11 @@ def run_parallel_evaluation(detector, dataset, args):
     }
     results = []
 
-    for sample in samples:
-        cwes = sample.metadata.get("cwe", []) if hasattr(sample, "metadata") else []
-        if not cwes:
-            continue
-
+    for sample, paths in zip(samples, all_paths):
+        cwes = sample.metadata.get("cwe", [])
         actual_cwe = cwes[0]
         actual_major, actual_middle, _ = get_full_path(actual_cwe)
-        if not actual_major or not actual_middle:
-            continue
 
-        paths = detector.detect(sample.input_text)
         top_path = paths[0] if paths else None
 
         predicted_major = top_path.layer1_category if top_path else "Unknown"
@@ -340,7 +357,7 @@ def run_parallel_evaluation(detector, dataset, args):
     return metrics
 
 
-def run_training(initial_prompt_set, detector, dataset, kb, args, trace_manager: TraceManager = None):
+def run_training(initial_prompt_set, detector, dataset, kb, args, trace_manager: TraceManager = None, prompt_change_logger: PromptChangeLogger = None):
     """运行训练
 
     Args:
@@ -349,6 +366,7 @@ def run_training(initial_prompt_set, detector, dataset, kb, args, trace_manager:
         dataset: 数据集
         kb: 知识库
         args: 命令行参数
+        prompt_change_logger: Always-on prompt change logger
 
     Returns:
         优化后的prompt集合
@@ -358,8 +376,15 @@ def run_training(initial_prompt_set, detector, dataset, kb, args, trace_manager:
 
     # 创建agents
     print("   🤖 Creating agents...")
+    from evoprompt.llm.client import OpenAICompatibleClient
+    detection_llm = OpenAICompatibleClient(
+        api_base=os.getenv("API_BASE_URL"),
+        api_key=os.getenv("API_KEY"),
+        model_name=os.getenv("MODEL_NAME", "gpt-4"),
+    )
     detection_agent = create_detection_agent(
-        model_name=os.getenv("MODEL_NAME", "gpt-4")
+        model_name=os.getenv("MODEL_NAME", "gpt-4"),
+        llm_client=detection_llm,
     )
     meta_agent = create_meta_agent(
         model_name=os.getenv("META_MODEL_NAME", "claude-4.5")
@@ -377,6 +402,7 @@ def run_training(initial_prompt_set, detector, dataset, kb, args, trace_manager:
         meta_agent=meta_agent,
         config=coordinator_config,
         trace_manager=trace_manager,
+        prompt_change_logger=prompt_change_logger,
     )
 
     # 创建进化算法配置
@@ -390,7 +416,8 @@ def run_training(initial_prompt_set, detector, dataset, kb, args, trace_manager:
         "meta_improve_count": args.meta_improve_count,
         "top_k": args.elite_size,
         "enable_elitism": True,
-        "meta_improvement_rate": 0.3
+        "meta_improvement_rate": 0.3,
+        "eval_sample_size": args.batch_size,
     }
 
     algorithm = CoevolutionaryAlgorithm(
@@ -425,11 +452,11 @@ def run_training(initial_prompt_set, detector, dataset, kb, args, trace_manager:
             metadata={"stage": "initialization"},
         )
 
-    best_individual = algorithm.evolve(initial_prompts=initial_prompts)
+    evolution_result = algorithm.evolve(initial_prompts=initial_prompts)
 
     print()
     print("   ✅ Training completed!")
-    print(f"      Best fitness: {best_individual.fitness:.4f}")
+    print(f"      Best fitness: {evolution_result['best_fitness']:.4f}")
 
     # TODO: 将best_individual.prompt转换回ThreeLayerPromptSet
     # 目前返回初始prompt集合
@@ -437,7 +464,7 @@ def run_training(initial_prompt_set, detector, dataset, kb, args, trace_manager:
         trace_manager.log_event(
             "training_complete",
             {
-                "best_fitness": getattr(best_individual, "fitness", None),
+                "best_fitness": evolution_result.get("best_fitness"),
             },
         )
 
@@ -694,6 +721,9 @@ def main():
         )
     )
 
+    # Always-on prompt change logger (independent of release mode)
+    prompt_change_logger = PromptChangeLogger(output_dir=Path(args.output_dir))
+
     # 开始
     print("🏗️  Three-Layer Detection Training System")
     print("=" * 70)
@@ -749,7 +779,7 @@ def main():
 
     # 训练
     if args.train:
-        prompt_set = run_training(prompt_set, detector, train_dataset, kb, args, trace_manager=trace_manager)
+        prompt_set = run_training(prompt_set, detector, train_dataset, kb, args, trace_manager=trace_manager, prompt_change_logger=prompt_change_logger)
 
         # 重新创建检测器并评估
         print("\n📊 Final Evaluation")
@@ -762,6 +792,12 @@ def main():
     else:
         # 仅评估，保存基线结果
         save_results(args.output_dir, baseline_metrics, prompt_set, args)
+
+    # Print prompt change summary
+    change_summary = prompt_change_logger.get_summary()
+    if change_summary["total_changes"] > 0:
+        print(f"\n   Prompt changes logged: {change_summary['total_changes']}")
+        print(f"   Log file: {prompt_change_logger.log_file}")
 
     print("\n" + "=" * 70)
     print("✨ Completed!")

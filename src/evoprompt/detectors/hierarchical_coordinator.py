@@ -481,6 +481,7 @@ def create_coordinator(
     llm_client: AsyncLLMClient,
     enable_meta_learning: bool = True,
     knowledge_base=None,
+    prompt_change_logger=None,
     **kwargs
 ) -> HierarchicalDetectionCoordinator:
     """Factory function to create a detection coordinator.
@@ -489,6 +490,7 @@ def create_coordinator(
         llm_client: Async LLM client
         enable_meta_learning: Whether to enable meta-learning
         knowledge_base: Optional KnowledgeBase for RAG enhancement
+        prompt_change_logger: Optional PromptChangeLogger for always-on change tracking
         **kwargs: Additional configuration (including enable_rag, rag_top_k, rag_retriever_type)
 
     Returns:
@@ -526,10 +528,17 @@ def create_coordinator(
             retriever_type=detector_config.rag_retriever_type,
         )
 
+    # Create prompt tuner with change logger
+    prompt_tuner = MetaLearningPromptTuner(
+        llm_client,
+        prompt_change_logger=prompt_change_logger,
+    )
+
     return HierarchicalDetectionCoordinator(
         llm_client=llm_client,
         prompt_set=hierarchical_prompts,
         detector_config=detector_config,
         coordinator_config=coordinator_config,
         retriever=retriever,
+        prompt_tuner=prompt_tuner,
     )
