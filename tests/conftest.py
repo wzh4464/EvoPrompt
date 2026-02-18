@@ -12,7 +12,6 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 from evoprompt.llm.client import LLMClient
-from evoprompt.llm.stub import DeterministicStubClient
 from evoprompt.core.evaluator import Evaluator
 from evoprompt.data.dataset import Dataset
 from evoprompt.metrics.base import Metric
@@ -67,12 +66,6 @@ def mock_evaluator(mock_dataset, mock_metric, mock_llm_client):
         metric=mock_metric,
         llm_client=mock_llm_client
     )
-
-
-@pytest.fixture
-def stub_llm_client():
-    """Deterministic stub LLM client for testing."""
-    return DeterministicStubClient(default_response="Benign")
 
 
 @pytest.fixture
