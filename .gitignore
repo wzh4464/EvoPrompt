@@ -140,10 +140,5 @@ data/**
 # MacOS
 .DS_Store
 
-# Local tool configs
-.claude/
-.serena/
-.cursor/
-
 # data
 *.json

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -c user.useConfigOnly=true commit --quiet --allow-empty-message --file - -S)",
+      "Bash(git add:*)",
+      "Bash(uv run:*)",
+      "Bash(chmod:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
