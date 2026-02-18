@@ -33,20 +33,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import comment generator for SCALE methodology
-try:
-    # Add src to path for imports
-    src_path = Path(__file__).parent.parent / "src"
-    if str(src_path) not in sys.path:
-        sys.path.insert(0, str(src_path))
-
-    from evoprompt.utils.comment_generator import CommentGenerator
-    COMMENT_GENERATOR_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"Comment generator not available: {e}")
-    COMMENT_GENERATOR_AVAILABLE = False
-    CommentGenerator = None
-
 
 def setup_comment4vul_imports(use_adapter: bool = False):
     """
@@ -87,14 +73,8 @@ def setup_comment4vul_imports(use_adapter: bool = False):
 
     # Try original parserTool first
     try:
-        # Add both parserTool and SymbolicRule directories to path
-        parser_tool_path = Path(__file__).parent.parent / "comment4vul" / "parserTool"
-        symbolic_rule_path = Path(__file__).parent.parent / "comment4vul" / "SymbolicRule"
-
-        if str(parser_tool_path) not in sys.path:
-            sys.path.insert(0, str(parser_tool_path))
-        if str(symbolic_rule_path) not in sys.path:
-            sys.path.insert(0, str(symbolic_rule_path))
+        # Try to import from comment4vul submodule
+        sys.path.insert(0, str(Path(__file__).parent.parent / "comment4vul" / "SymbolicRule"))
 
         import parserTool.parse as ps
         from parserTool.parse import Lang
@@ -209,10 +189,8 @@ def print_ast_node(code: str, node, indent: str = "") -> str:
                 if child.type == "parenthesized_expression" and child.start_point[0] == node.start_point[0]:
                     Begin = cpp_loc[child.start_point[0]][:child.start_point[1]]
                     End = cpp_loc[child.start_point[0]][child.end_point[1]:]
-                    original_expr = cpp_loc[child.start_point[0]][child.start_point[1]:child.end_point[1]]
 
-                    # Preserve original condition, add comment as inline comment
-                    New_line = Begin + original_expr[:-1] + " /* " + comment[1:].strip() + " */" + original_expr[-1:] + End
+                    New_line = Begin + "(" + comment[1:] + ") " + End
                     cpp_loc[node.start_point[0]] = New_line
                     code = "\n".join(cpp_loc)
 
@@ -224,10 +202,8 @@ def print_ast_node(code: str, node, indent: str = "") -> str:
                 if child.type == "parenthesized_expression" and child.start_point[0] == node.start_point[0]:
                     Begin = cpp_loc[child.start_point[0]][:child.start_point[1]]
                     End = cpp_loc[child.start_point[0]][child.end_point[1]:]
-                    original_expr = cpp_loc[child.start_point[0]][child.start_point[1]:child.end_point[1]]
 
-                    # Preserve original condition, add comment as inline comment
-                    New_line = Begin + original_expr[:-1] + " /* " + comment.strip() + " */" + original_expr[-1:] + End
+                    New_line = Begin + "(" + comment + ") " + End
                     cpp_loc[node.start_point[0]] = New_line
                     code = "\n".join(cpp_loc)
 
@@ -257,10 +233,8 @@ def print_ast_node(code: str, node, indent: str = "") -> str:
                 if child.type == "parenthesized_expression" and child.start_point[0] == node.start_point[0]:
                     Begin = cpp_loc[child.start_point[0]][:child.start_point[1]]
                     End = cpp_loc[child.start_point[0]][child.end_point[1]:]
-                    original_expr = cpp_loc[child.start_point[0]][child.start_point[1]:child.end_point[1]]
 
-                    # Preserve original condition, add comment as inline comment
-                    New_line = Begin + original_expr[:-1] + " /* " + comment[1:].strip() + " */" + original_expr[-1:] + End
+                    New_line = Begin + " (" + comment[1:] + ") " + End
                     cpp_loc[node.start_point[0]] = New_line
                     code = "\n".join(cpp_loc)
 
@@ -347,16 +321,10 @@ def process_with_comment4vul(code: str, ps, Lang) -> Optional[str]:
 def convert_primevul_to_comment4vul_format(
     primevul_record: Dict[str, Any],
     use_llm_comments: bool = False,
-    comment_text: Optional[str] = None,
-    comment_generator: Optional[CommentGenerator] = None
+    comment_text: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Convert PrimeVul record to comment4vul input format.
-
-    Implements SCALE Section 3.1: Comment Generation
-    - Option 1: Use LLM to generate comments (SCALE method)
-    - Option 2: Use existing comments from 'choices' field
-    - Option 3: Use original code as-is
 
     PrimeVul format:
         {
@@ -377,12 +345,11 @@ def convert_primevul_to_comment4vul_format(
 
     Args:
         primevul_record: Original PrimeVul record
-        use_llm_comments: Whether to use LLM-generated comments (SCALE method)
+        use_llm_comments: Whether to use LLM-generated comments (future feature)
         comment_text: Optional default comment to add
-        comment_generator: CommentGenerator instance for LLM generation
 
     Returns:
-        Record in comment4vul format with 'choices' field containing commented code
+        Record in comment4vul format
     """
     result = {
         "idx": primevul_record["idx"],
@@ -395,20 +362,9 @@ def convert_primevul_to_comment4vul_format(
         # Use existing LLM-generated commented code
         result["choices"] = primevul_record["choices"]
         logger.debug(f"Using existing commented code from 'choices' field for sample {result['idx']}")
-    elif use_llm_comments and comment_generator is not None:
-        # Generate comments using LLM (SCALE Section 3.1)
-        logger.debug(f"Generating LLM comments for sample {result['idx']}")
-        commented_code, success = comment_generator.generate_comments(
-            code=primevul_record["func"],
-            language="C"  # PrimeVul is primarily C/C++
-        )
-        if success:
-            result["choices"] = commented_code
-            logger.debug(f"✓ Successfully generated comments for sample {result['idx']}")
-        else:
-            # Fall back to original code if generation fails
-            result["choices"] = primevul_record["func"]
-            logger.warning(f"✗ Comment generation failed for sample {result['idx']}, using original code")
+    elif use_llm_comments:
+        logger.warning("LLM comment generation not yet implemented, using original code")
+        result["choices"] = primevul_record["func"]
     elif comment_text:
         # Add a default comment at the beginning
         result["choices"] = f"// {comment_text}\n{primevul_record['func']}"
@@ -459,34 +415,18 @@ def preprocess_primevul_dataset(
 
     logger.info(f"Loaded {len(samples)} samples")
 
-    # Initialize comment generator if needed (SCALE Section 3.1)
-    comment_generator = None
-    if use_llm_comments:
-        if COMMENT_GENERATOR_AVAILABLE:
-            logger.info("Initializing LLM comment generator (SCALE methodology)...")
-            try:
-                comment_generator = CommentGenerator()
-                logger.info("✓ Comment generator ready")
-            except Exception as e:
-                logger.error(f"✗ Failed to initialize comment generator: {e}")
-                logger.info("Continuing without LLM comment generation")
-        else:
-            logger.warning("Comment generator not available. Install required dependencies.")
-            logger.info("Continuing without LLM comment generation")
-
     # Process samples
     results = []
     errors = 0
 
     for record in tqdm(samples, desc="Processing samples"):
-        # Convert to comment4vul format (with optional LLM comment generation)
+        # Convert to comment4vul format
         c4v_record = convert_primevul_to_comment4vul_format(
             record,
-            use_llm_comments=use_llm_comments,
-            comment_generator=comment_generator
+            use_llm_comments=use_llm_comments
         )
 
-        # Apply symbolic processing (SCALE Section 3.2)
+        # Apply symbolic processing
         clean_code = process_with_comment4vul(c4v_record["choices"], ps, Lang)
 
         if clean_code is None:
