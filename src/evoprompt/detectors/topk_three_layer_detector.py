@@ -5,7 +5,6 @@ Layer1输出top-k个候选类别，每个都传给Layer2处理，最后聚合选
 
 import json
 import re
-import warnings
 import logging
 from typing import Optional, Tuple, Dict, List
 from dataclasses import dataclass
@@ -52,11 +51,6 @@ class TopKThreeLayerDetector(ThreeLayerDetector):
         use_scale_enhancement: bool = False,
         layer1_top_k: int = 3
     ):
-        warnings.warn(
-            "TopKThreeLayerDetector is deprecated. Use DetectionPipeline instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
         super().__init__(prompt_set, llm_client, use_scale_enhancement)
         self.layer1_top_k = layer1_top_k
         self._topk_prompt = self._create_topk_layer1_prompt()
