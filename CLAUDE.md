@@ -49,7 +49,7 @@ EvoPrompt/
 ```bash
 # .env文件内容 - ModelScope配置
 API_BASE_URL=https://api-inference.modelscope.cn/v1/
-API_KEY=ms-d18289c0-fa42-4449-b95d-fbaf794ae65a
+API_KEY=your-api-key-here
 BACKUP_API_BASE_URL=https://newapi.aicohere.org/v1
 MODEL_NAME=Qwen/Qwen3-Coder-480B-A35B-Instruct
 ```

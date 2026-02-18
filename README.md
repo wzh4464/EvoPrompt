@@ -46,14 +46,14 @@ MODEL_NAME=kimi-k2-code
 ### Basic Usage
 
 ```bash
-# Run SVEN vulnerability detection
-uv run python sven_llm_client.py
+# Run main entry point
+uv run python main.py
 
-# Run Primevul 1% sampling demo
-uv run python demo_primevul_1percent.py
+# Run Primevul 1% sampling experiment
+uv run python scripts/run_primevul_1percent.py
 
-# Run full Primevul evolution
-uv run python run_primevul_1percent.py
+# Run full pipeline
+uv run python scripts/run_full_pipeline.py
 ```
 
 ## 📊 Supported Datasets
@@ -179,7 +179,7 @@ uv run python scripts/verify_response_parsing.py \
   --verbose
 ```
 
-- 指定完整 PrimeVul 样本并输出结果归档，可直接复制下面命令：
+- To run with full PrimeVul samples and output archiving:
 
 ```bash
 uv run python scripts/verify_response_parsing.py \
@@ -192,16 +192,13 @@ uv run python scripts/verify_response_parsing.py \
   --output-json result.json
 ```
 
-- 默认运行真实 LLM；确保 `.env` 中已有 `API_KEY`、`API_BASE_URL`、`MODEL_NAME`
-  等配置。
-- 内置 `--use-cwe-major` 模式用于验证大类分类解析。
-- 若想在离线环境调试，可传 `--mock-response "benign"` 复用单一响应，但
-  该模式不会进行真实 API 校验。
-- 使用 `--output-json` 将每个样例的 prompt、原始响应与解析结果保存下来，
-  便于进一步分析。
+- Runs against a real LLM by default; ensure `API_KEY`, `API_BASE_URL`, `MODEL_NAME` are set in `.env`.
+- Use `--use-cwe-major` mode to verify major-category classification parsing.
+- For offline debugging, pass `--mock-response "benign"` to reuse a single response (no real API validation).
+- Use `--output-json` to save per-sample prompts, raw responses, and parsed results for further analysis.
 
-> pytest 默认不会运行 `tests/test_response_parsing.py`；若需要连同单元测试一起校验，
-> 请在命令前设置 `RUN_RESPONSE_PARSING_TESTS=1`。
+> By default, `pytest` will not run `tests/test_response_parsing.py`.
+> To include it in the test run, set `RUN_RESPONSE_PARSING_TESTS=1` before the command.
 
 ## 📋 Requirements
 
