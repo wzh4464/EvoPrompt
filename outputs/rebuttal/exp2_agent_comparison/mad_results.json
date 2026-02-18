@@ -1,0 +1,32 @@
+{
+  "method": "Multi-Agent Debate (MAD)",
+  "model": "from_env",
+  "n_samples": 150,
+  "metrics": {
+    "accuracy": 0.7067,
+    "macro_f1": 0.5032,
+    "precision_vuln": 0.4545,
+    "recall_vuln": 0.1163,
+    "f1_vuln": 0.1852,
+    "precision_benign": 0.7266,
+    "recall_benign": 0.9439,
+    "f1_benign": 0.8211,
+    "tp": 5,
+    "fp": 6,
+    "fn": 38,
+    "tn": 101
+  },
+  "cost": {
+    "n_samples": 150,
+    "total_api_calls": 750,
+    "avg_calls_per_sample": 5.0,
+    "total_prompt_tokens": 670430,
+    "total_completion_tokens": 216822,
+    "total_tokens": 887252,
+    "avg_tokens_per_sample": 5915.0,
+    "avg_prompt_tokens_per_call": 893.9,
+    "avg_completion_tokens_per_call": 289.1,
+    "avg_latency_sec": 10.001,
+    "total_latency_sec": 7500.99
+  }
+}

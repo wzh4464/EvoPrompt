@@ -1,0 +1,32 @@
+{
+  "method": "MulVul (Router-Detector)",
+  "model": "from_env",
+  "n_samples": 150,
+  "metrics": {
+    "accuracy": 0.5933,
+    "macro_f1": 0.588,
+    "precision_vuln": 0.4,
+    "recall_vuln": 0.8372,
+    "f1_vuln": 0.5414,
+    "precision_benign": 0.8833,
+    "recall_benign": 0.4953,
+    "f1_benign": 0.6347,
+    "tp": 36,
+    "fp": 54,
+    "fn": 7,
+    "tn": 53
+  },
+  "cost": {
+    "n_samples": 150,
+    "total_api_calls": 450,
+    "avg_calls_per_sample": 3.0,
+    "total_prompt_tokens": 210680,
+    "total_completion_tokens": 34033,
+    "total_tokens": 244713,
+    "avg_tokens_per_sample": 1631.4,
+    "avg_prompt_tokens_per_call": 468.2,
+    "avg_completion_tokens_per_call": 75.6,
+    "avg_latency_sec": 3.66,
+    "total_latency_sec": 1646.87
+  }
+}

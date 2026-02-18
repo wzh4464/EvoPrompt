@@ -1,0 +1,32 @@
+{
+  "method": "Reflexion (Self-Correction)",
+  "model": "from_env",
+  "n_samples": 150,
+  "metrics": {
+    "accuracy": 0.5867,
+    "macro_f1": 0.5079,
+    "precision_vuln": 0.2979,
+    "recall_vuln": 0.3256,
+    "f1_vuln": 0.3111,
+    "precision_benign": 0.7184,
+    "recall_benign": 0.6916,
+    "f1_benign": 0.7048,
+    "tp": 14,
+    "fp": 33,
+    "fn": 29,
+    "tn": 74
+  },
+  "cost": {
+    "n_samples": 150,
+    "total_api_calls": 450,
+    "avg_calls_per_sample": 3.0,
+    "total_prompt_tokens": 509092,
+    "total_completion_tokens": 94826,
+    "total_tokens": 603918,
+    "avg_tokens_per_sample": 4026.1,
+    "avg_prompt_tokens_per_call": 1131.3,
+    "avg_completion_tokens_per_call": 210.7,
+    "avg_latency_sec": 7.617,
+    "total_latency_sec": 3427.67
+  }
+}
