@@ -441,3 +441,146 @@ def print_averaging_comparison(metrics: MultiClassMetrics):
     print("💡 推荐用于漏洞检测: Macro-F1")
     print("   原因: 强制模型在所有类别(包括少数类)上都表现好")
     print("=" * 70)
+
+
+def recall_at_k(
+    predictions: List[List[str]],
+    ground_truth: List[str],
+    k: int = 3
+) -> float:
+    """计算 Recall@k - Router Agent 的优化目标
+
+    检查 top-k 预测中是否包含正确类别。
+
+    Args:
+        predictions: List of top-k predictions for each sample [[pred1, pred2, ...], ...]
+        ground_truth: List of actual labels
+        k: Number of top predictions to consider
+
+    Returns:
+        Recall@k score in [0, 1]
+
+    Example:
+        >>> predictions = [["Memory", "Injection", "Logic"], ["Benign", "Memory"]]
+        >>> ground_truth = ["Memory", "Benign"]
+        >>> recall_at_k(predictions, ground_truth, k=3)
+        1.0  # Both correct labels are in top-3
+    """
+    if len(predictions) != len(ground_truth):
+        raise ValueError("predictions and ground_truth must have same length")
+
+    if not predictions:
+        return 0.0
+
+    correct = 0
+    for preds, gt in zip(predictions, ground_truth):
+        top_k_preds = preds[:k] if isinstance(preds, list) else [preds]
+        if gt in top_k_preds:
+            correct += 1
+
+    return correct / len(ground_truth)
+
+
+def recall_at_k_with_confidence(
+    predictions: List[List[tuple]],
+    ground_truth: List[str],
+    k: int = 3
+) -> Dict:
+    """计算 Recall@k 并返回详细统计
+
+    Args:
+        predictions: List of [(category, confidence), ...] for each sample
+        ground_truth: List of actual labels
+        k: Number of top predictions to consider
+
+    Returns:
+        Dict with recall@k and detailed statistics
+    """
+    if len(predictions) != len(ground_truth):
+        raise ValueError("predictions and ground_truth must have same length")
+
+    if not predictions:
+        return {"recall_at_k": 0.0, "k": k, "total": 0, "correct": 0}
+
+    correct = 0
+    correct_positions = []  # Position where correct label was found
+
+    for preds, gt in zip(predictions, ground_truth):
+        top_k = preds[:k]
+        categories = [p[0] if isinstance(p, tuple) else p for p in top_k]
+
+        if gt in categories:
+            correct += 1
+            pos = categories.index(gt) + 1  # 1-indexed position
+            correct_positions.append(pos)
+
+    recall = correct / len(ground_truth)
+
+    # Calculate mean reciprocal rank (MRR)
+    mrr = sum(1.0 / pos for pos in correct_positions) / len(ground_truth) if correct_positions else 0.0
+
+    return {
+        "recall_at_k": round(recall, 4),
+        "k": k,
+        "total": len(ground_truth),
+        "correct": correct,
+        "mrr": round(mrr, 4),  # Mean Reciprocal Rank
+        "position_distribution": {
+            f"top_{i}": sum(1 for p in correct_positions if p == i)
+            for i in range(1, k + 1)
+        }
+    }
+
+
+class RouterMetrics:
+    """Router Agent 专用评估指标
+
+    优化目标: Recall@k (确保正确类别在 top-k 预测中)
+    """
+
+    def __init__(self, k: int = 3):
+        self.k = k
+        self.predictions: List[List[tuple]] = []  # [(category, confidence), ...]
+        self.ground_truth: List[str] = []
+
+    def add_prediction(self, top_k_preds: List[tuple], actual: str):
+        """添加一个路由预测
+
+        Args:
+            top_k_preds: [(category, confidence), ...] 按置信度排序
+            actual: 实际类别
+        """
+        self.predictions.append(top_k_preds)
+        self.ground_truth.append(actual)
+
+    def compute_recall_at_k(self, k: int = None) -> float:
+        """计算 Recall@k"""
+        k = k or self.k
+        categories_only = [
+            [p[0] if isinstance(p, tuple) else p for p in preds]
+            for preds in self.predictions
+        ]
+        return recall_at_k(categories_only, self.ground_truth, k)
+
+    def get_report(self) -> Dict:
+        """获取完整评估报告"""
+        return recall_at_k_with_confidence(
+            self.predictions, self.ground_truth, self.k
+        )
+
+    def print_report(self):
+        """打印评估报告"""
+        report = self.get_report()
+
+        print("\n" + "=" * 50)
+        print("Router Agent Evaluation Report")
+        print("=" * 50)
+        print(f"Recall@{self.k}: {report['recall_at_k']:.2%}")
+        print(f"MRR (Mean Reciprocal Rank): {report['mrr']:.4f}")
+        print(f"Total samples: {report['total']}")
+        print(f"Correct (in top-{self.k}): {report['correct']}")
+
+        print("\nPosition Distribution:")
+        for pos, count in report['position_distribution'].items():
+            print(f"  {pos}: {count}")
+        print("=" * 50)

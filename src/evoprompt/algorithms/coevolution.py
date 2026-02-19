@@ -47,7 +47,6 @@ class CoevolutionaryAlgorithm(EvolutionAlgorithm):
         self.top_k = config.get("top_k", 5)  # Keep top K prompts each generation
         self.enable_elitism = config.get("enable_elitism", True)
         self.meta_improvement_rate = config.get("meta_improvement_rate", 0.3)  # Fraction improved by meta-agent
-        self.eval_sample_size = config.get("eval_sample_size", None)  # Subsample for evaluation (None=full dataset)
 
     def initialize_population(self, initial_prompts: List[str]) -> Population:
         """Initialize population and evaluate with detection agent."""
@@ -55,7 +54,7 @@ class CoevolutionaryAlgorithm(EvolutionAlgorithm):
 
         for prompt in initial_prompts[:self.population_size]:
             # Evaluate using coordinator
-            stats = self.coordinator.evaluate_prompt(prompt, self.dataset, sample_size=self.eval_sample_size)
+            stats = self.coordinator.evaluate_prompt(prompt, self.dataset)
 
             individual = Individual(prompt, fitness=stats.f1_score)
             individual.metadata['stats'] = stats
@@ -72,7 +71,7 @@ class CoevolutionaryAlgorithm(EvolutionAlgorithm):
             mutated = self.coordinator.meta_agent.mutate_prompt(
                 base_prompt, stats, generation=0
             )
-            mutated_stats = self.coordinator.evaluate_prompt(mutated, self.dataset, sample_size=self.eval_sample_size)
+            mutated_stats = self.coordinator.evaluate_prompt(mutated, self.dataset)
 
             individual = Individual(mutated, fitness=mutated_stats.f1_score)
             individual.metadata['stats'] = mutated_stats
@@ -112,8 +111,7 @@ class CoevolutionaryAlgorithm(EvolutionAlgorithm):
             parent1.prompt,
             parent2.prompt,
             self.dataset,
-            generation=getattr(parent1, 'generation', 0),
-            sample_size=self.eval_sample_size,
+            generation=getattr(parent1, 'generation', 0)
         )
 
         offspring = Individual(offspring_prompt, fitness=offspring_stats.f1_score)
@@ -136,8 +134,7 @@ class CoevolutionaryAlgorithm(EvolutionAlgorithm):
         mutated_prompt, mutated_stats = self.coordinator.collaborative_mutate(
             individual.prompt,
             self.dataset,
-            generation=generation,
-            sample_size=self.eval_sample_size,
+            generation=generation
         )
 
         mutated_individual = Individual(mutated_prompt, fitness=mutated_stats.f1_score)
@@ -189,8 +186,7 @@ class CoevolutionaryAlgorithm(EvolutionAlgorithm):
                 individual.prompt,
                 self.dataset,
                 generation=generation,
-                historical_stats=historical_stats[-5:],  # Last 5 generations
-                sample_size=self.eval_sample_size,
+                historical_stats=historical_stats[-5:]  # Last 5 generations
             )
 
             improved_ind = Individual(improved_prompt, fitness=improved_stats.f1_score)

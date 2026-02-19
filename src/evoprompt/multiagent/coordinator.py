@@ -6,14 +6,12 @@ The coordinator manages the interaction between:
 """
 
 from enum import Enum
-from typing import List, Dict, Optional, Tuple, Any
+from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 
 from .agents import DetectionAgent, MetaAgent
 from ..evaluators.statistics import DetectionStatistics, BatchStatistics, StatisticsCollector
 from ..data.dataset import Dataset
-from ..utils.trace import TraceManager, compute_text_hash
-from ..core.prompt_change_logger import PromptChangeLogger
 
 
 class CoordinationStrategy(Enum):
@@ -54,9 +52,7 @@ class MultiAgentCoordinator:
         self,
         detection_agent: DetectionAgent,
         meta_agent: MetaAgent,
-        config: Optional[CoordinatorConfig] = None,
-        trace_manager: Optional[TraceManager] = None,
-        prompt_change_logger: Optional[PromptChangeLogger] = None,
+        config: Optional[CoordinatorConfig] = None
     ):
         """Initialize coordinator.
 
@@ -64,13 +60,10 @@ class MultiAgentCoordinator:
             detection_agent: Agent for vulnerability detection
             meta_agent: Agent for meta-level optimization
             config: Coordinator configuration
-            prompt_change_logger: Always-on prompt change logger
         """
         self.detection_agent = detection_agent
         self.meta_agent = meta_agent
         self.config = config or CoordinatorConfig()
-        self.trace = trace_manager
-        self.prompt_change_logger = prompt_change_logger
 
         # Statistics tracking
         self.statistics_collector = StatisticsCollector()
@@ -99,27 +92,11 @@ class MultiAgentCoordinator:
         code_samples = [s.input_text for s in samples]
         labels = [s.target for s in samples]
 
-        trace_enabled = bool(self.trace and self.trace.enabled)
-        prompt_hash = compute_text_hash(prompt)
-
         # Get predictions from detection agent
-        if trace_enabled:
-            payload = self.detection_agent.detect(
-                prompt,
-                code_samples,
-                return_raw=self.trace.config.store_raw_responses,
-                return_prompts=self.trace.config.store_filled_prompts,
-            )
-            predictions = payload["predictions"]
-            raw_responses = payload.get("responses", [])
-            filled_prompts = payload.get("prompts", [])
-        else:
-            predictions = self.detection_agent.detect(prompt, code_samples)
-            raw_responses = []
-            filled_prompts = []
+        predictions = self.detection_agent.detect(prompt, code_samples)
 
         # Collect statistics
-        for idx, (pred, actual, sample) in enumerate(zip(predictions, labels, samples)):
+        for pred, actual, sample in zip(predictions, labels, samples):
             # Convert label to string
             actual_str = "vulnerable" if actual == 1 else "benign"
 
@@ -136,32 +113,7 @@ class MultiAgentCoordinator:
                 sample_id=getattr(sample, 'id', None)
             )
 
-            if trace_enabled:
-                record: Dict[str, Any] = {
-                    "prompt_hash": prompt_hash,
-                    "prediction": pred,
-                    "actual": actual_str,
-                    "category": category,
-                    "sample_id": getattr(sample, "id", None),
-                }
-                if self.trace.config.store_code:
-                    record["input_code"] = sample.input_text
-                if raw_responses and idx < len(raw_responses) and self.trace.config.store_raw_responses:
-                    record["raw_response"] = raw_responses[idx]
-                if filled_prompts and idx < len(filled_prompts) and self.trace.config.store_filled_prompts:
-                    record["filled_prompt"] = filled_prompts[idx]
-                self.trace.log_sample_trace(record)
-
         stats.compute_metrics()
-        if trace_enabled:
-            self.trace.log_event(
-                "prompt_evaluation_summary",
-                {
-                    "prompt_hash": prompt_hash,
-                    "total_samples": stats.total_samples,
-                    "summary": stats.get_summary(),
-                },
-            )
         return stats
 
     def evaluate_with_batches(
@@ -187,9 +139,6 @@ class MultiAgentCoordinator:
         batch_stats_list = []
 
         # Process in batches
-        trace_enabled = bool(self.trace and self.trace.enabled)
-        prompt_hash = compute_text_hash(prompt)
-
         for batch_id, i in enumerate(range(0, len(samples), self.config.batch_size)):
             batch_samples = samples[i:i + self.config.batch_size]
 
@@ -198,22 +147,9 @@ class MultiAgentCoordinator:
             code_samples = [s.input_text for s in batch_samples]
             labels = [s.target for s in batch_samples]
 
-            if trace_enabled:
-                payload = self.detection_agent.detect(
-                    prompt,
-                    code_samples,
-                    return_raw=self.trace.config.store_raw_responses,
-                    return_prompts=self.trace.config.store_filled_prompts,
-                )
-                predictions = payload["predictions"]
-                raw_responses = payload.get("responses", [])
-                filled_prompts = payload.get("prompts", [])
-            else:
-                predictions = self.detection_agent.detect(prompt, code_samples)
-                raw_responses = []
-                filled_prompts = []
+            predictions = self.detection_agent.detect(prompt, code_samples)
 
-            for idx, (pred, actual, sample) in enumerate(zip(predictions, labels, batch_samples)):
+            for pred, actual, sample in zip(predictions, labels, batch_samples):
                 actual_str = "vulnerable" if actual == 1 else "benign"
                 category = None
                 if hasattr(sample, 'metadata') and 'cwe' in sample.metadata:
@@ -223,23 +159,6 @@ class MultiAgentCoordinator:
                 # Update both overall and batch stats
                 batch_stats_obj.add_prediction(pred, actual_str, category)
                 overall_stats.add_prediction(pred, actual_str, category)
-
-                if trace_enabled:
-                    record: Dict[str, Any] = {
-                        "prompt_hash": prompt_hash,
-                        "batch_id": batch_id,
-                        "prediction": pred,
-                        "actual": actual_str,
-                        "category": category,
-                        "sample_id": getattr(sample, "id", None),
-                    }
-                    if self.trace.config.store_code:
-                        record["input_code"] = sample.input_text
-                    if raw_responses and idx < len(raw_responses) and self.trace.config.store_raw_responses:
-                        record["raw_response"] = raw_responses[idx]
-                    if filled_prompts and idx < len(filled_prompts) and self.trace.config.store_filled_prompts:
-                        record["filled_prompt"] = filled_prompts[idx]
-                    self.trace.log_sample_trace(record)
 
             batch_stats_obj.compute_metrics()
 
@@ -253,15 +172,6 @@ class MultiAgentCoordinator:
             batch_stats_list.append(batch_stat)
 
         overall_stats.compute_metrics()
-        if trace_enabled:
-            self.trace.log_event(
-                "prompt_evaluation_summary",
-                {
-                    "prompt_hash": prompt_hash,
-                    "total_samples": overall_stats.total_samples,
-                    "summary": overall_stats.get_summary(),
-                },
-            )
         return overall_stats, batch_stats_list
 
     def collaborative_improve(
@@ -269,8 +179,7 @@ class MultiAgentCoordinator:
         prompt: str,
         dataset: Dataset,
         generation: int = 0,
-        historical_stats: Optional[List[DetectionStatistics]] = None,
-        sample_size: Optional[int] = None,
+        historical_stats: Optional[List[DetectionStatistics]] = None
     ) -> Tuple[str, DetectionStatistics]:
         """Collaboratively improve a prompt using detection + meta agents.
 
@@ -291,14 +200,14 @@ class MultiAgentCoordinator:
         """
         # Evaluate current prompt
         if self.config.enable_batch_feedback:
-            stats, batch_stats = self.evaluate_with_batches(prompt, dataset, sample_size=sample_size)
+            stats, batch_stats = self.evaluate_with_batches(prompt, dataset)
             # Track batch statistics
             self.batch_history.extend(batch_stats)
             # Keep only recent batches
             if len(self.batch_history) > self.config.statistics_window * 10:
                 self.batch_history = self.batch_history[-self.config.statistics_window * 10:]
         else:
-            stats = self.evaluate_prompt(prompt, dataset, sample_size=sample_size)
+            stats = self.evaluate_prompt(prompt, dataset)
             batch_stats = []
 
         # Get improvement suggestions from statistics
@@ -313,51 +222,15 @@ class MultiAgentCoordinator:
             improvement_suggestions=suggestions,
             generation=generation
         )
-        # Evaluate improved prompt to get actual performance
-        improved_stats = self.evaluate_prompt(improved_prompt, dataset, sample_size=sample_size)
 
-        if self.trace and self.trace.enabled:
-            payload = {
-                "operation": "meta_improve",
-                "generation": generation,
-                "prompt_hash_before": compute_text_hash(prompt),
-                "prompt_hash_after": compute_text_hash(improved_prompt),
-                "metrics_before": stats.get_summary(),
-                "metrics_after": improved_stats.get_summary(),
-                "improvement_suggestions": suggestions,
-            }
-            if self.trace.config.store_prompts:
-                payload["before_prompt"] = prompt
-                payload["after_prompt"] = improved_prompt
-            self.trace.log_prompt_update(payload)
-            if self.trace.config.store_prompts:
-                self.trace.save_prompt_snapshot(
-                    f"gen{generation}_improve_{payload['prompt_hash_after']}",
-                    improved_prompt,
-                    metadata={"operation": "meta_improve", "generation": generation},
-                )
-
-        if self.prompt_change_logger:
-            self.prompt_change_logger.log_change(
-                operation="meta_improve",
-                prompt_before=prompt,
-                prompt_after=improved_prompt,
-                generation=generation,
-                trigger_reason="evolutionary_operator",
-                context={"improvement_suggestions": suggestions},
-                metrics_before=stats.get_summary(),
-                metrics_after=improved_stats.get_summary(),
-            )
-
-        return improved_prompt, improved_stats
+        return improved_prompt, stats
 
     def collaborative_crossover(
         self,
         parent1: str,
         parent2: str,
         dataset: Dataset,
-        generation: int = 0,
-        sample_size: Optional[int] = None,
+        generation: int = 0
     ) -> Tuple[str, DetectionStatistics]:
         """Perform collaborative crossover of two parent prompts.
 
@@ -371,8 +244,8 @@ class MultiAgentCoordinator:
             Tuple of (offspring prompt, evaluation statistics)
         """
         # Evaluate both parents
-        stats1 = self.evaluate_prompt(parent1, dataset, sample_size=sample_size)
-        stats2 = self.evaluate_prompt(parent2, dataset, sample_size=sample_size)
+        stats1 = self.evaluate_prompt(parent1, dataset)
+        stats2 = self.evaluate_prompt(parent2, dataset)
 
         # Meta-agent creates offspring
         offspring = self.meta_agent.crossover_prompts(
@@ -380,45 +253,7 @@ class MultiAgentCoordinator:
         )
 
         # Evaluate offspring
-        offspring_stats = self.evaluate_prompt(offspring, dataset, sample_size=sample_size)
-
-        if self.trace and self.trace.enabled:
-            payload = {
-                "operation": "meta_crossover",
-                "generation": generation,
-                "prompt_hash_before": compute_text_hash(parent1),
-                "prompt_hash_before_2": compute_text_hash(parent2),
-                "prompt_hash_after": compute_text_hash(offspring),
-                "metrics_parent1": stats1.get_summary(),
-                "metrics_parent2": stats2.get_summary(),
-                "metrics_after": offspring_stats.get_summary(),
-            }
-            if self.trace.config.store_prompts:
-                payload["parent1"] = parent1
-                payload["parent2"] = parent2
-                payload["after_prompt"] = offspring
-            self.trace.log_prompt_update(payload)
-            if self.trace.config.store_prompts:
-                self.trace.save_prompt_snapshot(
-                    f"gen{generation}_crossover_{payload['prompt_hash_after']}",
-                    offspring,
-                    metadata={"operation": "meta_crossover", "generation": generation},
-                )
-
-        if self.prompt_change_logger:
-            self.prompt_change_logger.log_change(
-                operation="meta_crossover",
-                prompt_before=parent1,
-                prompt_after=offspring,
-                generation=generation,
-                trigger_reason="evolutionary_operator",
-                context={
-                    "parent1_hash": compute_text_hash(parent1),
-                    "parent2_hash": compute_text_hash(parent2),
-                },
-                metrics_before=stats1.get_summary(),
-                metrics_after=offspring_stats.get_summary(),
-            )
+        offspring_stats = self.evaluate_prompt(offspring, dataset)
 
         return offspring, offspring_stats
 
@@ -426,8 +261,7 @@ class MultiAgentCoordinator:
         self,
         prompt: str,
         dataset: Dataset,
-        generation: int = 0,
-        sample_size: Optional[int] = None,
+        generation: int = 0
     ) -> Tuple[str, DetectionStatistics]:
         """Perform collaborative mutation of a prompt.
 
@@ -440,45 +274,13 @@ class MultiAgentCoordinator:
             Tuple of (mutated prompt, evaluation statistics)
         """
         # Evaluate current prompt
-        stats = self.evaluate_prompt(prompt, dataset, sample_size=sample_size)
+        stats = self.evaluate_prompt(prompt, dataset)
 
         # Meta-agent mutates prompt
         mutated = self.meta_agent.mutate_prompt(prompt, stats, generation)
 
         # Evaluate mutated prompt
-        mutated_stats = self.evaluate_prompt(mutated, dataset, sample_size=sample_size)
-
-        if self.trace and self.trace.enabled:
-            payload = {
-                "operation": "meta_mutate",
-                "generation": generation,
-                "prompt_hash_before": compute_text_hash(prompt),
-                "prompt_hash_after": compute_text_hash(mutated),
-                "metrics_before": stats.get_summary(),
-                "metrics_after": mutated_stats.get_summary(),
-            }
-            if self.trace.config.store_prompts:
-                payload["before_prompt"] = prompt
-                payload["after_prompt"] = mutated
-            self.trace.log_prompt_update(payload)
-            if self.trace.config.store_prompts:
-                self.trace.save_prompt_snapshot(
-                    f"gen{generation}_mutate_{payload['prompt_hash_after']}",
-                    mutated,
-                    metadata={"operation": "meta_mutate", "generation": generation},
-                )
-
-        if self.prompt_change_logger:
-            self.prompt_change_logger.log_change(
-                operation="meta_mutate",
-                prompt_before=prompt,
-                prompt_after=mutated,
-                generation=generation,
-                trigger_reason="evolutionary_operator",
-                context={},
-                metrics_before=stats.get_summary(),
-                metrics_after=mutated_stats.get_summary(),
-            )
+        mutated_stats = self.evaluate_prompt(mutated, dataset)
 
         return mutated, mutated_stats
 

@@ -67,8 +67,6 @@ def create_parser() -> argparse.ArgumentParser:
                        help="Random seed")
     parser.add_argument("--verbose", "-v", action="store_true",
                        help="Verbose output")
-    parser.add_argument("--release", action="store_true",
-                       help="Disable detailed tracing (default enabled)")
     
     return parser
 
@@ -170,9 +168,6 @@ def main():
     """Main CLI entry point."""
     parser = create_parser()
     args = parser.parse_args()
-
-    if args.release:
-        os.environ["EVOPROMPT_RELEASE"] = "1"
     
     if args.verbose:
         print(f"EvoPrompt CLI - Args: {args}")

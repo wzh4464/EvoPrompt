@@ -11,7 +11,6 @@ EvoPrompt Main Entry - PrimeVul Layer-1 并发漏洞分类
 """
 
 import sys
-import os
 import json
 import time
 import random
@@ -44,12 +43,6 @@ from evoprompt.utils.checkpoint import (
     RetryManager,
     BatchCheckpointer,
     ExperimentRecovery,
-)
-from evoprompt.utils.trace import (
-    TraceManager,
-    TraceConfig,
-    trace_enabled_from_env,
-    compute_text_hash,
 )
 from evoprompt.utils.text import safe_format
 from sklearn.metrics import classification_report, confusion_matrix
@@ -309,11 +302,10 @@ class PromptEvolver:
         """
     ).strip()
 
-    def __init__(self, llm_client, config: Dict[str, Any], trace_manager: Optional[TraceManager] = None):
+    def __init__(self, llm_client, config: Dict[str, Any]):
         self.llm_client = llm_client
         self.config = config
         self.evolution_history = []
-        self.trace = trace_manager
         self.builder = StructuredPromptBuilder(
             LAYER1_CLASS_LABELS,
             self.DEFAULT_GUIDANCE,
@@ -393,35 +385,6 @@ class PromptEvolver:
 
             new_prompt = self.builder.render(new_guidance)
 
-            if self.trace and self.trace.enabled:
-                update_payload = {
-                    "operation": "batch_evolve",
-                    "generation": generation,
-                    "batch_idx": batch_analysis.get("batch_idx"),
-                    "accuracy": batch_analysis.get("accuracy"),
-                    "error_patterns": batch_analysis.get("error_patterns"),
-                    "improvement_suggestions": batch_analysis.get("improvement_suggestions"),
-                    "prompt_hash_before": compute_text_hash(current_prompt),
-                    "prompt_hash_after": compute_text_hash(new_prompt),
-                    "meta_response": raw_response,
-                    "before_guidance": current_guidance,
-                    "after_guidance": new_guidance,
-                }
-                if self.trace.config.store_prompts:
-                    update_payload["before_prompt"] = current_prompt
-                    update_payload["after_prompt"] = new_prompt
-                self.trace.log_prompt_update(update_payload)
-                if self.trace.config.store_prompts:
-                    self.trace.save_prompt_snapshot(
-                        f"gen{generation}_batch{batch_analysis.get('batch_idx')}_{update_payload['prompt_hash_after']}",
-                        new_prompt,
-                        metadata={
-                            "operation": "batch_evolve",
-                            "generation": generation,
-                            "batch_idx": batch_analysis.get("batch_idx"),
-                        },
-                    )
-
             self.evolution_history.append({
                 "generation": generation,
                 "batch_idx": batch_analysis["batch_idx"],
@@ -495,18 +458,6 @@ class PrimeVulLayer1Pipeline:
         self.exp_dir = self.result_dir / self.exp_id
         self.exp_dir.mkdir(exist_ok=True, parents=True)
 
-        # Trace manager (enabled by default, disabled in release mode)
-        trace_enabled = config.get("trace_enabled")
-        if trace_enabled is None:
-            trace_enabled = trace_enabled_from_env()
-        self.trace = TraceManager(
-            TraceConfig(
-                enabled=trace_enabled,
-                base_dir=self.exp_dir,
-                experiment_id=self.exp_id,
-            )
-        )
-
         # 初始化组件
         self.llm_client = create_default_client(
             model_name=config.get("analysis_model_name"),
@@ -519,7 +470,7 @@ class PrimeVulLayer1Pipeline:
             api_key=config.get("meta_api_key"),
         )
         self.batch_analyzer = BatchAnalyzer(batch_size=self.batch_size)
-        self.prompt_evolver = PromptEvolver(self.meta_llm_client, config, trace_manager=self.trace)
+        self.prompt_evolver = PromptEvolver(self.meta_llm_client, config)
 
         # 初始化 Checkpoint 管理器
         self.checkpoint_manager = CheckpointManager(self.exp_dir, auto_save=True)
@@ -723,8 +674,6 @@ class PrimeVulLayer1Pipeline:
 
             responses = self.retry_manager.retry_with_backoff(batch_generate_with_retry)
 
-            prompt_hash = compute_text_hash(prompt)
-
             # 规范化输出
             for idx, response in enumerate(responses):
                 if response == "error":
@@ -766,25 +715,6 @@ class PrimeVulLayer1Pipeline:
 
                     predictions.append(predicted_category)
 
-                # Trace sample-level details
-                if self.trace and self.trace.enabled:
-                    sample = samples[idx]
-                    record = {
-                        "prompt_hash": prompt_hash,
-                        "batch_idx": batch_idx,
-                        "prediction": predictions[-1],
-                        "ground_truth": ground_truths[idx],
-                        "sample_id": getattr(sample, "id", None),
-                        "cwe": sample.metadata.get("cwe") if hasattr(sample, "metadata") else None,
-                    }
-                    if self.trace.config.store_code:
-                        record["input_code"] = sample.input_text
-                    if self.trace.config.store_filled_prompts:
-                        record["filled_prompt"] = queries[idx]
-                    if self.trace.config.store_raw_responses:
-                        record["raw_response"] = response
-                    self.trace.log_sample_trace(record)
-
         except Exception as e:
             print(f"      ❌ 批量预测失败 (已达最大重试次数): {e}")
             predictions = ["Other"] * len(samples)
@@ -803,17 +733,6 @@ class PrimeVulLayer1Pipeline:
         """在完整数据集上评估 prompt，使用 batch 处理和 checkpoint"""
         samples = dataset.get_samples()
         total_samples = len(samples)
-
-        initial_prompt_hash = compute_text_hash(prompt)
-        if self.trace and self.trace.enabled:
-            self.trace.log_event(
-                "prompt_evaluation_start",
-                {
-                    "prompt_id": prompt_id,
-                    "generation": generation,
-                    "prompt_hash": initial_prompt_hash,
-                },
-            )
 
         all_predictions = []
         all_ground_truths = []
@@ -874,19 +793,6 @@ class PrimeVulLayer1Pipeline:
             all_predictions.extend(predictions)
             all_ground_truths.extend(ground_truths)
 
-            if self.trace and self.trace.enabled:
-                prompt_hash = compute_text_hash(current_prompt)
-                self.trace.log_event(
-                    "prompt_evaluation_batch",
-                    {
-                        "prompt_id": prompt_id,
-                        "generation": generation,
-                        "prompt_hash": prompt_hash,
-                        "batch_idx": batch_idx,
-                        "batch_analysis": batch_analysis,
-                    },
-                )
-
             # 根据 batch 分析进化 prompt (仅在训练模式下)
             if enable_evolution and batch_analysis["accuracy"] < 0.95:
                 print(f"        🧬 尝试进化 prompt...")
@@ -923,21 +829,6 @@ class PrimeVulLayer1Pipeline:
             all_predictions,
             labels=LAYER1_CLASS_LABELS
         )
-
-        if self.trace and self.trace.enabled:
-            prompt_hash = compute_text_hash(current_prompt)
-            self.trace.log_event(
-                "prompt_evaluation_summary",
-                {
-                    "prompt_id": prompt_id,
-                    "generation": generation,
-                    "prompt_hash": prompt_hash,
-                    "accuracy": overall_accuracy,
-                    "total_samples": total_samples,
-                    "classification_report": report,
-                    "confusion_matrix": cm.tolist(),
-                },
-            )
 
         return {
             "prompt_id": prompt_id,
@@ -1329,16 +1220,8 @@ def main():
         action="store_true",
         help="无论采样目录是否存在都重新采样",
     )
-    parser.add_argument(
-        "--release",
-        action="store_true",
-        help="关闭详细追踪输出 (默认开启)",
-    )
 
     args = parser.parse_args()
-
-    if args.release:
-        os.environ["EVOPROMPT_RELEASE"] = "1"
 
     # 创建配置
     config = {
@@ -1353,7 +1236,6 @@ def main():
         "auto_recover": args.auto_recover,
         "balance_mode": args.balance_mode,
         "force_resample": args.force_resample,
-        "trace_enabled": not args.release,
     }
 
     # 创建并运行 pipeline
