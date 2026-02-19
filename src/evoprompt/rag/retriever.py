@@ -98,6 +98,37 @@ class CodeSimilarityRetriever:
 
         return self._retrieve_from_pool(query_code, all_examples, top_k)
 
+    def retrieve_for_middle_category_by_name(
+        self,
+        query_code: str,
+        major_name: str,
+        top_k: int = 2
+    ) -> RetrievalResult:
+        """String-accepting wrapper for retrieve_for_middle_category.
+
+        Args:
+            query_code: Code to find similar examples for
+            major_name: Major category name (e.g. "Memory", "Injection")
+            top_k: Number of examples to retrieve
+
+        Returns:
+            Retrieval result with examples and formatted text
+        """
+        try:
+            major_category = MajorCategory(major_name)
+        except ValueError:
+            # Try case-insensitive match
+            for mc in MajorCategory:
+                if mc.value.lower() == major_name.lower():
+                    major_category = mc
+                    break
+            else:
+                return RetrievalResult(
+                    examples=[], formatted_text="", similarity_scores=[],
+                    debug_info={"pool_size": 0, "message": f"Unknown major category: {major_name}"}
+                )
+        return self.retrieve_for_middle_category(query_code, major_category, top_k)
+
     def retrieve_for_cwe(
         self,
         query_code: str,
@@ -130,6 +161,37 @@ class CodeSimilarityRetriever:
             all_examples.extend(middle_examples)
 
         return self._retrieve_from_pool(query_code, all_examples, top_k)
+
+    def retrieve_for_cwe_by_name(
+        self,
+        query_code: str,
+        middle_name: str,
+        top_k: int = 2
+    ) -> RetrievalResult:
+        """String-accepting wrapper for retrieve_for_cwe.
+
+        Args:
+            query_code: Code to find similar examples for
+            middle_name: Middle category name (e.g. "Buffer Overflow", "SQL Injection")
+            top_k: Number of examples to retrieve
+
+        Returns:
+            Retrieval result with examples and formatted text
+        """
+        try:
+            middle_category = MiddleCategory(middle_name)
+        except ValueError:
+            # Try case-insensitive match
+            for mc in MiddleCategory:
+                if mc.value.lower() == middle_name.lower():
+                    middle_category = mc
+                    break
+            else:
+                return RetrievalResult(
+                    examples=[], formatted_text="", similarity_scores=[],
+                    debug_info={"pool_size": 0, "message": f"Unknown middle category: {middle_name}"}
+                )
+        return self.retrieve_for_cwe(query_code, middle_category, top_k)
 
     def _retrieve_from_pool(
         self,

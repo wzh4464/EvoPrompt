@@ -98,7 +98,7 @@ class MultiAgentCoordinator:
         # Collect statistics
         for pred, actual, sample in zip(predictions, labels, samples):
             # Convert label to string
-            actual_str = "vulnerable" if actual == 1 else "benign"
+            actual_str = "vulnerable" if str(actual) == "1" else "benign"
 
             # Get category/CWE if available
             category = None
@@ -150,7 +150,7 @@ class MultiAgentCoordinator:
             predictions = self.detection_agent.detect(prompt, code_samples)
 
             for pred, actual, sample in zip(predictions, labels, batch_samples):
-                actual_str = "vulnerable" if actual == 1 else "benign"
+                actual_str = "vulnerable" if str(actual) == "1" else "benign"
                 category = None
                 if hasattr(sample, 'metadata') and 'cwe' in sample.metadata:
                     cwes = sample.metadata['cwe']
