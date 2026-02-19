@@ -1,0 +1,158 @@
+{
+  "method": "MulVul (Router-Detector)",
+  "metrics": {
+    "accuracy": 0.455,
+    "macro_f1": 0.1051,
+    "n_classes": 14,
+    "binary_vuln_precision": 0.4352,
+    "binary_vuln_recall": 0.746,
+    "binary_vuln_f1": 0.5497,
+    "binary_confusion": {
+      "tp": 47,
+      "fp": 61,
+      "fn": 16,
+      "tn": 76
+    },
+    "per_class": {
+      "Authentication": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 2,
+        "tp": 0,
+        "fp": 1,
+        "fn": 2
+      },
+      "Benign": {
+        "precision": 0.8261,
+        "recall": 0.5547,
+        "f1": 0.6638,
+        "support": 137,
+        "tp": 76,
+        "fp": 16,
+        "fn": 61
+      },
+      "Buffer Errors": {
+        "precision": 0.2683,
+        "recall": 0.5789,
+        "f1": 0.3667,
+        "support": 19,
+        "tp": 11,
+        "fp": 30,
+        "fn": 8
+      },
+      "Concurrency Issues": {
+        "precision": 0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 2
+      },
+      "Cryptography Issues": {
+        "precision": 0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 2
+      },
+      "Information Exposure": {
+        "precision": 0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 2
+      },
+      "Injection": {
+        "precision": 0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 2
+      },
+      "Input Validation": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 2,
+        "tp": 0,
+        "fp": 8,
+        "fn": 2
+      },
+      "Integer Errors": {
+        "precision": 0.2,
+        "recall": 0.4,
+        "f1": 0.2667,
+        "support": 5,
+        "tp": 2,
+        "fp": 8,
+        "fn": 3
+      },
+      "Memory Management": {
+        "precision": 0.1176,
+        "recall": 0.3333,
+        "f1": 0.1739,
+        "support": 6,
+        "tp": 2,
+        "fp": 15,
+        "fn": 4
+      },
+      "Other": {
+        "precision": 0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 5,
+        "tp": 0,
+        "fp": 0,
+        "fn": 5
+      },
+      "Path Traversal": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 2,
+        "tp": 0,
+        "fp": 1,
+        "fn": 2
+      },
+      "Pointer Dereference": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 7,
+        "tp": 0,
+        "fp": 30,
+        "fn": 7
+      },
+      "Resource Management": {
+        "precision": 0,
+        "recall": 0.0,
+        "f1": 0,
+        "support": 7,
+        "tp": 0,
+        "fp": 0,
+        "fn": 7
+      }
+    }
+  },
+  "cost": {
+    "n_samples": 200,
+    "total_api_calls": 416,
+    "avg_calls_per_sample": 2.08,
+    "total_prompt_tokens": 309955,
+    "total_completion_tokens": 1835,
+    "total_tokens": 311790,
+    "avg_tokens_per_sample": 1559.0,
+    "avg_prompt_tokens_per_call": 745.1,
+    "avg_completion_tokens_per_call": 4.4,
+    "avg_latency_sec": 2.369,
+    "total_latency_sec": 985.3
+  }
+}
