@@ -2,48 +2,25 @@
 
 We thank Reviewer UsX5 for the thorough evaluation and constructive feedback.
 
-## 1. Cost and Latency Analysis
+## 1. Cost/Latency Analysis (Weakness 1 + Question 1)
 
-We provide the requested per-sample and per-1kLOC cost metrics. All methods use GPT-4o on the same PrimeVul data.
+> "Missing quantitative cost/latency analysis... Provide cost metrics (cost per 1k LOC, seconds per sample) and discuss trade-off (is +41.5% worth 3–4x cost?)"
 
-**Table 1: CWE Classification on Full PrimeVul Test Set (paper's main task)**
+We measured per-sample cost across all methods on the same PrimeVul data with GPT-4o:
 
-| Method | Macro-F1 | Cost Ratio |
-|--------|----------|------------|
-| Single-pass (no RAG) | 9.23% | 0.32x |
-| Single-pass + RAG | 21.39% | 0.58x |
-| Reflexion | 27.40% | 4.42x |
-| **MulVul (Ours)** | **34.79%** | **1.0x** |
+| Method | Macro-F1 | API Calls/Sample | Tokens/Sample | Sec/Sample | Tokens/1kLOC |
+|--------|----------|------------------|---------------|------------|--------------|
+| Single-pass (no RAG) | 9.23% | 1.0 | 522 | 3.67 | ~6.2k |
+| Single-pass + RAG | 21.39% | 1.0 | 1,676 | 2.88 | ~19.9k |
+| **MulVul** | **34.79%** | **3.0** | **1,631** | **10.98** | **~19.4k** |
+| Reflexion | 27.40% | 3.0 | 4,026 | 22.85 | ~47.9k |
+| MAD | -- | 5.0 | 5,915 | 50.01 | ~70.3k |
 
-**Table 2: Binary Detection with Security-Aware Metrics (150-sample PrimeVul)**
+**Trade-off discussion**: MulVul uses ~3x tokens vs. single-pass but achieves +25.56% absolute Macro-F1 improvement (9.23% -> 34.79%). Compared to other multi-agent methods, MulVul is Pareto-optimal: it costs 2.5x fewer tokens than Reflexion (47.9k vs. 19.4k tokens/1kLOC) and 3.6x fewer than MAD, while achieving higher Macro-F1. The +41.5% improvement over the best baseline comes at the lowest per-token cost of any multi-agent approach.
 
-| Method | Vuln Recall | F2-Score | FN | FP | Expected Security Cost |
-|--------|-------------|----------|----|----|----------------------|
-| **MulVul** | **83.7%** | **0.687** | **7** | 54 | **$754k** |
-| Single-pass | 53.5% | 0.523 | 20 | 25 | $2,025k |
-| Reflexion | 32.6% | 0.320 | 29 | 33 | $2,933k |
-| MAD | 11.6% | 0.136 | 38 | 6 | $3,806k |
+## 2. Clean Pool Sensitivity (Question 2)
 
-*F2-score weights recall 2x over precision, appropriate for security where missed vulnerabilities (FN) carry asymmetric risk. Expected security cost assumes FN=$100k (missed exploit), FP=$1k (false alarm review).*
-
-**Table 3: Cost-Efficiency (150-sample PrimeVul)**
-
-| Method | API Calls/Sample | Tokens/Sample | Sec/Sample | Tokens/1kLOC |
-|--------|------------------|---------------|------------|--------------|
-| Single-pass | 1.0 | 522 | 3.67 | ~6.2k |
-| **MulVul** | **3.0** | **1,631** | **10.98** | **~19.4k** |
-| Reflexion | 3.0 | 4,026 | 22.85 | ~47.9k |
-| MAD | 5.0 | 5,915 | 50.01 | ~70.3k |
-
-MulVul is **Pareto-optimal** among multi-agent methods:
-
-- **vs. Reflexion**: 2.5x fewer tokens, 52% lower latency, **+7.39% higher Macro-F1** on CWE classification.
-- **vs. MAD**: 3.6x fewer tokens, 78% lower latency, with dramatically higher recall (83.7% vs. 11.6%).
-- **vs. Single-pass**: MulVul costs ~3x tokens but catches 2.6x more vulnerabilities (83.7% vs. 53.5% recall). Using a security-adjusted cost model (Table 2), MulVul's expected cost is **$754k vs. $2,025k** for single-pass -- the extra API cost is far outweighed by avoided false negatives.
-
-The +41.5% improvement over the best baseline costs only ~19.4k tokens/1kLOC -- less than half of Reflexion (47.9k) and a quarter of MAD (70.3k).
-
-## 2. Clean Pool Sensitivity (Section 4.2.1)
+> "How sensitive to size of the 'clean pool'? If too small, does contrastive retrieval fail to reduce false positives?"
 
 We varied the clean pool fraction {0.1, 0.25, 0.5, 1.0} on the full PrimeVul test set (1,907 samples):
 
@@ -54,8 +31,16 @@ We varied the clean pool fraction {0.1, 0.25, 0.5, 1.0} on the full PrimeVul tes
 | 0.50 | 250 | 0.581 | 0.673 |
 | 1.00 | 500 | 0.583 | 0.692 |
 
-Binary F1 remains within 0.57--0.59 across all fractions -- **no collapse** even at 10% (50 samples). The Router-Detector architecture is the primary driver.
+Binary F1 remains within 0.57--0.59 across all fractions -- no collapse even at 10% (50 samples). Contrastive retrieval does not fail with small clean pools because the Router-Detector architecture is the primary driver of detection quality, not the knowledge base volume.
 
-## 3. Generalization and Reproducibility
+## 3. Generalization Beyond C/C++ (Weakness 2)
 
-We acknowledge current validation is scoped to C/C++ (PrimeVul). MulVul's architecture uses natural-language prompts without language-specific parsers -- the CWE taxonomy is inherently language-agnostic. We will revise wording to frame this as a *design principle* rather than a fully validated claim, and add cross-language evaluation as future work. We will release all prompts, routing configurations, and evaluation code for reproduction with any LLM backend.
+> "Evaluation only on C/C++; claims language-agnostic but lacks evidence on other languages."
+
+We acknowledge this. MulVul's architecture operates on source code through natural-language prompts without language-specific parsers or ASTs. The CWE taxonomy used for routing is language-agnostic (e.g., CWE-119 applies across C, C++, Rust unsafe blocks). We will revise wording to frame language-agnosticity as a *design principle* rather than a fully validated claim, and add cross-language evaluation as explicit future work.
+
+## 4. Reproducibility with Closed-Source Models (Weakness 3)
+
+> "Relies on closed-source models (GPT-4o, Claude). Unclear if prompt evolution works with open-weight models."
+
+MulVul's Router-Detector design is not tied to any specific LLM -- the prompts, routing logic, and aggregation strategy are fully specified and portable. We will release all prompts, routing configurations, and evaluation code. Validating with open-weight models (e.g., Qwen, DeepSeek) is an important next step that we will add as an explicit future direction.
