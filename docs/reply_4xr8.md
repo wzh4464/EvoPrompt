@@ -25,7 +25,7 @@ RAG contributes +12.16%, but MulVul's Router-Detector architecture contributes +
 | Single-pass | 9.23% | 1.0 | 522 | 3.67 | ~6.2k |
 | MulVul | 34.79% | 3.0 | 1,631 | 10.98 | ~19.4k |
 | Reflexion | 27.40% | 3.0 | 4,026 | 22.85 | ~47.9k |
-| MAD | -- | 5.0 | 5,915 | 50.01 | ~70.3k |
+| MAD | 12.33% | 5.0 | 5,915 | 50.01 | ~70.3k |
 
 MulVul uses 2.5x fewer tokens than Reflexion and 3.6x fewer than MAD, while achieving higher Macro-F1. The ~3x overhead vs. single-pass yields +25.56% absolute Macro-F1 improvement -- the highest return per token of any evaluated approach.
 
@@ -38,6 +38,6 @@ Using GPT-4o as both generator and executor (self-model) results in 41.3% perfor
 | Configuration | Generator | Executor | Macro-F1 | Degradation |
 |--------------|-----------|----------|----------|-------------|
 | Cross-model (ours) | Claude | GPT-4o | 34.79% | -- |
-| Self-model | GPT-4o | GPT-4o | ~20.4% | -41.3% |
+| Self-model | GPT-4o | GPT-4o | 20.4% | -41.3% |
 
 This confirms that cross-model decoupling is essential. Using a different model as generator introduces beneficial diversity in the prompt search space, avoiding the self-reinforcing biases that arise when the same model both generates and evaluates prompts.
