@@ -1,5 +1,7 @@
 # MulVul (Submission 10134) — Consolidated Reviewer Comments
 
+> Official rebuttal: see [docs/official_reply.md](official_reply.md) and per-reviewer replies ([UsX5](reply_usx5.md), [rvhT](reply_rvht.md), [4xR8](reply_4xr8.md)).
+
 ## Reviewer UsX5
 
 ### Summary (What they think the paper is)

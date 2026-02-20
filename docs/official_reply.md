@@ -87,7 +87,7 @@ We compared MulVul against Reflexion (Shinn et al., NeurIPS'23) and Multi-Agent 
 
 > **Finding**: In 9 out of 43 vulnerable samples, MulVul correctly detected the vulnerability while *all three* other methods missed it. In every case, Reflexion's actor initially made the correct prediction, but the critic argued the code was contextually safe, causing the refinement step to flip to "Benign." Similarly, MAD's judge systematically sided with the "developer" role over the "auditor" role. MulVul's independent specialized detectors avoid this over-correction trap — each detector assesses vulnerability within its domain without a critic second-guessing it.
 
-**Example**: For a NGINX function containing CWE-416 (Use-After-Free) and CWE-476 (NULL Pointer Dereference), Reflexion's actor correctly identified the vulnerability but the critic argued the memory management was safe by design; the refinement flipped to "Benign." MulVul's Memory and Null Pointer detectors each independently flagged the issue.
+**Example**: For an NGINX function containing CWE-416 (Use-After-Free) and CWE-476 (NULL Pointer Dereference), Reflexion's actor correctly identified the vulnerability but the critic argued the memory management was safe by design; the refinement flipped to "Benign." MulVul's Memory and Null Pointer detectors each independently flagged the issue.
 
 ### 2) Scalability
 
