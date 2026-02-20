@@ -14,7 +14,7 @@ We measured per-sample cost across all methods on the same PrimeVul data with GP
 | Single-pass + RAG | 21.39% | 1.0 | 1,676 | 2.88 | ~19.9k |
 | MulVul | 34.79% | 3.0 | 1,631 | 10.98 | ~19.4k |
 | Reflexion | 27.40% | 3.0 | 4,026 | 22.85 | ~47.9k |
-| MAD | -- | 5.0 | 5,915 | 50.01 | ~70.3k |
+| MAD | 12.33% | 5.0 | 5,915 | 50.01 | ~70.3k |
 
 MulVul uses ~3x tokens vs. single-pass but achieves +25.56% absolute Macro-F1 improvement (9.23% -> 34.79%). Compared to other multi-agent methods, MulVul is Pareto-optimal: 2.5x fewer tokens than Reflexion (47.9k vs. 19.4k tokens/1kLOC) and 3.6x fewer than MAD, while achieving higher Macro-F1. The +41.5% improvement over the best baseline comes at the lowest per-token cost of any multi-agent approach.
 
