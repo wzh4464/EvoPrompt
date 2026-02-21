@@ -1,22 +1,20 @@
-# Agent Comparison, Scalability, and Clarifications
+# Response to Reviewer rvhT
 
-Thank you for your thoughtful review. We address each concern below.
+Thank you for the precise and practical comments. You pointed out several places where our original text was too terse, especially on scalability and implementation details. We addressed those gaps with additional experiments and clearer line-level explanations.
 
-1. Agent-Based Comparison
+1.
 
 > "Missing comparison to agent-based vulnerability detection approaches."
 
-We compared MulVul against Reflexion (Shinn et al., NeurIPS'23) and Multi-Agent Debate/MAD (Liang et al., 2023). All methods use GPT-4o.
+We added direct comparisons with Reflexion (Shinn et al., NeurIPS'23) and MAD (Liang et al., 2023), all under GPT-4o.
 
-CWE classification (full PrimeVul test set, paper's main task):
+CWE classification (full PrimeVul test set):
 
 | Method | Macro-F1 | Cost Ratio |
 |--------|----------|------------|
-| Single-pass (no RAG) | 9.23% | 0.32x |
+| Single-pass (no RAG) | 3.86% | 0.32x |
 | Reflexion | 27.40% | 4.42x |
 | MulVul | 34.79% | 1.0x |
-
-MulVul achieves +7.39% higher Macro-F1 than Reflexion while costing 4.42x less.
 
 Binary detection (150-sample PrimeVul):
 
@@ -26,55 +24,63 @@ Binary detection (150-sample PrimeVul):
 | Reflexion | 0.508 | 32.6% | 4,026 |
 | MAD | 0.503 | 11.6% | 5,915 |
 
-Qualitative error analysis: in 9 out of 43 vulnerable samples, MulVul correctly detected the vulnerability while all three other methods missed it. In every case, Reflexion's actor initially made the correct prediction, but the critic argued the code was contextually safe, causing the refinement step to flip to "Benign." MulVul's independent specialized detectors avoid this over-correction trap.
+We also checked error cases: in 9/43 vulnerable samples, MulVul was correct while all three alternatives missed.
 
-2. Scalability
+2.
 
 > "Real-world scalability unclear as #vulnerability types increases; unclear human effort required for initial prompts."
 
-Each Detector uses the same prompt template populated with CWE descriptions from the CWE database. Adding a new category requires only specifying CWE IDs -- no per-category prompt engineering. Evolution converges within 2--3 generations.
+All Detectors use one shared template, parameterized by CWE descriptions. In practice, adding a category means adding CWE IDs/descriptions; it does not require writing a new prompt from scratch each time.
 
-We evaluated on the CWE-130 subset (1,907 samples, 70 CWE classes):
+CWE-130 subset (1,907 samples, 70 CWE classes):
 
 | Approach | Macro-F1 | CWE Coverage |
 |----------|----------|--------------|
 | MulVul baseline | 2.03% | 11/70 |
 | Hybrid LLM+kNN | 8.08% | 25/70 |
 
-The hybrid approach augments MulVul with a kNN retriever over vulnerable training examples, improving CWE coverage from 11 to 25 of 70 classes. The retrieval component handles the long tail of rare CWE types that any fixed prompt set would struggle with.
+We also added a cost/latency view so scalability is not discussed only in terms of F1:
 
-3. L163: Multi-Agent Frameworks
+| Method | Macro-F1 | API Calls/Sample | Tokens/Sample | Sec/Sample | Tokens/1kLOC |
+|--------|----------|------------------|---------------|------------|--------------|
+| Single-pass (no RAG) | 3.86% | 1.0 | 522 | 3.67 | ~6.2k |
+| Single-pass + RAG | 21.39% | 1.0 | 1,676 | 2.88 | ~19.9k |
+| MulVul | 34.79% | 3.0 | 1,631 | 10.98 | ~19.4k |
+| Reflexion | 27.40% | 3.0 | 4,026 | 22.85 | ~47.9k |
+| MAD | 12.33% | 5.0 | 5,915 | 50.01 | ~70.3k |
 
-> "Add more details about multi-agent frameworks."
+3.
 
-We will position MulVul relative to ReAct (tool-augmented reasoning), Reflexion (self-reflection), and MAD (adversarial debate). MulVul differs by employing domain-informed decomposition: the Router dispatches to specialized Detectors using vulnerability taxonomy knowledge, rather than relying on generic reflection or debate.
+> "L163: add more details about multi-agent frameworks."
 
-4. L261: "Fine-Grained Identification"
+In the revised text, we now position MulVul against ReAct, Reflexion, and MAD, and explain more clearly why Router->specialized Detector decomposition differs from generic reflection/debate loops.
 
-> "Clarify what 'fine-grained identification' means."
+4.
 
-Identifying the specific CWE type (e.g., CWE-119 Buffer Overflow, CWE-416 Use-After-Free), as opposed to binary vulnerable/not-vulnerable classification.
+> "L261: clarify what 'fine-grained identification' means (e.g., identify a specific CWE type)."
 
-5. L286--295: Router-Detector Example
+We now state this explicitly: fine-grained means predicting concrete CWE types (e.g., CWE-119, CWE-416), not only vulnerable vs. benign.
 
-> "Add examples to make the description clearer."
+5.
 
-A function with a double-free bug -> Router classifies under "Memory" -> Memory Detector examines against memory-related CWEs (CWE-119, CWE-416, CWE-476, etc.) -> identifies CWE-415 (Double Free). This narrows the search space from the full taxonomy to a manageable subset.
+> "L286--295: add examples to make the description clearer."
 
-6. L382: Detector Prompt Design
+We added a step-by-step example: a double-free sample is routed to the memory branch, then evaluated by memory-related detectors, and finally mapped to CWE-415.
 
-> "Provide example of Detector Agent prompt; is each initial prompt designed case-by-case?"
+6.
 
-All Detectors share a single parameterized template instantiated with category-specific CWE descriptions from the CWE database. Extending to new categories requires adding description entries, not designing new prompts. This is not case-by-case.
+> "L382: provide example of Detector Agent prompt; is each initial prompt designed case-by-case (scalability concern)?"
 
-7. L392: Retrieval Budget
+We now include one Detector prompt example and make clear that Detectors share the same parameterized template; extension is done by filling CWE descriptions, not by case-by-case prompt writing.
 
-> "Specify retrieval budget and how agents allocate it."
+7.
 
-Fixed top-k with k=3 similar examples per query, selected via preliminary experiments balancing context length against retrieval utility.
+> "L392: specify retrieval budget and how agents allocate it."
 
-8. L502: "Without Agent"
+We now specify the retrieval setting directly (fixed top-k, k=3 per query) and describe where those examples are consumed in the pipeline.
 
-> "Clarify what is removed in the 'without agent' version."
+8.
 
-Removing the Router's specialization: either (a) bypassing the Router so all Detectors run on every sample, or (b) using a single generic detector. Both ablations degrade performance, confirming the value of domain-informed dispatch.
+> "L502: clarify what is removed in the 'without agent' version (tools? memory? interactions?)."
+
+We now define this ablation precisely: remove Router specialization by either running all Detectors for each sample or replacing them with a single generic detector.

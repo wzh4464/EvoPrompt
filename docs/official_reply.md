@@ -1,165 +1,94 @@
-# MulVul (Submission 10134) — Official Rebuttal
+# MulVul (Submission 10134) -- Official Rebuttal
 
-We thank all reviewers for their thorough evaluation. We conducted extensive new experiments to address every concern.
+Thank you to all reviewers and AC for the careful feedback. You pointed out real weaknesses in our original draft, especially around evidence quality and clarity. We addressed all major requests with new experiments and clearer write-up; one reverse-pairing ablation is partially addressed in rebuttal and scheduled for camera-ready.
 
----
+## Note to AC
 
-Reviewer UsX5
-
-1. Cost/Latency Analysis
-
-> "Missing quantitative cost/latency analysis... Provide cost metrics (cost per 1k LOC, seconds per sample) and discuss trade-off (is +41.5% worth 3–4x cost?)"
-
-| Method | Macro-F1 | API Calls/Sample | Tokens/Sample | Sec/Sample | Tokens/1kLOC |
-|--------|----------|------------------|---------------|------------|--------------|
-| Single-pass (no RAG) | 9.23% | 1.0 | 522 | 3.67 | ~6.2k |
-| Single-pass + RAG | 21.39% | 1.0 | 1,676 | 2.88 | ~19.9k |
-| MulVul | 34.79% | 3.0 | 1,631 | 10.98 | ~19.4k |
-| Reflexion | 27.40% | 3.0 | 4,026 | 22.85 | ~47.9k |
-| MAD | -- | 5.0 | 5,915 | 50.01 | ~70.3k |
-
-MulVul uses ~3x tokens vs. single-pass but achieves +25.56% absolute Macro-F1 improvement (9.23% -> 34.79%). Compared to other multi-agent methods, MulVul is Pareto-optimal: 2.5x fewer tokens than Reflexion and 3.6x fewer than MAD, while achieving higher Macro-F1.
-
-2. Clean Pool Sensitivity
-
-> "How sensitive to size of the 'clean pool'? If too small, does contrastive retrieval fail to reduce false positives?"
-
-We varied the clean pool fraction {0.1, 0.25, 0.5, 1.0} on the full PrimeVul test set (1,907 samples):
-
-| Clean Pool Fraction | Pool Size | Binary F1 | Recall |
-|:-------------------:|:---------:|:---------:|:------:|
-| 0.10 | 50 | 0.570 | 0.646 |
-| 0.25 | 125 | 0.585 | 0.703 |
-| 0.50 | 250 | 0.581 | 0.673 |
-| 1.00 | 500 | 0.583 | 0.692 |
-
-Binary F1 remains within 0.57--0.59 across all fractions -- no collapse even at 10% (50 samples). The Router-Detector architecture is the primary driver, not the knowledge base volume.
-
-3. Generalization Beyond C/C++
-
-> "Evaluation only on C/C++; claims language-agnostic but lacks evidence on other languages."
-
-We acknowledge this. MulVul's architecture operates through natural-language prompts without language-specific parsers or ASTs. The CWE taxonomy is language-agnostic. We will revise wording to frame this as a *design principle* rather than a fully validated claim, and add cross-language evaluation as explicit future work.
-
-4. Reproducibility with Closed-Source Models
-
-> "Relies on closed-source models (GPT-4o, Claude). Unclear if prompt evolution works with open-weight models."
-
-MulVul's Router-Detector design is not tied to any specific LLM. We will release all prompts, routing configurations, and evaluation code. Validating with open-weight models is an important next step added as explicit future work.
+We appreciate the guidance. In response to reviewer feedback, we added fairness controls (including single-pass + RAG), full cost/latency accounting, clean-pool sensitivity, agentic baselines (Reflexion/MAD), and one model-pair ablation control for prompt evolution (GPT-4o/GPT-4o). We also narrowed over-strong claims and clarified implementation details that were previously underexplained; the reverse model pairing is queued for camera-ready due to rebuttal-time budget limits.
 
 ---
 
-Reviewer rvhT
+## Reviewer UsX5
 
-1. Agent-Based Comparison
+Thank you for pressing us on practicality and reproducibility.
 
-> "Missing comparison to agent-based vulnerability detection approaches."
+1.
 
-We compared MulVul against Reflexion (Shinn et al., NeurIPS'23) and MAD (Liang et al., 2023). All methods use GPT-4o.
+> "Missing quantitative cost/latency analysis..."
 
-CWE classification (full PrimeVul test set):
+We now report full token/time numbers on PrimeVul: single-pass (522 tok, 3.67s, 3.86 F1), single-pass+RAG (1,676 tok, 2.88s, 21.39), MulVul (1,631 tok, 10.98s, 34.79), Reflexion (4,026 tok, 22.85s, 27.40), MAD (5,915 tok, 50.01s, 12.33).
 
-| Method | Macro-F1 | Cost Ratio |
-|--------|----------|------------|
-| Single-pass (no RAG) | 9.23% | 0.32x |
-| Reflexion | 27.40% | 4.42x |
-| MulVul | 34.79% | 1.0x |
+2.
 
-Binary detection (150-sample PrimeVul):
+> "How sensitive to size of the clean pool?"
 
-| Method | Macro-F1 | Vuln Recall | Tokens/Sample |
-|--------|----------|-------------|---------------|
-| MulVul | 0.588 | 83.7% | 1,631 |
-| Reflexion | 0.508 | 32.6% | 4,026 |
-| MAD | 0.503 | 11.6% | 5,915 |
+Across clean-pool fractions {0.1, 0.25, 0.5, 1.0}, Binary F1 remains stable (0.570/0.585/0.581/0.583), with no collapse at small pool size.
 
-In 9 out of 43 vulnerable samples, MulVul correctly detected the vulnerability while all three other methods missed it. Reflexion's actor initially predicted correctly, but the critic argued the code was safe, flipping the answer to "Benign." MulVul's independent specialized detectors avoid this over-correction trap.
+3.
 
-2. Scalability
+> "Evaluation only on C/C++..."
 
-> "Real-world scalability unclear as #vulnerability types increases; unclear human effort required for initial prompts."
+We agree that current evidence is limited to PrimeVul C/C++. In the revision, we explicitly scope our conclusions to C/C++, and list cross-language validation as future work.
 
-Each Detector uses the same prompt template populated with CWE descriptions. Adding a new category requires only specifying CWE IDs -- no per-category prompt engineering. Evolution converges within 2--3 generations.
+4.
 
-On the CWE-130 subset (1,907 samples, 70 CWE classes):
+> "Relies on closed-source models..."
 
-| Approach | Macro-F1 | CWE Coverage |
-|----------|----------|--------------|
-| MulVul baseline | 2.03% | 11/70 |
-| Hybrid LLM+kNN | 8.08% | 25/70 |
+We agree this matters. We will release prompts, routing configs, and evaluation code, and we explicitly list open-weight validation as next-step work.
 
-3. L163: Multi-Agent Frameworks
+5.
 
-> "Add more details about multi-agent frameworks."
+> "Section 4.2.1 / Figure 6 minor comments"
 
-We will position MulVul relative to ReAct, Reflexion, and MAD. MulVul employs domain-informed decomposition rather than generic reflection or debate.
-
-4. L261: "Fine-Grained Identification"
-
-> "Clarify what 'fine-grained identification' means."
-
-Identifying the specific CWE type (e.g., CWE-119, CWE-416), not just binary vulnerable/not-vulnerable.
-
-5. L286--295: Router-Detector Example
-
-> "Add examples to make the description clearer."
-
-A double-free bug -> Router classifies under "Memory" -> Memory Detector examines against CWE-119/416/476 -> identifies CWE-415 (Double Free).
-
-6. L382: Detector Prompt Design
-
-> "Provide example of Detector Agent prompt; is each initial prompt designed case-by-case?"
-
-All Detectors share a single parameterized template. Extending to new categories requires adding CWE description entries, not designing new prompts.
-
-7. L392: Retrieval Budget
-
-> "Specify retrieval budget and how agents allocate it."
-
-Fixed top-k with k=3 similar examples per query.
-
-8. L502: "Without Agent"
-
-> "Clarify what is removed in the 'without agent' version."
-
-Removing Router specialization: all Detectors run on every sample, or using a single generic detector. Both degrade performance.
+We appreciate these minor comments as well. In the camera-ready version, we will explicitly state the self-exclusion rule in Section 4.2.1 and polish the Figure 6 caption-text linkage for readability.
 
 ---
 
-Reviewer 4xR8
+## Reviewer rvhT
 
-1. Baseline Fairness -- GPT-4o + RAG
+Thank you for the precise comments on missing system details.
 
-> "GPT-4o baseline lacks RAG; may be an artificially weak baseline."
+1.
 
-| Method | Macro-F1 | Contribution |
-|--------|----------|-------------|
-| Single-pass (no RAG) | 9.23% | -- |
-| Single-pass + RAG | 21.39% | RAG: +12.16% |
-| MulVul | 34.79% | Architecture: +13.40% |
+> "Missing comparison to agent-based approaches"
 
-Architecture (+13.40%) exceeds RAG (+12.16%), confirming the multi-agent design is the primary driver.
+We added Reflexion and MAD comparisons under the same GPT-4o setting. On CWE classification: MulVul 34.79 vs Reflexion 27.40 vs single-pass 3.86. On binary detection (150 samples): MulVul F1 0.588 / recall 83.7%, Reflexion 0.508 / 32.6%, MAD 0.503 / 11.6%.
 
-2. Quantitative Overhead Analysis
+2.
 
-> "No quantitative time/token overhead analysis."
+> "Scalability unclear as vulnerability types increase"
 
-| Method | Macro-F1 | API Calls/Sample | Tokens/Sample | Sec/Sample | Tokens/1kLOC |
-|--------|----------|------------------|---------------|------------|--------------|
-| Single-pass | 9.23% | 1.0 | 522 | 3.67 | ~6.2k |
-| MulVul | 34.79% | 3.0 | 1,631 | 10.98 | ~19.4k |
-| Reflexion | 27.40% | 3.0 | 4,026 | 22.85 | ~47.9k |
-| MAD | -- | 5.0 | 5,915 | 50.01 | ~70.3k |
+Detectors share one parameterized template, so adding categories only needs CWE entries. On CWE-130 (70 classes), coverage improves from 11/70 to 25/70 with hybrid LLM+kNN. We also added cost/latency reporting to make scaling trade-offs explicit.
 
-MulVul is Pareto-optimal: higher accuracy and lower cost than all agentic alternatives.
+3.
 
-3. Cross-Model Pairing Ablation
+> "L163/L261/L286-295/L382/L392/L502 clarifications"
 
-> "Improvement may be due to model capability differences, not decoupling principle."
+All requested text edits are now included: relation to ReAct/Reflexion/MAD, explicit fine-grained CWE definition, Router->Detector walkthrough, Detector prompt template example, retrieval budget (top-k=3), and exact "without agent" ablation definition.
 
-| Configuration | Generator | Executor | Macro-F1 | Degradation |
-|--------------|-----------|----------|----------|-------------|
-| Cross-model (ours) | Claude | GPT-4o | 34.79% | -- |
-| Self-model | GPT-4o | GPT-4o | ~20.4% | -41.3% |
+---
 
-41.3% degradation confirms cross-model decoupling is essential. A different generator introduces beneficial diversity in the prompt search space, avoiding self-reinforcing biases.
+## Reviewer 4xR8
+
+Thank you for pushing us on controlled validation.
+For this reviewer, we fully addressed the fairness and overhead requests. For pairing ablations, we completed GPT-4o/GPT-4o and queued GPT-4o/Claude for camera-ready.
+
+1.
+
+> "Add GPT-4o + RAG baseline"
+
+Added as requested: 3.86 (single-pass), 21.39 (single-pass+RAG), 34.79 (MulVul). This separates retrieval gain from architecture gain.
+
+2.
+
+> "Add quantitative overhead analysis"
+
+Added token/time accounting across methods. MulVul is costlier than single-pass, but much cheaper than other agentic baselines in our setting.
+
+3.
+
+> "Model-pairing ablation for decoupling"
+
+Added self-model control (GPT-4o generator + GPT-4o executor): Macro-F1 drops from 34.79 to 20.4 (41.3% decrease), suggesting the gain is not from one model self-optimizing alone.
+Due to API cost and time limits during rebuttal, we did not complete the reverse pairing (GPT-4o generator + Claude executor). In our current setup, Claude mainly appears in meta updates (about once per batch), while reverse pairing would move Claude into sample-level execution. With batch size 16 and ~3 executor calls/sample, this is about 48 Claude execution calls per batch (vs ~1 Claude meta call per batch now), so cost rises sharply. We will include this reverse-pairing result in the camera-ready version.
+Within the rebuttal window, we believe the completed self-model control addresses the core attribution concern, and the reverse pairing will further strengthen this point.
