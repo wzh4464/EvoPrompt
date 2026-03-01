@@ -1,0 +1,1336 @@
+/Users/zihan/codes/evoprompt/src/evoprompt/data/cwe_layer1.py:46: UserWarning: CWE hierarchy file not found: /Users/zihan/codes/evoprompt/data/cwe_researchview.json. Using fallback CWE mapping. Run scripts/convert_cwe_researchview.py for full hierarchy.
+  warnings.warn(
+🏗️  Three-Layer Detection Training System
+======================================================================
+
+📋 Configuration:
+   Mode: Training
+   RAG: ✅ Enabled
+   Scale: ✅ Enabled
+   Output: ./outputs/full_training_5gen
+✅ Environment configured:
+   Detection Model: gpt-4o
+   Meta Model: claude-4.5
+
+📚 Knowledge Base Setup
+======================================================================
+   📖 Loading existing KB: ./outputs/knowledge_base.json
+   ✅ Loaded 235 examples
+
+📂 Loading Dataset
+======================================================================
+   Training: ./data/primevul_1percent_sample/train.txt
+   Evaluation: ./data/primevul_1percent_sample/dev.txt
+Invalid format at line 47: static timeCount GetTimestamp()
+Invalid format at line 48: {
+Invalid format at line 49: static timeCount baseCount;
+Invalid format at line 50: timeCount ret;
+Invalid format at line 51: #ifdef CLOCK_MONOTONIC
+Invalid format at line 52: struct timespec ts;
+Invalid format at line 53: clock_gettime(CLOCK_MONOTONIC, &ts);
+Invalid format at line 54: ret=((timeCount) ts.tv_sec*1000000000000LL)+ts.tv_nsec*1000LL;
+Invalid format at line 55: #else
+Invalid format at line 56: struct timeval tv;
+Invalid format at line 57: gettimeofday(&tv, 0);
+Invalid format at line 58: ret=((timeCount) tv.tv_sec*1000000000000LL)+tv.tv_usec*1000000LL;
+Invalid format at line 59: #endif
+Invalid format at line 60: if(!baseCount) baseCount=ret;
+Invalid format at line 61: return ret-baseCount;
+Invalid format at line 86: void __fastcall TSCPFileSystem::ClearAliases()
+Invalid format at line 87: {
+Invalid format at line 88: try
+Invalid format at line 89: {
+Invalid format at line 90: FTerminal->LogEvent(L"Clearing all aliases.");
+Invalid format at line 91: ClearAlias(TCommandSet::ExtractCommand(FTerminal->SessionData->ListingCommand));
+Invalid format at line 92: TStrings * CommandList = FCommandSet->CreateCommandList();
+Invalid format at line 93: try
+Invalid format at line 94: {
+Invalid format at line 95: for (int Index = 0; Index < CommandList->Count; Index++)
+Invalid format at line 96: {
+Invalid format at line 97: ClearAlias(CommandList->Strings[Index]);
+Invalid format at line 98: }
+Invalid format at line 99: }
+Invalid format at line 100: __finally
+Invalid format at line 101: {
+Invalid format at line 102: delete CommandList;
+Invalid format at line 103: }
+Invalid format at line 104: }
+Invalid format at line 105: catch (Exception &E)
+Invalid format at line 106: {
+Invalid format at line 107: FTerminal->CommandError(&E, LoadStr(UNALIAS_ALL_ERROR));
+Invalid format at line 108: }
+Invalid format at line 188: TStrings * __fastcall TSCPFileSystem::GetFixedPaths()
+Invalid format at line 189: {
+Invalid format at line 190: return NULL;
+Invalid format at line 313: void SoundTouch::setChannels(uint numChannels)
+Invalid format at line 314: {
+Invalid format at line 315: /*if (numChannels != 1 && numChannels != 2)
+Invalid format at line 316: {
+Invalid format at line 317: //ST_THROW_RT_ERROR("Illegal number of channels");
+Invalid format at line 318: return;
+Invalid format at line 319: }*/
+Invalid format at line 320: channels = numChannels;
+Invalid format at line 321: pRateTransposer->setChannels((int)numChannels);
+Invalid format at line 322: pTDStretch->setChannels((int)numChannels);
+Invalid format at line 362: unsigned CjfifDecode::DecodeIccHeader(unsigned nPos)
+Invalid format at line 363: {
+Invalid format at line 364: CString strTmp,strTmp1;
+Invalid format at line 366: // Profile header
+Invalid format at line 367: unsigned nProfSz;
+Invalid format at line 368: unsigned nPrefCmmType;
+Invalid format at line 369: unsigned nProfVer;
+Invalid format at line 370: unsigned nProfDevClass;
+Invalid format at line 371: unsigned nDataColorSpace;
+Invalid format at line 372: unsigned nPcs;
+Invalid format at line 373: unsigned anDateTimeCreated[3];
+Invalid format at line 374: unsigned nProfFileSig;
+Invalid format at line 375: unsigned nPrimPlatSig;
+Invalid format at line 376: unsigned nProfFlags;
+Invalid format at line 377: unsigned nDevManuf;
+Invalid format at line 378: unsigned nDevModel;
+Invalid format at line 379: unsigned anDevAttrib[2];
+Invalid format at line 380: unsigned nRenderIntent;
+Invalid format at line 381: unsigned anIllumPcsXyz[3];
+Invalid format at line 382: unsigned nProfCreatorSig;
+Invalid format at line 383: unsigned anProfId[4];
+Invalid format at line 384: unsigned anRsvd[7];
+Invalid format at line 386: // Read in all of the ICC header bytes
+Invalid format at line 387: nProfSz = ReadBe4(nPos);nPos+=4;
+Invalid format at line 388: nPrefCmmType = ReadBe4(nPos);nPos+=4;
+Invalid format at line 389: nProfVer = ReadBe4(nPos);nPos+=4;
+Invalid format at line 390: nProfDevClass = ReadBe4(nPos);nPos+=4;
+Invalid format at line 391: nDataColorSpace = ReadBe4(nPos);nPos+=4;
+Invalid format at line 392: nPcs = ReadBe4(nPos);nPos+=4;
+Invalid format at line 393: anDateTimeCreated[2] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 394: anDateTimeCreated[1] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 395: anDateTimeCreated[0] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 396: nProfFileSig = ReadBe4(nPos);nPos+=4;
+Invalid format at line 397: nPrimPlatSig = ReadBe4(nPos);nPos+=4;
+Invalid format at line 398: nProfFlags = ReadBe4(nPos);nPos+=4;
+Invalid format at line 399: nDevManuf = ReadBe4(nPos);nPos+=4;
+Invalid format at line 400: nDevModel = ReadBe4(nPos);nPos+=4;
+Invalid format at line 401: anDevAttrib[1] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 402: anDevAttrib[0] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 403: nRenderIntent = ReadBe4(nPos);nPos+=4;
+Invalid format at line 404: anIllumPcsXyz[2] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 405: anIllumPcsXyz[1] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 406: anIllumPcsXyz[0] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 407: nProfCreatorSig = ReadBe4(nPos);nPos+=4;
+Invalid format at line 408: anProfId[3] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 409: anProfId[2] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 410: anProfId[1] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 411: anProfId[0] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 412: anRsvd[6] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 413: anRsvd[5] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 414: anRsvd[4] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 415: anRsvd[3] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 416: anRsvd[2] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 417: anRsvd[1] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 418: anRsvd[0] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 420: // Now output the formatted version of the above data structures
+Invalid format at line 421: strTmp.Format(_T(" %-33s : %u bytes"),_T("Profile Size"),nProfSz);
+Invalid format at line 422: m_pLog->AddLine(strTmp);
+Invalid format at line 424: strTmp.Format(_T(" %-33s : %s"),_T("Preferred CMM Type"),(LPCTSTR)Uint2Chars(nPrefCmmType));
+Invalid format at line 425: m_pLog->AddLine(strTmp);
+Invalid format at line 427: strTmp.Format(_T(" %-33s : %u.%u.%u.%u (0x%08X)"),_T("Profile Version"),
+Invalid format at line 428: ((nProfVer & 0xF0000000)>>28),
+Invalid format at line 429: ((nProfVer & 0x0F000000)>>24),
+Invalid format at line 430: ((nProfVer & 0x00F00000)>>20),
+Invalid format at line 431: ((nProfVer & 0x000F0000)>>16),
+Invalid format at line 432: nProfVer);
+Invalid format at line 433: m_pLog->AddLine(strTmp);
+Invalid format at line 435: switch (nProfDevClass) {
+Invalid format at line 436: case 'scnr':
+Invalid format at line 437: strTmp1.Format(_T("Input Device profile"));break;
+Invalid format at line 438: case 'mntr':
+Invalid format at line 439: strTmp1.Format(_T("Display Device profile"));break;
+Invalid format at line 440: case 'prtr':
+Invalid format at line 441: strTmp1.Format(_T("Output Device profile"));break;
+Invalid format at line 442: case 'link':
+Invalid format at line 443: strTmp1.Format(_T("DeviceLink Device profile"));break;
+Invalid format at line 444: case 'spac':
+Invalid format at line 445: strTmp1.Format(_T("ColorSpace Conversion profile"));break;
+Invalid format at line 446: case 'abst':
+Invalid format at line 447: strTmp1.Format(_T("Abstract profile"));break;
+Invalid format at line 448: case 'nmcl':
+Invalid format at line 449: strTmp1.Format(_T("Named colour profile"));break;
+Invalid format at line 450: default:
+Invalid format at line 451: strTmp1.Format(_T("? (0x%08X)"),nProfDevClass);
+Invalid format at line 452: break;
+Invalid format at line 453: }
+Invalid format at line 454: strTmp.Format(_T(" %-33s : %s (%s)"),_T("Profile Device/Class"),(LPCTSTR)strTmp1,(LPCTSTR)Uint2Chars(nProfDevClass));
+Invalid format at line 455: m_pLog->AddLine(strTmp);
+Invalid format at line 457: switch (nDataColorSpace) {
+Invalid format at line 458: case 'XYZ ':
+Invalid format at line 459: strTmp1.Format(_T("XYZData"));break;
+Invalid format at line 460: case 'Lab ':
+Invalid format at line 461: strTmp1.Format(_T("labData"));break;
+Invalid format at line 462: case 'Luv ':
+Invalid format at line 463: strTmp1.Format(_T("lubData"));break;
+Invalid format at line 464: case 'YCbr':
+Invalid format at line 465: strTmp1.Format(_T("YCbCrData"));break;
+Invalid format at line 466: case 'Yxy ':
+Invalid format at line 467: strTmp1.Format(_T("YxyData"));break;
+Invalid format at line 468: case 'RGB ':
+Invalid format at line 469: strTmp1.Format(_T("rgbData"));break;
+Invalid format at line 470: case 'GRAY':
+Invalid format at line 471: strTmp1.Format(_T("grayData"));break;
+Invalid format at line 472: case 'HSV ':
+Invalid format at line 473: strTmp1.Format(_T("hsvData"));break;
+Invalid format at line 474: case 'HLS ':
+Invalid format at line 475: strTmp1.Format(_T("hlsData"));break;
+Invalid format at line 476: case 'CMYK':
+Invalid format at line 477: strTmp1.Format(_T("cmykData"));break;
+Invalid format at line 478: case 'CMY ':
+Invalid format at line 479: strTmp1.Format(_T("cmyData"));break;
+Invalid format at line 480: case '2CLR':
+Invalid format at line 481: strTmp1.Format(_T("2colourData"));break;
+Invalid format at line 482: case '3CLR':
+Invalid format at line 483: strTmp1.Format(_T("3colourData"));break;
+Invalid format at line 484: case '4CLR':
+Invalid format at line 485: strTmp1.Format(_T("4colourData"));break;
+Invalid format at line 486: case '5CLR':
+Invalid format at line 487: strTmp1.Format(_T("5colourData"));break;
+Invalid format at line 488: case '6CLR':
+Invalid format at line 489: strTmp1.Format(_T("6colourData"));break;
+Invalid format at line 490: case '7CLR':
+Invalid format at line 491: strTmp1.Format(_T("7colourData"));break;
+Invalid format at line 492: case '8CLR':
+Invalid format at line 493: strTmp1.Format(_T("8colourData"));break;
+Invalid format at line 494: case '9CLR':
+Invalid format at line 495: strTmp1.Format(_T("9colourData"));break;
+Invalid format at line 496: case 'ACLR':
+Invalid format at line 497: strTmp1.Format(_T("10colourData"));break;
+Invalid format at line 498: case 'BCLR':
+Invalid format at line 499: strTmp1.Format(_T("11colourData"));break;
+Invalid format at line 500: case 'CCLR':
+Invalid format at line 501: strTmp1.Format(_T("12colourData"));break;
+Invalid format at line 502: case 'DCLR':
+Invalid format at line 503: strTmp1.Format(_T("13colourData"));break;
+Invalid format at line 504: case 'ECLR':
+Invalid format at line 505: strTmp1.Format(_T("14colourData"));break;
+Invalid format at line 506: case 'FCLR':
+Invalid format at line 507: strTmp1.Format(_T("15colourData"));break;
+Invalid format at line 508: default:
+Invalid format at line 509: strTmp1.Format(_T("? (0x%08X)"),nDataColorSpace);
+Invalid format at line 510: break;
+Invalid format at line 511: }
+Invalid format at line 512: strTmp.Format(_T(" %-33s : %s (%s)"),_T("Data Colour Space"),(LPCTSTR)strTmp1,(LPCTSTR)Uint2Chars(nDataColorSpace));
+Invalid format at line 513: m_pLog->AddLine(strTmp);
+Invalid format at line 515: strTmp.Format(_T(" %-33s : %s"),_T("Profile connection space (PCS)"),(LPCTSTR)Uint2Chars(nPcs));
+Invalid format at line 516: m_pLog->AddLine(strTmp);
+Invalid format at line 518: strTmp.Format(_T(" %-33s : %s"),_T("Profile creation date"),(LPCTSTR)DecodeIccDateTime(anDateTimeCreated));
+Invalid format at line 519: m_pLog->AddLine(strTmp);
+Invalid format at line 521: strTmp.Format(_T(" %-33s : %s"),_T("Profile file signature"),(LPCTSTR)Uint2Chars(nProfFileSig));
+Invalid format at line 522: m_pLog->AddLine(strTmp);
+Invalid format at line 524: switch (nPrimPlatSig) {
+Invalid format at line 525: case 'APPL':
+Invalid format at line 526: strTmp1.Format(_T("Apple Computer, Inc."));break;
+Invalid format at line 527: case 'MSFT':
+Invalid format at line 528: strTmp1.Format(_T("Microsoft Corporation"));break;
+Invalid format at line 529: case 'SGI ':
+Invalid format at line 530: strTmp1.Format(_T("Silicon Graphics, Inc."));break;
+Invalid format at line 531: case 'SUNW':
+Invalid format at line 532: strTmp1.Format(_T("Sun Microsystems, Inc."));break;
+Invalid format at line 533: default:
+Invalid format at line 534: strTmp1.Format(_T("? (0x%08X)"),nPrimPlatSig);
+Invalid format at line 535: break;
+Invalid format at line 536: }
+Invalid format at line 537: strTmp.Format(_T(" %-33s : %s (%s)"),_T("Primary platform"),(LPCTSTR)strTmp1,(LPCTSTR)Uint2Chars(nPrimPlatSig));
+Invalid format at line 538: m_pLog->AddLine(strTmp);
+Invalid format at line 540: strTmp.Format(_T(" %-33s : 0x%08X"),_T("Profile flags"),nProfFlags);
+Invalid format at line 541: m_pLog->AddLine(strTmp);
+Invalid format at line 542: strTmp1 = (TestBit(nProfFlags,0))?"Embedded profile":"Profile not embedded";
+Invalid format at line 543: strTmp.Format(_T(" %-35s > %s"),_T("Profile flags"),(LPCTSTR)strTmp1);
+Invalid format at line 544: m_pLog->AddLine(strTmp);
+Invalid format at line 545: strTmp1 = (TestBit(nProfFlags,1))?"Profile can be used independently of embedded":"Profile can't be used independently of embedded";
+Invalid format at line 546: strTmp.Format(_T(" %-35s > %s"),_T("Profile flags"),(LPCTSTR)strTmp1);
+Invalid format at line 547: m_pLog->AddLine(strTmp);
+Invalid format at line 549: strTmp.Format(_T(" %-33s : %s"),_T("Device Manufacturer"),(LPCTSTR)Uint2Chars(nDevManuf));
+Invalid format at line 550: m_pLog->AddLine(strTmp);
+Invalid format at line 552: strTmp.Format(_T(" %-33s : %s"),_T("Device Model"),(LPCTSTR)Uint2Chars(nDevModel));
+Invalid format at line 553: m_pLog->AddLine(strTmp);
+Invalid format at line 555: strTmp.Format(_T(" %-33s : 0x%08X_%08X"),_T("Device attributes"),anDevAttrib[1],anDevAttrib[0]);
+Invalid format at line 556: m_pLog->AddLine(strTmp);
+Invalid format at line 557: strTmp1 = (TestBit(anDevAttrib[0],0))?"Transparency":"Reflective";
+Invalid format at line 558: strTmp.Format(_T(" %-35s > %s"),_T("Device attributes"),(LPCTSTR)strTmp1);
+Invalid format at line 559: m_pLog->AddLine(strTmp);
+Invalid format at line 560: strTmp1 = (TestBit(anDevAttrib[0],1))?"Matte":"Glossy";
+Invalid format at line 561: strTmp.Format(_T(" %-35s > %s"),_T("Device attributes"),(LPCTSTR)strTmp1);
+Invalid format at line 562: m_pLog->AddLine(strTmp);
+Invalid format at line 563: strTmp1 = (TestBit(anDevAttrib[0],2))?"Media polarity = positive":"Media polarity = negative";
+Invalid format at line 564: strTmp.Format(_T(" %-35s > %s"),_T("Device attributes"),(LPCTSTR)strTmp1);
+Invalid format at line 565: m_pLog->AddLine(strTmp);
+Invalid format at line 566: strTmp1 = (TestBit(anDevAttrib[0],3))?"Colour media":"Black & white media";
+Invalid format at line 567: strTmp.Format(_T(" %-35s > %s"),_T("Device attributes"),(LPCTSTR)strTmp1);
+Invalid format at line 568: m_pLog->AddLine(strTmp);
+Invalid format at line 570: switch(nRenderIntent) {
+Invalid format at line 571: case 0x00000000: strTmp1.Format(_T("Perceptual"));break;
+Invalid format at line 572: case 0x00000001: strTmp1.Format(_T("Media-Relative Colorimetric"));break;
+Invalid format at line 573: case 0x00000002: strTmp1.Format(_T("Saturation"));break;
+Invalid format at line 574: case 0x00000003: strTmp1.Format(_T("ICC-Absolute Colorimetric"));break;
+Invalid format at line 575: default:
+Invalid format at line 576: strTmp1.Format(_T("0x%08X"),nRenderIntent);
+Invalid format at line 577: break;
+Invalid format at line 578: }
+Invalid format at line 579: strTmp.Format(_T(" %-33s : %s"),_T("Rendering intent"),(LPCTSTR)strTmp1);
+Invalid format at line 580: m_pLog->AddLine(strTmp);
+Invalid format at line 582: // PCS illuminant
+Invalid format at line 584: strTmp.Format(_T(" %-33s : %s"),_T("Profile creator"),(LPCTSTR)Uint2Chars(nProfCreatorSig));
+Invalid format at line 585: m_pLog->AddLine(strTmp);
+Invalid format at line 587: strTmp.Format(_T(" %-33s : 0x%08X_%08X_%08X_%08X"),_T("Profile ID"),
+Invalid format at line 588: anProfId[3],anProfId[2],anProfId[1],anProfId[0]);
+Invalid format at line 589: m_pLog->AddLine(strTmp);
+Invalid format at line 591: return 0;
+Invalid format at line 664: AllocatePageTableMemory (
+Invalid format at line 665: IN UINTN Pages
+Invalid format at line 666: )
+Invalid format at line 667: {
+Invalid format at line 668: VOID *Address;
+Invalid format at line 670: Address = AllocatePages(Pages);
+Invalid format at line 671: if (Address != NULL) {
+Invalid format at line 672: ZeroMem(Address, EFI_PAGES_TO_SIZE (Pages));
+Invalid format at line 673: }
+Invalid format at line 675: return Address;
+Invalid format at line 907: void RateTransposer::setChannels(int nChannels)
+Invalid format at line 908: {
+Invalid format at line 909: assert(nChannels > 0);
+Invalid format at line 911: if (pTransposer->numChannels == nChannels) return;
+Invalid format at line 912: pTransposer->setChannels(nChannels);
+Invalid format at line 914: inputBuffer.setChannels(nChannels);
+Invalid format at line 915: midBuffer.setChannels(nChannels);
+Invalid format at line 916: outputBuffer.setChannels(nChannels);
+Invalid format at line 1015: int WavInFile::readHeaderBlock()
+Invalid format at line 1016: {
+Invalid format at line 1017: char label[5];
+Invalid format at line 1018: string sLabel;
+Invalid format at line 1020: // lead label string
+Invalid format at line 1021: if (fread(label, 1, 4, fptr) !=4) return -1;
+Invalid format at line 1022: label[4] = 0;
+Invalid format at line 1024: if (isAlphaStr(label) == 0) return -1; // not a valid label
+Invalid format at line 1026: // Decode blocks according to their label
+Invalid format at line 1027: if (strcmp(label, fmtStr) == 0)
+Invalid format at line 1028: {
+Invalid format at line 1029: int nLen, nDump;
+Invalid format at line 1031: // 'fmt ' block
+Invalid format at line 1032: memcpy(header.format.fmt, fmtStr, 4);
+Invalid format at line 1034: // read length of the format field
+Invalid format at line 1035: if (fread(&nLen, sizeof(int), 1, fptr) != 1) return -1;
+Invalid format at line 1036: // swap byte order if necessary
+Invalid format at line 1037: _swap32(nLen);
+Invalid format at line 1039: // calculate how much length differs from expected
+Invalid format at line 1040: nDump = nLen - ((int)sizeof(header.format) - 8);
+Invalid format at line 1042: // verify that header length isn't smaller than expected structure
+Invalid format at line 1043: if (nDump < 0) return -1;
+Invalid format at line 1045: header.format.format_len = nLen;
+Invalid format at line 1047: // if format_len is larger than expected, read only as much data as we've space for
+Invalid format at line 1048: if (nDump > 0)
+Invalid format at line 1049: {
+Invalid format at line 1050: nLen = sizeof(header.format) - 8;
+Invalid format at line 1051: }
+Invalid format at line 1053: // read data
+Invalid format at line 1054: if (fread(&(header.format.fixed), nLen, 1, fptr) != 1) return -1;
+Invalid format at line 1056: // swap byte order if necessary
+Invalid format at line 1057: _swap16((short &)header.format.fixed); // short int fixed;
+Invalid format at line 1058: _swap16((short &)header.format.channel_number); // short int channel_number;
+Invalid format at line 1059: _swap32((int &)header.format.sample_rate); // int sample_rate;
+Invalid format at line 1060: _swap32((int &)header.format.byte_rate); // int byte_rate;
+Invalid format at line 1061: _swap16((short &)header.format.byte_per_sample); // short int byte_per_sample;
+Invalid format at line 1062: _swap16((short &)header.format.bits_per_sample); // short int bits_per_sample;
+Invalid format at line 1064: // if format_len is larger than expected, skip the extra data
+Invalid format at line 1065: if (nDump > 0)
+Invalid format at line 1066: {
+Invalid format at line 1067: fseek(fptr, nDump, SEEK_CUR);
+Invalid format at line 1068: }
+Invalid format at line 1070: return 0;
+Invalid format at line 1071: }
+Invalid format at line 1072: else if (strcmp(label, factStr) == 0)
+Invalid format at line 1073: {
+Invalid format at line 1074: int nLen, nDump;
+Invalid format at line 1076: // 'fact' block
+Invalid format at line 1077: memcpy(header.fact.fact_field, factStr, 4);
+Invalid format at line 1079: // read length of the fact field
+Invalid format at line 1080: if (fread(&nLen, sizeof(int), 1, fptr) != 1) return -1;
+Invalid format at line 1081: // swap byte order if necessary
+Invalid format at line 1082: _swap32(nLen);
+Invalid format at line 1084: // calculate how much length differs from expected
+Invalid format at line 1085: nDump = nLen - ((int)sizeof(header.fact) - 8);
+Invalid format at line 1087: // verify that fact length isn't smaller than expected structure
+Invalid format at line 1088: if (nDump < 0) return -1;
+Invalid format at line 1090: header.fact.fact_len = nLen;
+Invalid format at line 1092: // if format_len is larger than expected, read only as much data as we've space for
+Invalid format at line 1093: if (nDump > 0)
+Invalid format at line 1094: {
+Invalid format at line 1095: nLen = sizeof(header.fact) - 8;
+Invalid format at line 1096: }
+Invalid format at line 1098: // read data
+Invalid format at line 1099: if (fread(&(header.fact.fact_sample_len), nLen, 1, fptr) != 1) return -1;
+Invalid format at line 1101: // swap byte order if necessary
+Invalid format at line 1102: _swap32((int &)header.fact.fact_sample_len); // int sample_length;
+Invalid format at line 1104: // if fact_len is larger than expected, skip the extra data
+Invalid format at line 1105: if (nDump > 0)
+Invalid format at line 1106: {
+Invalid format at line 1107: fseek(fptr, nDump, SEEK_CUR);
+Invalid format at line 1108: }
+Invalid format at line 1110: return 0;
+Invalid format at line 1111: }
+Invalid format at line 1112: else if (strcmp(label, dataStr) == 0)
+Invalid format at line 1113: {
+Invalid format at line 1114: // 'data' block
+Invalid format at line 1115: memcpy(header.data.data_field, dataStr, 4);
+Invalid format at line 1116: if (fread(&(header.data.data_len), sizeof(uint), 1, fptr) != 1) return -1;
+Invalid format at line 1118: // swap byte order if necessary
+Invalid format at line 1119: _swap32((int &)header.data.data_len);
+Invalid format at line 1121: return 1;
+Invalid format at line 1122: }
+Invalid format at line 1123: else
+Invalid format at line 1124: {
+Invalid format at line 1125: uint len, i;
+Invalid format at line 1126: uint temp;
+Invalid format at line 1127: // unknown block
+Invalid format at line 1129: // read length
+Invalid format at line 1130: if (fread(&len, sizeof(len), 1, fptr) != 1) return -1;
+Invalid format at line 1131: // scan through the block
+Invalid format at line 1132: for (i = 0; i < len; i ++)
+Invalid format at line 1133: {
+Invalid format at line 1134: if (fread(&temp, 1, 1, fptr) != 1) return -1;
+Invalid format at line 1135: if (feof(fptr)) return -1; // unexpected eof
+Invalid format at line 1136: }
+Invalid format at line 1137: }
+Invalid format at line 1138: return 0;
+Invalid format at line 1631: void __fastcall TSCPFileSystem::SCPSink(const UnicodeString TargetDir,
+Invalid format at line 1632: const UnicodeString FileName, const UnicodeString SourceDir,
+Invalid format at line 1633: const TCopyParamType * CopyParam, bool & Success,
+Invalid format at line 1634: TFileOperationProgressType * OperationProgress, int Params,
+Invalid format at line 1635: int Level)
+Invalid format at line 1636: {
+Invalid format at line 1637: struct
+Invalid format at line 1638: {
+Invalid format at line 1639: int SetTime;
+Invalid format at line 1640: TDateTime Modification;
+Invalid format at line 1641: TRights RemoteRights;
+Invalid format at line 1642: int Attrs;
+Invalid format at line 1643: bool Exists;
+Invalid format at line 1644: } FileData;
+Invalid format at line 1646: bool SkipConfirmed = false;
+Invalid format at line 1647: bool Initialized = (Level > 0);
+Invalid format at line 1649: FileData.SetTime = 0;
+Invalid format at line 1651: FSecureShell->SendNull();
+Invalid format at line 1653: while (!OperationProgress->Cancel)
+Invalid format at line 1654: {
+Invalid format at line 1655: // See (switch ... case 'T':)
+Invalid format at line 1656: if (FileData.SetTime) FileData.SetTime--;
+Invalid format at line 1658: // In case of error occurred before control record arrived.
+Invalid format at line 1659: // We can finally use full path here, as we get current path in FileName param
+Invalid format at line 1660: // (we used to set the file into OperationProgress->FileName, but it collided
+Invalid format at line 1661: // with progress outputting, particularly for scripting)
+Invalid format at line 1662: UnicodeString FullFileName = FileName;
+Invalid format at line 1664: try
+Invalid format at line 1665: {
+Invalid format at line 1666: // Receive control record
+Invalid format at line 1667: UnicodeString Line = FSecureShell->ReceiveLine();
+Invalid format at line 1669: if (Line.Length() == 0) FTerminal->FatalError(NULL, LoadStr(SCP_EMPTY_LINE));
+Invalid format at line 1671: if (IsLastLine(Line))
+Invalid format at line 1672: {
+Invalid format at line 1673: // Remote side finished copying, so remote SCP was closed
+Invalid format at line 1674: // and we don't need to terminate it manually, see CopyToLocal()
+Invalid format at line 1675: OperationProgress->SetCancel(csRemoteAbort);
+Invalid format at line 1676: /* TODO 1 : Show stderror to user? */
+Invalid format at line 1677: FSecureShell->ClearStdError();
+Invalid format at line 1678: try
+Invalid format at line 1679: {
+Invalid format at line 1680: // coIgnoreWarnings should allow batch transfer to continue when
+Invalid format at line 1681: // download of one the files fails (user denies overwriting
+Invalid format at line 1682: // of target local file, no read permissions...)
+Invalid format at line 1683: ReadCommandOutput(coExpectNoOutput | coRaiseExcept |
+Invalid format at line 1684: coOnlyReturnCode | coIgnoreWarnings);
+Invalid format at line 1685: if (!Initialized)
+Invalid format at line 1686: {
+Invalid format at line 1687: throw Exception(L"");
+Invalid format at line 1688: }
+Invalid format at line 1689: }
+Invalid format at line 1690: catch(Exception & E)
+Invalid format at line 1691: {
+Invalid format at line 1692: if (!Initialized && FTerminal->Active)
+Invalid format at line 1693: {
+Invalid format at line 1694: FTerminal->TerminalError(&E, LoadStr(SCP_INIT_ERROR));
+Invalid format at line 1695: }
+Invalid format at line 1696: else
+Invalid format at line 1697: {
+Invalid format at line 1698: throw;
+Invalid format at line 1699: }
+Invalid format at line 1700: }
+Invalid format at line 1701: return;
+Invalid format at line 1702: }
+Invalid format at line 1703: else
+Invalid format at line 1704: {
+Invalid format at line 1705: Initialized = true;
+Invalid format at line 1707: // First character distinguish type of control record
+Invalid format at line 1708: wchar_t Ctrl = Line[1];
+Invalid format at line 1709: Line.Delete(1, 1);
+Invalid format at line 1711: switch (Ctrl) {
+Invalid format at line 1712: case 1:
+Invalid format at line 1713: // Error (already logged by ReceiveLine())
+Invalid format at line 1714: throw EScpFileSkipped(NULL, FMTLOAD(REMOTE_ERROR, (Line)));
+Invalid format at line 1716: case 2:
+Invalid format at line 1717: // Fatal error, terminate copying
+Invalid format at line 1718: FTerminal->TerminalError(Line);
+Invalid format at line 1719: return; // Unreachable
+Invalid format at line 1721: case L'E': // Exit
+Invalid format at line 1722: FSecureShell->SendNull();
+Invalid format at line 1723: return;
+Invalid format at line 1725: case L'T':
+Invalid format at line 1726: unsigned long MTime, ATime;
+Invalid format at line 1727: if (swscanf(Line.c_str(), L"%ld %*d %ld %*d", &MTime, &ATime) == 2)
+Invalid format at line 1728: {
+Invalid format at line 1729: FileData.Modification = UnixToDateTime(MTime, FTerminal->SessionData->DSTMode);
+Invalid format at line 1730: FSecureShell->SendNull();
+Invalid format at line 1731: // File time is only valid until next pass
+Invalid format at line 1732: FileData.SetTime = 2;
+Invalid format at line 1733: continue;
+Invalid format at line 1734: }
+Invalid format at line 1735: else
+Invalid format at line 1736: {
+Invalid format at line 1737: SCPError(LoadStr(SCP_ILLEGAL_TIME_FORMAT), False);
+Invalid format at line 1738: }
+Invalid format at line 1740: case L'C':
+Invalid format at line 1741: case L'D':
+Invalid format at line 1742: break; // continue pass switch{}
+Invalid format at line 1744: default:
+Invalid format at line 1745: FTerminal->FatalError(NULL, FMTLOAD(SCP_INVALID_CONTROL_RECORD, (Ctrl, Line)));
+Invalid format at line 1746: }
+Invalid format at line 1748: TFileMasks::TParams MaskParams;
+Invalid format at line 1749: MaskParams.Modification = FileData.Modification;
+Invalid format at line 1751: // We reach this point only if control record was 'C' or 'D'
+Invalid format at line 1752: try
+Invalid format at line 1753: {
+Invalid format at line 1754: FileData.RemoteRights.Octal = CutToChar(Line, L' ', True);
+Invalid format at line 1755: // do not trim leading spaces of the filename
+Invalid format at line 1756: __int64 TSize = StrToInt64(CutToChar(Line, L' ', False).TrimRight());
+Invalid format at line 1757: MaskParams.Size = TSize;
+Invalid format at line 1758: // Security fix: ensure the file ends up where we asked for it.
+Invalid format at line 1759: // (accept only filename, not path)
+Invalid format at line 1760: UnicodeString OnlyFileName = UnixExtractFileName(Line);
+Invalid format at line 1761: if (Line != OnlyFileName)
+Invalid format at line 1762: {
+Invalid format at line 1763: FTerminal->LogEvent(FORMAT(L"Warning: Remote host set a compound pathname '%s'", (Line)));
+Invalid format at line 1764: }
+Invalid format at line 1766: FullFileName = SourceDir + OnlyFileName;
+Invalid format at line 1767: OperationProgress->SetFile(FullFileName);
+Invalid format at line 1768: OperationProgress->SetTransferSize(TSize);
+Invalid format at line 1769: }
+Invalid format at line 1770: catch (Exception &E)
+Invalid format at line 1771: {
+Invalid format at line 1772: {
+Invalid format at line 1773: TSuspendFileOperationProgress Suspend(OperationProgress);
+Invalid format at line 1774: FTerminal->Log->AddException(&E);
+Invalid format at line 1775: }
+Invalid format at line 1776: SCPError(LoadStr(SCP_ILLEGAL_FILE_DESCRIPTOR), false);
+Invalid format at line 1777: }
+Invalid format at line 1779: // last possibility to cancel transfer before it starts
+Invalid format at line 1780: if (OperationProgress->Cancel)
+Invalid format at line 1781: {
+Invalid format at line 1782: throw ESkipFile(NULL, MainInstructions(LoadStr(USER_TERMINATED)));
+Invalid format at line 1783: }
+Invalid format at line 1785: bool Dir = (Ctrl == L'D');
+Invalid format at line 1786: UnicodeString BaseFileName = FTerminal->GetBaseFileName(FullFileName);
+Invalid format at line 1787: if (!CopyParam->AllowTransfer(BaseFileName, osRemote, Dir, MaskParams, IsUnixHiddenFile(BaseFileName)))
+Invalid format at line 1788: {
+Invalid format at line 1789: FTerminal->LogEvent(FORMAT(L"File \"%s\" excluded from transfer",
+Invalid format at line 1790: (FullFileName)));
+Invalid format at line 1791: SkipConfirmed = true;
+Invalid format at line 1792: SCPError(L"", false);
+Invalid format at line 1793: }
+Invalid format at line 1795: if (CopyParam->SkipTransfer(FullFileName, Dir))
+Invalid format at line 1796: {
+Invalid format at line 1797: SkipConfirmed = true;
+Invalid format at line 1798: SCPError(L"", false);
+Invalid format at line 1799: OperationProgress->AddSkippedFileSize(MaskParams.Size);
+Invalid format at line 1800: }
+Invalid format at line 1802: FTerminal->LogFileDetails(FileName, FileData.Modification, MaskParams.Size);
+Invalid format at line 1804: UnicodeString DestFileNameOnly =
+Invalid format at line 1805: FTerminal->ChangeFileName(
+Invalid format at line 1806: CopyParam, OperationProgress->FileName, osRemote,
+Invalid format at line 1807: Level == 0);
+Invalid format at line 1808: UnicodeString DestFileName =
+Invalid format at line 1809: IncludeTrailingBackslash(TargetDir) + DestFileNameOnly;
+Invalid format at line 1811: FileData.Attrs = FileGetAttrFix(ApiPath(DestFileName));
+Invalid format at line 1812: // If getting attrs fails, we suppose, that file/folder doesn't exists
+Invalid format at line 1813: FileData.Exists = (FileData.Attrs != -1);
+Invalid format at line 1814: if (Dir)
+Invalid format at line 1815: {
+Invalid format at line 1816: if (FileData.Exists && !(FileData.Attrs & faDirectory))
+Invalid format at line 1817: {
+Invalid format at line 1818: SCPError(FMTLOAD(NOT_DIRECTORY_ERROR, (DestFileName)), false);
+Invalid format at line 1819: }
+Invalid format at line 1821: if (!FileData.Exists)
+Invalid format at line 1822: {
+Invalid format at line 1823: FILE_OPERATION_LOOP_BEGIN
+Invalid format at line 1824: {
+Invalid format at line 1825: THROWOSIFFALSE(ForceDirectories(ApiPath(DestFileName)));
+Invalid format at line 1826: }
+Invalid format at line 1827: FILE_OPERATION_LOOP_END(FMTLOAD(CREATE_DIR_ERROR, (DestFileName)));
+Invalid format at line 1828: /* SCP: can we set the timestamp for directories ? */
+Invalid format at line 1829: }
+Invalid format at line 1830: UnicodeString FullFileName = SourceDir + OperationProgress->FileName;
+Invalid format at line 1831: SCPSink(DestFileName, FullFileName, UnixIncludeTrailingBackslash(FullFileName),
+Invalid format at line 1832: CopyParam, Success, OperationProgress, Params, Level + 1);
+Invalid format at line 1833: continue;
+Invalid format at line 1834: }
+Invalid format at line 1835: else if (Ctrl == L'C')
+Invalid format at line 1836: {
+Invalid format at line 1837: TDownloadSessionAction Action(FTerminal->ActionLog);
+Invalid format at line 1838: Action.FileName(FTerminal->AbsolutePath(FullFileName, true));
+Invalid format at line 1840: try
+Invalid format at line 1841: {
+Invalid format at line 1842: HANDLE File = NULL;
+Invalid format at line 1843: TStream * FileStream = NULL;
+Invalid format at line 1845: /* TODO 1 : Turn off read-only attr */
+Invalid format at line 1847: try
+Invalid format at line 1848: {
+Invalid format at line 1849: try
+Invalid format at line 1850: {
+Invalid format at line 1851: if (FileExists(ApiPath(DestFileName)))
+Invalid format at line 1852: {
+Invalid format at line 1853: __int64 MTime;
+Invalid format at line 1854: TOverwriteFileParams FileParams;
+Invalid format at line 1855: FileParams.SourceSize = OperationProgress->TransferSize;
+Invalid format at line 1856: FileParams.SourceTimestamp = FileData.Modification;
+Invalid format at line 1857: FTerminal->OpenLocalFile(DestFileName, GENERIC_READ,
+Invalid format at line 1858: NULL, NULL, NULL, &MTime, NULL,
+Invalid format at line 1859: &FileParams.DestSize);
+Invalid format at line 1860: FileParams.DestTimestamp = UnixToDateTime(MTime,
+Invalid format at line 1861: FTerminal->SessionData->DSTMode);
+Invalid format at line 1863: unsigned int Answer =
+Invalid format at line 1864: ConfirmOverwrite(OperationProgress->FileName, DestFileNameOnly, osLocal,
+Invalid format at line 1865: &FileParams, CopyParam, Params, OperationProgress);
+Invalid format at line 1867: switch (Answer)
+Invalid format at line 1868: {
+Invalid format at line 1869: case qaCancel:
+Invalid format at line 1870: OperationProgress->SetCancel(csCancel); // continue on next case
+Invalid format at line 1871: case qaNo:
+Invalid format at line 1872: SkipConfirmed = true;
+Invalid format at line 1873: EXCEPTION;
+Invalid format at line 1874: }
+Invalid format at line 1875: }
+Invalid format at line 1877: Action.Destination(DestFileName);
+Invalid format at line 1879: if (!FTerminal->CreateLocalFile(DestFileName, OperationProgress,
+Invalid format at line 1880: &File, FLAGSET(Params, cpNoConfirmation)))
+Invalid format at line 1881: {
+Invalid format at line 1882: SkipConfirmed = true;
+Invalid format at line 1883: EXCEPTION;
+Invalid format at line 1884: }
+Invalid format at line 1886: FileStream = new TSafeHandleStream((THandle)File);
+Invalid format at line 1887: }
+Invalid format at line 1888: catch (Exception &E)
+Invalid format at line 1889: {
+Invalid format at line 1890: // In this step we can still cancel transfer, so we do it
+Invalid format at line 1891: SCPError(E.Message, false);
+Invalid format at line 1892: throw;
+Invalid format at line 1893: }
+Invalid format at line 1895: // We succeeded, so we confirm transfer to remote side
+Invalid format at line 1896: FSecureShell->SendNull();
+Invalid format at line 1897: // From now we need to finish file transfer, if not it's fatal error
+Invalid format at line 1898: OperationProgress->SetTransferringFile(true);
+Invalid format at line 1900: // Suppose same data size to transfer as to write
+Invalid format at line 1901: // (not true with ASCII transfer)
+Invalid format at line 1902: OperationProgress->SetLocalSize(OperationProgress->TransferSize);
+Invalid format at line 1904: // Will we use ASCII of BINARY file transfer?
+Invalid format at line 1905: OperationProgress->SetAsciiTransfer(
+Invalid format at line 1906: CopyParam->UseAsciiTransfer(BaseFileName, osRemote, MaskParams));
+Invalid format at line 1907: if (FTerminal->Configuration->ActualLogProtocol >= 0)
+Invalid format at line 1908: {
+Invalid format at line 1909: FTerminal->LogEvent(UnicodeString((OperationProgress->AsciiTransfer ? L"Ascii" : L"Binary")) +
+Invalid format at line 1910: L" transfer mode selected.");
+Invalid format at line 1911: }
+Invalid format at line 1913: try
+Invalid format at line 1914: {
+Invalid format at line 1915: // Buffer for one block of data
+Invalid format at line 1916: TFileBuffer BlockBuf;
+Invalid format at line 1917: bool ConvertToken = false;
+Invalid format at line 1919: do
+Invalid format at line 1920: {
+Invalid format at line 1921: BlockBuf.Size = OperationProgress->TransferBlockSize();
+Invalid format at line 1922: BlockBuf.Position = 0;
+Invalid format at line 1924: FSecureShell->Receive(reinterpret_cast<unsigned char *>(BlockBuf.Data), BlockBuf.Size);
+Invalid format at line 1925: OperationProgress->AddTransferred(BlockBuf.Size);
+Invalid format at line 1927: if (OperationProgress->AsciiTransfer)
+Invalid format at line 1928: {
+Invalid format at line 1929: unsigned int PrevBlockSize = BlockBuf.Size;
+Invalid format at line 1930: BlockBuf.Convert(FTerminal->SessionData->EOLType,
+Invalid format at line 1931: FTerminal->Configuration->LocalEOLType, 0, ConvertToken);
+Invalid format at line 1932: OperationProgress->SetLocalSize(
+Invalid format at line 1933: OperationProgress->LocalSize - PrevBlockSize + BlockBuf.Size);
+Invalid format at line 1934: }
+Invalid format at line 1936: // This is crucial, if it fails during file transfer, it's fatal error
+Invalid format at line 1937: FILE_OPERATION_LOOP_BEGIN
+Invalid format at line 1938: {
+Invalid format at line 1939: BlockBuf.WriteToStream(FileStream, BlockBuf.Size);
+Invalid format at line 1940: }
+Invalid format at line 1941: FILE_OPERATION_LOOP_END_EX(FMTLOAD(WRITE_ERROR, (DestFileName)), folNone);
+Invalid format at line 1943: OperationProgress->AddLocallyUsed(BlockBuf.Size);
+Invalid format at line 1945: if (OperationProgress->Cancel == csCancelTransfer)
+Invalid format at line 1946: {
+Invalid format at line 1947: throw Exception(MainInstructions(LoadStr(USER_TERMINATED)));
+Invalid format at line 1948: }
+Invalid format at line 1949: }
+Invalid format at line 1950: while (!OperationProgress->IsLocallyDone() || !
+Invalid format at line 1951: OperationProgress->IsTransferDone());
+Invalid format at line 1952: }
+Invalid format at line 1953: catch (Exception &E)
+Invalid format at line 1954: {
+Invalid format at line 1955: // Every exception during file transfer is fatal
+Invalid format at line 1956: FTerminal->FatalError(&E,
+Invalid format at line 1957: FMTLOAD(COPY_FATAL, (OperationProgress->FileName)));
+Invalid format at line 1958: }
+Invalid format at line 1960: OperationProgress->SetTransferringFile(false);
+Invalid format at line 1962: try
+Invalid format at line 1963: {
+Invalid format at line 1964: SCPResponse();
+Invalid format at line 1965: // If one of following exception occurs, we still need
+Invalid format at line 1966: // to send confirmation to other side
+Invalid format at line 1967: }
+Invalid format at line 1968: catch (EScp &E)
+Invalid format at line 1969: {
+Invalid format at line 1970: FSecureShell->SendNull();
+Invalid format at line 1971: throw;
+Invalid format at line 1972: }
+Invalid format at line 1973: catch (EScpFileSkipped &E)
+Invalid format at line 1974: {
+Invalid format at line 1975: FSecureShell->SendNull();
+Invalid format at line 1976: throw;
+Invalid format at line 1977: }
+Invalid format at line 1979: FSecureShell->SendNull();
+Invalid format at line 1981: if (FileData.SetTime && CopyParam->PreserveTime)
+Invalid format at line 1982: {
+Invalid format at line 1983: FTerminal->UpdateTargetTime(File, FileData.Modification, FTerminal->SessionData->DSTMode);
+Invalid format at line 1984: }
+Invalid format at line 1985: }
+Invalid format at line 1986: __finally
+Invalid format at line 1987: {
+Invalid format at line 1988: if (File) CloseHandle(File);
+Invalid format at line 1989: if (FileStream) delete FileStream;
+Invalid format at line 1990: }
+Invalid format at line 1991: }
+Invalid format at line 1992: catch(Exception & E)
+Invalid format at line 1993: {
+Invalid format at line 1994: if (SkipConfirmed)
+Invalid format at line 1995: {
+Invalid format at line 1996: Action.Cancel();
+Invalid format at line 1997: }
+Invalid format at line 1998: else
+Invalid format at line 1999: {
+Invalid format at line 2000: FTerminal->RollbackAction(Action, OperationProgress, &E);
+Invalid format at line 2001: }
+Invalid format at line 2002: throw;
+Invalid format at line 2003: }
+Invalid format at line 2005: if (FileData.Attrs == -1) FileData.Attrs = faArchive;
+Invalid format at line 2006: int NewAttrs = CopyParam->LocalFileAttrs(FileData.RemoteRights);
+Invalid format at line 2007: if ((NewAttrs & FileData.Attrs) != NewAttrs)
+Invalid format at line 2008: {
+Invalid format at line 2009: FILE_OPERATION_LOOP_BEGIN
+Invalid format at line 2010: {
+Invalid format at line 2011: THROWOSIFFALSE(FileSetAttr(ApiPath(DestFileName), FileData.Attrs | NewAttrs) == 0);
+Invalid format at line 2012: }
+Invalid format at line 2013: FILE_OPERATION_LOOP_END(FMTLOAD(CANT_SET_ATTRS, (DestFileName)));
+Invalid format at line 2014: }
+Invalid format at line 2016: FTerminal->LogFileDone(OperationProgress, DestFileName);
+Invalid format at line 2017: }
+Invalid format at line 2018: }
+Invalid format at line 2019: }
+Invalid format at line 2020: catch (EScpFileSkipped &E)
+Invalid format at line 2021: {
+Invalid format at line 2022: if (!SkipConfirmed)
+Invalid format at line 2023: {
+Invalid format at line 2024: TSuspendFileOperationProgress Suspend(OperationProgress);
+Invalid format at line 2025: TQueryParams Params(qpAllowContinueOnError);
+Invalid format at line 2026: if (FTerminal->QueryUserException(FMTLOAD(COPY_ERROR, (FullFileName)),
+Invalid format at line 2027: &E, qaOK | qaAbort, &Params, qtError) == qaAbort)
+Invalid format at line 2028: {
+Invalid format at line 2029: OperationProgress->SetCancel(csCancel);
+Invalid format at line 2030: }
+Invalid format at line 2031: FTerminal->Log->AddException(&E);
+Invalid format at line 2032: }
+Invalid format at line 2033: // this was inside above condition, but then transfer was considered
+Invalid format at line 2034: // successful, even when for example user refused to overwrite file
+Invalid format at line 2035: Success = false;
+Invalid format at line 2036: }
+Invalid format at line 2037: catch (ESkipFile &E)
+Invalid format at line 2038: {
+Invalid format at line 2039: SCPSendError(E.Message, false);
+Invalid format at line 2040: Success = false;
+Invalid format at line 2041: if (!FTerminal->HandleException(&E)) throw;
+Invalid format at line 2042: }
+Invalid format at line 2043: }
+   ✅ Train: 1230 samples
+   ✅ Eval: 526 samples
+
+📝 Creating Initial Prompts
+======================================================================
+   ✅ Created 16 prompts
+      Layer 1: 1
+      Layer 2: 6
+      Layer 3: 9
+
+🔧 Creating Detector
+======================================================================
+   🎯 Type: RAG-Enhanced Three-Layer
+   📊 RAG top-k: 2
+   🔍 Retriever: lexical
+   ⚡ Scale enhancement: True
+
+📊 Baseline Evaluation
+======================================================================
+
+📊 Running Evaluation
+======================================================================
+   🔍 Evaluating on 1000 samples...
+Could not normalize 'The provided code snippet for the `bnxt_re_modify_ah` function in a network environment appears to be benign and does not contain any apparent vulnerabilities. Here are several reasons why it is considered safe:
+
+1. **Functionality**: The function is currently a stub, meaning it does not perform any operations on the provided input parameters. It simply returns 0, which indicates success. Since there's no actual logic implemented, there’s no risk of mishandling data or causing any unintended side effects.
+
+2. **Parameters**: The function takes two arguments (`struct ib_ah *ib_ah` and `struct rdma_ah_attr *ah_attr`) but does not use these parameters. As a result, there are no operations or modifications being performed that could lead to potential memory issues, such as buffer overflows or invalid memory accesses.
+
+3. **Security Considerations**: The comments suggest future implementation might require validation of input parameters to prevent vulnerabilities. Although the function currently lacks such logic, the acknowledgment of these concerns indicates awareness and intention to address them once functionality is added.
+
+4. **Concurrency and Error Handling**: The absence of concurrency handling or error checks does not present a risk in its current form since no operations are being performed. However, the comments highlight these aspects, suggesting inclusion in any future implementation to enhance security and robustness.
+
+Overall, given that the function is a placeholder for future development and contains appropriate comments highlighting areas for attention when logic is added, it can be classified as safe in its present form. When implementing functionality, it’s crucial to incorporate the suggested validations and security considerations to maintain code security and reliability.', using first middle category
+Could not normalize 'Based on the provided code snippet and enhancements, the code is classified as BENIGN (safe) for the following reasons:
+
+1. **Semantic Understanding:** The code snippet contains detailed comments explaining the function `vmxnet3_post_load`, the purpose of its parameters, and the major operations within the function. This enhances the readability and makes it easier to understand the intended functionality.
+
+2. **Key Operations Highlighted:** Critical operations, such as the initialization of transmit and receive packet structures and the reuse of MSI-X vectors, are emphasized. The code takes care of reinitializing necessary components to restore the VMXNET3 device's state after loading.
+
+3. **Error Handling:** The code contains adequate error handling when attempting to reuse MSI-X vectors. If the operation fails, it logs an error and proceeds to uninitialize MSI-X to maintain the consistency of the device's state.
+
+4. **Potential Security Concerns Addressed:** The code acknowledges that failure to reuse MSI-X vectors could affect device functionality. However, it properly handles such errors by logging the error, uninitializing MSI-X, and updating the `msix_used` flag accordingly.
+
+5. **Functionality and Performance:** There are checks and operations in place to ensure that device interrupt delivery is managed correctly, minimizing the risk of unintended behavior or denial of service.
+
+Overall, these aspects contribute to the code being considered safe. There's a logical flow of operations, clear error handling, and the key functionalities are adequately addressed. While the code highlights areas of potential concern, it handles them appropriately, ensuring the VM's functionality remains intact.', using first middle category
+Could not normalize 'The provided code snippet seems to be from an audio processing system, specifically involving the management of an `AudioNode` in a graph. Here's a breakdown of its safety and potential vulnerabilities:
+
+1. **Main Thread Ensurance**: The code uses `DCHECK(IsMainThread())` to ensure that the disposal operation is running on the main thread. This helps prevent race conditions that can occur when operations affecting shared resources are executed across multiple threads.
+
+2. **Debug Logging**: Debug logging is conditional and only compiled in debug mode when `DEBUG_AUDIONODE_REFERENCES` is defined. This logging includes memory addresses, which could be a concern if logs are not secured. In production environments, such logs should be protected or disabled to prevent data leakage.
+
+3. **Thread Safety**: The use of `BaseAudioContext::GraphAutoLocker` indicates that there is a mechanism for locking the audio graph during manipulation, which is essential for thread safety. This helps in preventing race conditions and ensures that operations on shared resources are atomic.
+
+4. **Conditional Deferred Task Handling**: The code includes logic to conditionally add handlers to a deferred task queue based on the context state. This helps in efficiently managing resources by ensuring that handlers are properly cleaned up and prevents potential memory leaks.
+
+5. **Sensitive Information Exposure**: Although logging memory addresses is helpful for debugging, it poses a risk if logs are exposed in insecure environments. Care should be taken to handle logs securely, particularly in releases meant for production.
+
+Considering these points, the code appears to be designed with good practices in mind for managing audio node disposal in an audio processing system. However, the safe handling of sensitive information during logging and ensuring adequate thread synchronization are areas that developers should continuously monitor.
+
+Overall, the code can be considered safe as long as:
+- Logs containing sensitive data are secured or disabled in production.
+- Thread synchronization and main thread operation checks are rigorously enforced.
+- Context and deferred task handling are correctly implemented to prevent resource mismanagement.
+
+Therefore, confirming this code as safe with these considerations in mind is reasonable.', using first middle category
+Could not normalize 'This code snippet appears to be safe, as long as certain security considerations are taken into account. Here’s a breakdown to confirm its safety:
+
+1. **Destructor Operation**: The code effectively ends the async trace for navigation requests, indicating the closing of an operation, which helps ensure that no prolonged processes are running that might cause data leaks or inconsistencies.
+
+2. **Navigation State Check**: The code checks if the navigation state is "STARTED" and appropriately handles an aborted navigation request, thus preventing any incomplete operations from lingering.
+
+3. **Resource Cleanup**: The use of `navigation_handle_.reset()` is crucial to release resources properly and prevent any dangling pointers, a common cause for memory leaks.
+
+### Security Considerations:
+- **No Residual Data**: Ensure the resetting of `navigation_handle_` completely clears any residual data to avoid any form of exploitation.
+  
+- **Sensitive Data Leakage**: Verify that `TRACE_EVENT_ASYNC_END0`, which is used here for diagnostic and tracing purposes, does not leak sensitive details about the navigation operation. Depending on the environment where this code runs, trace information could potentially be exposed to unauthorized parties.
+
+- **Error Handling**: Consider implementing thorough error handling for scenarios where `state_` does not equal `STARTED`, as handling for other states might be required in some cases.
+
+- **Instrumentation Functions**: Ensure functions like `devtools_instrumentation::OnNavigationRequestFailed` do not expose internal error states unintentionally. The safety of logs and reports is essential to maintain the integrity of the program.
+
+- **Thread Safety**: If the destructor is called in a multi-threaded environment, ensure operations within this destructor are thread-safe to prevent race conditions, which can lead to unpredictable behavior or security vulnerabilities.
+
+By reviewing and implementing these security considerations, the code can be considered safe with no apparent vulnerabilities.', using first middle category
+Could not normalize 'Based on the code provided, there are specific points to consider when confirming whether the code is safe or not. Let's go through the function and associated comments provided:
+
+### Code Analysis:
+
+```c
+#include <virglrenderer.h>
+#include <glib.h> // for G_UNUSED macro
+
+/*! 
+ * \brief Destroys the OpenGL context. 
+ *
+ * This function is a utility to safely destroy the given OpenGL rendering context.
+ * It acts as a cleanup operation, ensuring any allocated resources associated with
+ * the context are released properly.
+ *
+ * \param cookie This parameter is UNUSED in the current implementation but kept
+ * for API compatibility or future use. Don't remove without confirming all
+ * related calls.
+ *
+ * \param ctx The OpenGL context to destroy.
+ */
+static void fuzzer_destroy_gl_context(G_GNUC_UNUSED void *cookie, virgl_renderer_gl_context ctx)
+{
+   // Highlighting key operation:
+   // The context destruction function from the VirGL library is called here,
+   // which should be the main cleanup operation for the graphics context.
+   virgl_egl_destroy_context(test_egl, ctx);
+
+   /* Possible Security Considerations:
+    *
+    * 1. Ensure that `ctx` is valid before destruction to avoid undefined behavior or resource
+    *    leaks. An invalid context may cause crashes or memory corruption.
+    * 2. If `ctx` is manipulated via user input or external data sources, validate and sanitize
+    *    the context thoroughly to prevent malicious exploitation such as resource hijacking.
+    * 3. Ensure that the context destruction is performed in a thread-safe manner if `ctx`
+    *    could be accessed concurrently by different threads.
+    */
+}
+```
+
+### Points of Confirmation:
+
+1. **Functionality Context**:
+   - The primary function of this code is to destroy an OpenGL context using the `virgl_egl_destroy_context` function from the VirGL library. This is a typical cleanup operation for resource management.
+
+2. **Parameter Validity**:
+   - The comments indicate that the validity of `ctx` should be confirmed prior to calling the destruction function. This is crucial to avoid undefined behaviors that could lead to crashes or memory corruption.
+
+3. **Security Measures**:
+   - Context validation and sanitization are advised if `ctx` is derived from external sources. This prevents potential exploitation from malicious data inputs, safeguarding against resource hijacking.
+
+4. **Thread-Safety**:
+   - Ensuring thread-safety is recommended if `ctx` might be accessed by multiple threads concurrently. This prevents race conditions and ensures consistent state during context destruction.
+
+5. **Unused Parameters**:
+   - The parameter `cookie` is marked as unused but is retained for potential future use or API compatibility, which is a valid approach to maintain flexibility.
+
+### Conclusion:
+
+Given the points above, the code appears to adhere to good practices regarding resource management and security. Proper comments are in place suggesting validation and thread-safety, which enhance the robustness of the code. From the information and comments provided, the code does not exhibit any obvious vulnerabilities and is classified as **safe with considerations**.
+
+### Confirmation:
+
+The code is **safe** under the assumptions:
+- `ctx` is validated before being passed to `virgl_egl_destroy_context`.
+- When obtained from external input, `ctx` is validated appropriately.
+- The code execution context maintains thread-safety if required.
+
+Thus, the code can be confirmed as safe, adhering to the guidelines.', using first middle category
+Could not normalize 'The code provided is indeed safe and classified as BENIGN. Here's a breakdown of why it appears safe and free of vulnerabilities:
+
+### Structural and Semantic Safety:
+
+1. **Lifecycle Management**:
+   - The use of `RefPtr<FrameView> protector(this);` demonstrates proper memory management and lifecycle protection for the `FrameView` object. This prevents memory leaks and dangling pointers, ensuring that the object remains valid throughout the function execution.
+
+2. **Conditional Execution**:
+   - The function includes checks such as `if (RenderView* view = renderView())` to ensure operations are only performed if the necessary context (i.e., presence of a `RenderView`) exists. This minimizes the risk of null pointer dereferencing.
+
+3. **Recursive Updates**:
+   - `updateLayoutAndStyleIfNeededRecursive()` and `invalidateTreeIfNeededRecursive()` imply comprehensive adaptation of layout and tree checks, enhancing the accuracy and completeness of the frame view's update.
+   - Recursive methods like `scrollContentsIfNeededRecursive()` are safely applied, assuming the methods themselves are implemented with care to avoid issues such as infinite recursion.
+
+4. **Compositing and Coordinating**:
+   - The code includes checks for compositing with `view->compositor()->inCompositingMode()` and coordinates updates with `m_frame->page()->scrollingCoordinator()->updateAfterCompositingChangeIfNeeded()` which indicates robust handling of graphics and rendering modes with the compositor.
+   
+5. **Diagnostics and Instrumentation**:
+   - The function logs diagnostic information through trace events (`TRACE_EVENT_INSTANT1`) and manages rendering lifecycle status via instrumentation calls (`InspectorInstrumentation`). This facilitates monitoring and debugging, but does not appear to introduce vulnerabilities since it mainly interacts with development tools.
+
+### Potential Security Considerations:
+
+- **Assertions**:
+  - The use of `ASSERT(lifecycle().state() == DocumentLifecycle::PaintInvalidationClean);` checks lifecycle state post-update. While in production, assertion failures can lead to abrupt termination (if they were enabled), this is typically controlled in debug builds, reducing the risk in production.
+  - Assertions are generally beneficial for development environments to catch bugs early, but should be supplemented with error handling mechanisms (as assertions aren't a substitute for runtime checks in production code).
+
+Given the careful management of lifecycle, the conditional operations contingent upon valid state, and the diagnostic support integrated into the function, this code snippet handles operations safely and securely within its context. Overall, it supports the application’s correctness and stability in rendering operations without exposing vulnerabilities like memory leaks or command injection.', using first middle category
+Could not normalize 'The provided code snippet appears to be safe with no evident vulnerabilities. Here's an analysis highlighting its safety aspects:
+
+### Safety Analysis:
+
+1. **Thread Safety**: 
+   - The code uses `DCHECK(allocate_gpu_memory_buffer_thread_checker_.CalledOnValidThread())` to ensure that the method is invoked on the correct thread. While `DCHECK` relies on debug builds, it is an effective way to enforce thread-checking in development. In production, similar checks should be ensured through other means to prevent race conditions.
+
+2. **Format Validation**: 
+   - Before allocating memory, the code validates the format using `GpuMemoryBufferImpl::IsFormatValid(internalformat)`. This prevents potential issues that could arise from using unsupported or incorrect formats.
+
+3. **Inter-Process Communication (IPC)**:
+   - The function sends an IPC message to allocate a GPU memory buffer. It checks the success of the message sending operation and appropriately returns an empty pointer if the operation fails, ensuring that no invalid or partial resources are returned.
+
+4. **Resource Management**: 
+   - The code handles resource allocation and deallocation responsibly. It returns an empty `scoped_ptr` if any step fails, preventing resource leakage or misuse.
+
+5. **Key Operations Identification**: 
+   - The function clearly defines and handles key operations like message sending and resource creation, which contributes to a well-understood and maintainable code structure.
+
+### Potential Security Considerations:
+
+- **IPC Vulnerabilities**: While the code correctly handles IPC operation outcomes, IPC communications generally have inherent security risks. Ensuring secure endpoints and validating message integrity are crucial, though these concerns are likely addressed at a higher architectural level in production systems.
+  
+- **Thread-Safety in Production**: The `DCHECK` relies on debugging. For production systems, ensure that similar thread-safety checks are implemented to prevent concurrency issues.
+
+Overall, the code snippet effectively manages resource allocation and deallocation, with thorough validation and error handling making it safe as per the context provided. Proper architectural measures around IPC security and runtime thread checks will further reinforce its reliability in a production environment.', using first middle category
+Could not normalize 'The provided code snippet is classified as "safe" because it does not contain any active vulnerabilities. Let me walk you through the aspects confirming its benign nature:
+
+1. **Function Purpose and Implementation:**
+
+   - The function `session_info_get_fd` is intended to retrieve a file descriptor from a session information structure (`session_info *si`). However, the code is currently incomplete and serves as a placeholder that always returns `-1`, signaling an error or invalid session retrieval.
+
+2. **Potential Vulnerability Considerations:**
+
+   - At present, the code doesn't execute any operations that could lead to vulnerabilities such as buffer overflow, command injection, etc., due to its simplistic structure.
+   - The absence of actual logic in the function means there are no operations that could utilize or manipulate the contents of the `session_info` structure in a way that could compromise security.
+   
+3. **Future Implementation Notes:**
+
+   - Although the current code is safe, future implementations should incorporate security best practices, including:
+     - Validating input parameters to handle `NULL` pointers effectively.
+     - Checking the integrity and correctness of session information before attempting to retrieve the file descriptor.
+    
+4. **Enhancements and Commenting:**
+
+   - The code has been augmented with comments that describe the function's intent, potential future concerns, and areas for enhancement. These comments serve as guidelines for developing a comprehensive and secure version of the function.
+
+Given the current state of the code, it is benign with no active vulnerabilities. However, future developments should ensure proper validation and handling of data to maintain security.', using first middle category
+Could not normalize 'The provided code snippet demonstrates a function with basic arithmetic operations primarily focused on scaling a `Quantum` value to a specified range using the type `QuantumAny`. The enhancements help describe the functionality and potential risks associated with the operation. Let's confirm its safety by considering the key aspects:
+
+1. **Function Purpose and Operation:**
+   - The function `ScaleQuantumToAny` aims to convert a `Quantum` value into a different range defined by `QuantumAny`. This involves scaling and rounding operations which are critical for maintaining precision.
+
+2. **Security Considerations:**
+   - **Arithmetic Operations:** The potential for precision loss or overflow is noted. Given the use of `double` casting and arithmetic, precision management is essential, especially if `QuantumRange` could exceed limits inherent in `QuantumAny`.
+   - **Type Safety:** Casting operations need careful consideration to ensure no unexpected behavior due to type conversions.
+   - **Input Validation:** No explicit input validation is made visible in the code comments, and the dependability on `quantum` and `range` being within expected bounds is emphasized to prevent potential errors and vulnerabilities.
+
+3. **Absence of Complex Vulnerabilities:**
+   - There are no apparent risks like buffer overflow or integer overflow within this function. It's primarily a scaling function with mathematical transformations.
+
+4. **Recommendations:**
+   - While the function appears benign and safe from critical vulnerabilities given its scope, adding input validation can ensure robustness against erroneous or malicious input, though such additions are context-driven dependent on how `quantum` and `range` are being sourced or utilized elsewhere.
+
+Overall, the code is safe in terms of the operations it performs, provided proper input sanitation is handled externally where values for `quantum` and `range` are derived. The enhancements effectively communicate these considerations and potential risks, confirming the snippet as safe for execution given its current construct.', using first middle category
+Could not normalize 'Based on the provided analysis and enhancements, the code snippet appears to be safe with no obvious vulnerabilities. The function `__perf_install_in_context` is designed to manage performance event installations in the context of a given task or CPU and includes several safety mechanisms:
+
+1. **Locking Mechanisms:** The use of spin locks (`raw_spin_lock`) ensures thread safety while accessing and modifying shared resources, preventing race conditions.
+   
+2. **Task Context Checks:** The function performs checks to determine the current state of tasks, avoids reprogramming if the task is not running on the current CPU, and appropriately handles the scenario where a task might not be found (`ret = -ESRCH`).
+
+3. **Controlled Reprogramming:** The logic distinguishes between the need to reprogram the context and merely adding the event, reducing the risk of inconsistent behavior when a task is not on the current CPU.
+
+4. **Proper Lock Release:** The `perf_ctx_unlock` function call guarantees that locks are released appropriately, preventing deadlocks and resource leaks.
+
+5. **Debugging Warnings:** The use of `WARN_ON_ONCE` provides additional diagnostic capability by flagging unexpected states that might reveal potential logic errors without compromising security.
+
+While the code includes mechanisms to address typical security concerns in kernel programming, potential vulnerabilities could still exist due to the complexity and interactions with other parts of the system. Regular code reviews, testing in various scenarios, and security audits are recommended to ensure ongoing safety as the codebase evolves. 
+
+Given the current analysis, the code can be classified as safe with the enhancements contributing to a clearer understanding of its operation and security aspects.', using first middle category
+Could not normalize 'The provided code snippet for the `Char2Int` function appears to be safe with no direct vulnerabilities such as buffer overflow or improper handling that could lead to security issues. Here's why:
+
+### Safety Confirmation
+
+1. **Input Validation**: The function uses `isdigit()`, `islower()`, and `isupper()` to check for valid input characters limited to digits and letters, ensuring that only expected inputs are processed.
+
+2. **Character Conversion Logic**: The operations within the function are straightforward arithmetic manipulations using ASCII values. The conversions are confined within defined ranges:
+   - Digits are directly mapped using `(character - '0')`.
+   - Lowercase letters are mapped using `(character - 'a' + 10)`.
+   - Uppercase letters are mapped using `(character - 'A' + 10)`.
+
+3. **Error Handling**: The function returns `-1` for any character that is not a digit or letter, effectively acting as a catch-all for invalid inputs, promoting robustness.
+
+4. **No Buffer Usage**: There are no operations involving buffers or array indexing, eliminating the risk of buffer overflow.
+
+5. **Type Safety**: The function does not use any data types that would suffer from overflow with valid input (e.g., int or uint). The values operated on are within normal ASCII character ranges, safely mapped to integers.
+
+### Considerations
+
+- **Character Encoding**: As noted, the function assumes input is ASCII. In contexts where extended character sets or multibyte characters are handled, further considerations may be necessary, such as using a different mapping approach that accommodates such encoding.
+  
+- **Integration Environment**: Ensure that when this function is integrated into a larger system, its parameters are constrained properly to align with the function's assumptions, particularly regarding the input character type and encoding.
+
+Overall, this code snippet is robust within its described use, concerning the conversion of digits and letter characters to integers. It's important to ensure the context in which this code is deployed maintains the assumptions it relies on, notably ASCII character handling. If exposed to user input, ensuring input validation before calling this function would be prudent, as part of broader input sanitation practices.', using first middle category
+Could not normalize 'Based on the provided example and the enhanced code snippet, it seems that the original code is indeed safe from obvious vulnerabilities, including buffer overflow or integer overflow. Let's walk through this reasoning:
+
+### Original Code:
+The function `_atNX` is designed to return an element from a container `_data`, based on a position and optional multidimensional indices. The crucial operation here involves the use of `cimg::cut` to ensure that the `position` is within bounds, specifically clamped between `0` and `width() - 1`.
+
+### Key Security Aspects:
+
+1. **Bounds Checking**:
+   - The use of `cimg::cut` function ensures that the `position` is properly clamped, avoiding access outside the container boundaries. This significantly reduces the risk of buffer overflow vulnerabilities, as it prevents out-of-bound errors when accessing the `_data` array.
+
+2. **Descriptive Naming and Comments**:
+   - The enhanced code improves readability and understanding with descriptive parameter naming and comments that clarify the function's role, aiding in easier maintenance and analysis.
+
+3. **Input Validation**:
+   - The code handles position validation securely, but further validation for `coordinateX`, `coordinateY`, `coordinateZ`, and `channel` could be beneficial depending on the context (e.g., if there are specific dimensional constraints).
+
+4. **Exception Safety**:
+   - No explicit checking for exceptions is made here, so considering the overall software context, it might be beneficial to ensure that operations like `atX()` can handle unexpected inputs and throw manageable exceptions.
+
+5. **Implicit Assumptions**:
+   - The `_data` container and `atX()` method should ideally manage all dimensions and channel data correctly. If these objects are not designed to handle bounds or type safety properly, they could be potential sources for bugs, although not necessarily security vulnerabilities.
+
+### Conclusion: 
+Based on the analysis and enhancements, the code provided is classified as **BENIGN** and does not exhibit vulnerabilities like buffer overflow or integer overflow in its current form. Enhancements suggested focus on improving readability and prompting further validation where necessary, although the current implementation prevents the most common issues efficiently. Always consider the broader context in which this function operates to ensure complete security.', using first middle category
+Could not normalize 'The code segment provided is related to a race condition vulnerability. Race conditions occur when the timing of processes and operations leads to unexpected and undesirable behavior, which can be exploited for unauthorized access or manipulation of shared resources.
+
+In the sample code, multiple locks are employed (`rdma_lock_handler`, `ucma_lock_files`, `xa_lock`) to ensure that operations involving shared resources, such as context and file lists, are performed in an atomic and isolated manner. These locking mechanisms are crucial to prevent race conditions that could arise from concurrent modifications in a multithreaded environment.
+
+The key indicators of race conditions in the code are:
+
+- **Context Manipulation with Locking**: The use of locks (`mutex_lock`, `rdma_lock_handler`) when accessing or modifying shared data structures (e.g., `ctx->list`, `new_file->ctx_list`, `ctx_table`). This is necessary to ensure that no other threads/processes concurrently modify these resources, potentially leading to inconsistent states or faulty executions.
+
+- **File Descriptor and Context Migration**: Operations like `list_move_tail` and `ucma_move_events`, where data is transferred between structures, must be safeguarded by locks to prevent race conditions where simultaneous access can disrupt the expected order and status.
+
+Race conditions can lead to various security and data integrity issues, such as accessing invalid data states, executing unintended operations, or gaining unauthorized access. The provided code seems to have mechanisms in place to handle race conditions, but the description highlights the vulnerability category based on potential lapses in ensuring these mechanisms are properly applied or are sufficient under all circumstances.', using first middle category
+Could not normalize 'To confirm if the provided code snippet is safe with no vulnerabilities, let's consider a few aspects based on the improvements made and the context in which the code functions:
+
+### Code Review for Safety
+
+1. **Functionality:**
+   - The function `isVerboseEnabled` checks if verbose mode is enabled for an Image instance. This mode is typically used for debugging, providing detailed logs or output during operations.
+
+2. **Security Considerations:**
+   - **Immutable Data Handling:** The code calls `getConstOptions()`, suggesting that the image options accessed are constant or immutable, protecting against accidental modification.
+   - **Information Exposure:** Verbose mode, if active, might log sensitive information inadvertently. However, since this snippet only checks a flag without implementing logging, the snippet itself is free from direct vulnerability.
+
+3. **Contextual Vulnerabilities:**
+   - While the function itself lacks direct vulnerabilities, enabling verbose logging more broadly in your image processing environment could expose sensitive data indirectly, dependent on what is logged, and should be managed with attention to security practices.
+   - Ensuring proper logging practices, especially in production environments, is crucial to preventing information leakage.
+
+### Conclusion
+
+Based on its functionality as a flag checker, the provided code snippet can be considered **safe** with no direct vulnerabilities. However, the broader application context in which verbose logging is managed should be evaluated to ensure no sensitive data exposure occurs inadvertently.
+
+### Recommendation for Broader Usage
+
+- Document the function clearly to ensure that any user configures verbose logging knowingly and understands the implications, especially in terms of performance and security.
+- Audit the broader application, assessing logging practices to ensure sensitive data is not exposed when verbose mode is enabled. 
+
+Given the code snippet you've provided, its function is purely to check for verbosity, and modifications enhance clarity and documentation without affecting security directly.', using first middle category
+Could not normalize 'Based on the provided code snippet and accompanying commentary, the code appears to be benign and does not display any immediate vulnerabilities or unsafe constructs. Let's analyze the aspects of the code that contribute to this determination:
+
+1. **Const Correctness:**  
+   The use of `const_iterator` and the `const` qualifier in the method signature indicate that the function is intended for read-only access, ensuring that the state of the container `ordered_` is not modified. This is a good practice to prevent unintended side effects.
+
+2. **Use of STL Container Methods:**  
+   The code utilizes standard STL container methods (`begin()`) which are well-reviewed and safe for typical use cases. The `begin()` method returns an iterator pointing to the first element of the container, which is a standard operation.
+
+3. **Semantic Information and Key Operations:**  
+   The code comments provide semantic context, highlighting the role and functionality of the method and `ordered_`. This aids in understanding the intended use and operation of the code.
+
+4. **Potential Security Concerns:**  
+   The comments address potential security concerns around object lifetime, thread safety, and iterator validity. Although the code does not directly implement mechanisms for these concerns, it is important that anyone maintaining the code considers synchronization and validation if `ordered_` may be subject to concurrent modifications or invalidation.
+
+Overall, the code snippet exemplifies a standard operation on a container, relying on built-in mechanisms that are considered safe in typical scenarios. However, developers should remain vigilant about the context in which such code is used, especially concerning object lifetime and multithreading, to ensure ongoing safety. Based on the current analysis, the code can be confirmed as safe with no evident vulnerabilities.', using first middle category
+Could not normalize 'The provided code snippet appears to be safe with no evident vulnerabilities. It is a straightforward getter function designed to retrieve the value of `MatchStackLimitSize`. Here is a summary and analysis of its safety:
+
+### Semantic Information
+- **Function Purpose**: The function likely belongs to a regular expression library and serves to return the current value of a variable used to limit how much stack space is used for pattern matching operations.
+  
+### Security Considerations
+- **Global State Exposure**: The function retrieves a global or module-scoped variable. While using getter functions promotes encapsulation, there should be assurance elsewhere in the code that modifications to `MatchStackLimitSize` are well-controlled to prevent unwanted side effects or modifications.
+  
+- **Integer Overflow**: The function returns an integer value. Depending on how `MatchStackLimitSize` is set, there should be validations to ensure it doesn't exceed reasonable limits to prevent potential integer overflow issues.
+
+- **Concurrency**: If the code is part of a multi-threaded application, concurrent access to `MatchStackLimitSize` must be safely managed, although this getter function itself appears not to present a problem.
+
+### Recommendations
+- **Type Safety**: Ensure the type of `MatchStackLimitSize` captures the intended range of values for stack size limitations.
+
+- **Validation on Setters**: While the getter is safe, make sure that any associated setter functions perform necessary validations to prevent an invalid state.
+
+- **Thread Safety**: If the code is multi-threaded, ensure necessary synchronization mechanisms are in place when accessing shared resources to prevent race conditions.
+
+- **Documentation**: Clear documentation should accompany the function to explain the significance of `MatchStackLimitSize`, any assumptions, and the expected range of values.
+
+### Conclusion
+Given the function’s simplicity as a getter operation with no evident data manipulation or input handling, it can be considered safe. There are no immediate vulnerabilities in this code as provided, assuming the environment in which it operates also adheres to best coding practices.', using first middle category
+
+======================================================================
+EVALUATION RESULTS
+======================================================================
+
+Total Samples: 201
+Full Path Accuracy: 0.1393
+
+----------------------------------------------------------------------
+Layer 1 (Major Category)
+----------------------------------------------------------------------
+  Accuracy:        0.4975
+  Macro-F1:        0.2906 ⭐ (推荐)
+  Weighted-F1:     0.5366
+  Micro-F1:        0.4975
+  Macro-Precision: 0.3137
+  Macro-Recall:    0.3195
+
+----------------------------------------------------------------------
+Layer 2 (Middle Category)
+----------------------------------------------------------------------
+  Accuracy:        0.1841
+  Macro-F1:        0.0973 ⭐ (推荐)
+  Weighted-F1:     0.1835
+  Micro-F1:        0.1841
+  Macro-Precision: 0.1117
+  Macro-Recall:    0.1415
+
+----------------------------------------------------------------------
+Layer 3 (CWE)
+----------------------------------------------------------------------
+  Accuracy:        0.1393
+  Macro-F1:        0.0827 ⭐ (推荐)
+  Weighted-F1:     0.1498
+  Micro-F1:        0.1393
+  Macro-Precision: 0.0972
+  Macro-Recall:    0.1190
+
+======================================================================
+💡 推荐关注指标: Macro-F1
+   原因: 漏洞检测中类别不平衡，Macro-F1确保所有类别都被重视
+======================================================================
+
+   ✅ Evaluation completed in 3701.5s
+
+🚀 Starting Training
+======================================================================
+   🤖 Creating agents...
+   🎯 Creating coordinator...
+   🧬 Creating evolution algorithm...
+
+   📋 Configuration:
+      Population: 5
+      Generations: 5
+      Elite size: 2
+      Mutation rate: 0.3
+      Batch size: 20
+      Meta improve interval: 2
+      Meta improve count: 3
+
+   🎬 Starting evolution...
+======================================================================
+🔬 Initializing population with detection agent...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-mutation failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-mutation failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-mutation failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-mutation failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+
+🧬 Generation 1/5
+   Current best fitness: 0.0000
+   Phase 1: Meta-agent improving 1 prompts...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-optimization failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+   Phase 2: Evolutionary crossover and mutation...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-crossover failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-mutation failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+   Avg fitness: 0.0000
+   Population diversity: 1/5
+
+🧬 Generation 2/5
+   Current best fitness: 0.0000
+   Phase 1: Meta-agent improving 1 prompts...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-optimization failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+   Phase 2: Evolutionary crossover and mutation...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-crossover failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-mutation failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+   Avg fitness: 0.0000
+   Population diversity: 1/5
+
+🧬 Generation 3/5
+   Current best fitness: 0.0000
+   Phase 1: Meta-agent improving 1 prompts...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-optimization failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+   Phase 2: Evolutionary crossover and mutation...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-crossover failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-mutation failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+   Avg fitness: 0.0000
+   Population diversity: 1/5
+
+🧬 Generation 4/5
+   Current best fitness: 0.0000
+   Phase 1: Meta-agent improving 1 prompts...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-optimization failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+   Phase 2: Evolutionary crossover and mutation...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-crossover failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-mutation failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+   Avg fitness: 0.0000
+   Population diversity: 1/5
+
+🧬 Generation 5/5
+   Current best fitness: 0.0000
+   Phase 1: Meta-agent improving 1 prompts...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-optimization failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+   Phase 2: Evolutionary crossover and mutation...
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-crossover failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 1): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 2): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+API call failed (attempt 3): Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+Meta-mutation failed: All API attempts failed. Last error: Error code: 404 - {'error': {'message': '该模型不支持或模型不存在，请确认模型参数拼写正确、为小写字母且无特殊字符。The model is not supported or the model does not exist, please make sure that the model parameters are spelled correctly, in lowercase letters and without special characters.【如果您遇到问题，欢迎加入QQ群咨询：1003520025】', 'type': 'chatanywhere_error', 'param': None, 'code': '404 NOT_FOUND'}}
+   Avg fitness: 0.0000
+   Population diversity: 1/5
+
+   ✅ Training completed!
+Traceback (most recent call last):
+  File "/Users/zihan/codes/evoprompt/scripts/train_three_layer.py", line 557, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/Users/zihan/codes/evoprompt/scripts/train_three_layer.py", line 525, in main
+    prompt_set = run_training(prompt_set, detector, train_dataset, kb, args)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/zihan/codes/evoprompt/scripts/train_three_layer.py", line 268, in run_training
+    print(f"      Best fitness: {best_individual.fitness:.4f}")
+                                 ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'fitness'

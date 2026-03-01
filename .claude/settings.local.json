@@ -4,7 +4,15 @@
       "Bash(git -c user.useConfigOnly=true commit --quiet --allow-empty-message --file - -S)",
       "Bash(git add:*)",
       "Bash(uv run:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(git commit:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(xargs ls:*)",
+      "Bash(done)",
+      "Bash(for:*)",
+      "Bash(do echo \"=== Round $i ===\")"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,877 @@
+/Users/zihan/codes/evoprompt/src/evoprompt/data/cwe_layer1.py:46: UserWarning: CWE hierarchy file not found: /Users/zihan/codes/evoprompt/data/cwe_researchview.json. Using fallback CWE mapping. Run scripts/convert_cwe_researchview.py for full hierarchy.
+  warnings.warn(
+🏗️  Three-Layer Detection Training System
+======================================================================
+
+📋 Configuration:
+   Mode: Training
+   RAG: ✅ Enabled
+   Scale: ✅ Enabled
+   Output: ./outputs/full_training_5gen
+✅ Environment configured:
+   Detection Model: gpt-3.5-turbo
+   Meta Model: gpt-3.5-turbo
+
+📚 Knowledge Base Setup
+======================================================================
+   📖 Loading existing KB: ./outputs/knowledge_base.json
+   ✅ Loaded 235 examples
+
+📂 Loading Dataset
+======================================================================
+   Training: ./data/primevul_1percent_sample/train.txt
+   Evaluation: ./data/primevul_1percent_sample/dev.txt
+Invalid format at line 47: static timeCount GetTimestamp()
+Invalid format at line 48: {
+Invalid format at line 49: static timeCount baseCount;
+Invalid format at line 50: timeCount ret;
+Invalid format at line 51: #ifdef CLOCK_MONOTONIC
+Invalid format at line 52: struct timespec ts;
+Invalid format at line 53: clock_gettime(CLOCK_MONOTONIC, &ts);
+Invalid format at line 54: ret=((timeCount) ts.tv_sec*1000000000000LL)+ts.tv_nsec*1000LL;
+Invalid format at line 55: #else
+Invalid format at line 56: struct timeval tv;
+Invalid format at line 57: gettimeofday(&tv, 0);
+Invalid format at line 58: ret=((timeCount) tv.tv_sec*1000000000000LL)+tv.tv_usec*1000000LL;
+Invalid format at line 59: #endif
+Invalid format at line 60: if(!baseCount) baseCount=ret;
+Invalid format at line 61: return ret-baseCount;
+Invalid format at line 86: void __fastcall TSCPFileSystem::ClearAliases()
+Invalid format at line 87: {
+Invalid format at line 88: try
+Invalid format at line 89: {
+Invalid format at line 90: FTerminal->LogEvent(L"Clearing all aliases.");
+Invalid format at line 91: ClearAlias(TCommandSet::ExtractCommand(FTerminal->SessionData->ListingCommand));
+Invalid format at line 92: TStrings * CommandList = FCommandSet->CreateCommandList();
+Invalid format at line 93: try
+Invalid format at line 94: {
+Invalid format at line 95: for (int Index = 0; Index < CommandList->Count; Index++)
+Invalid format at line 96: {
+Invalid format at line 97: ClearAlias(CommandList->Strings[Index]);
+Invalid format at line 98: }
+Invalid format at line 99: }
+Invalid format at line 100: __finally
+Invalid format at line 101: {
+Invalid format at line 102: delete CommandList;
+Invalid format at line 103: }
+Invalid format at line 104: }
+Invalid format at line 105: catch (Exception &E)
+Invalid format at line 106: {
+Invalid format at line 107: FTerminal->CommandError(&E, LoadStr(UNALIAS_ALL_ERROR));
+Invalid format at line 108: }
+Invalid format at line 188: TStrings * __fastcall TSCPFileSystem::GetFixedPaths()
+Invalid format at line 189: {
+Invalid format at line 190: return NULL;
+Invalid format at line 313: void SoundTouch::setChannels(uint numChannels)
+Invalid format at line 314: {
+Invalid format at line 315: /*if (numChannels != 1 && numChannels != 2)
+Invalid format at line 316: {
+Invalid format at line 317: //ST_THROW_RT_ERROR("Illegal number of channels");
+Invalid format at line 318: return;
+Invalid format at line 319: }*/
+Invalid format at line 320: channels = numChannels;
+Invalid format at line 321: pRateTransposer->setChannels((int)numChannels);
+Invalid format at line 322: pTDStretch->setChannels((int)numChannels);
+Invalid format at line 362: unsigned CjfifDecode::DecodeIccHeader(unsigned nPos)
+Invalid format at line 363: {
+Invalid format at line 364: CString strTmp,strTmp1;
+Invalid format at line 366: // Profile header
+Invalid format at line 367: unsigned nProfSz;
+Invalid format at line 368: unsigned nPrefCmmType;
+Invalid format at line 369: unsigned nProfVer;
+Invalid format at line 370: unsigned nProfDevClass;
+Invalid format at line 371: unsigned nDataColorSpace;
+Invalid format at line 372: unsigned nPcs;
+Invalid format at line 373: unsigned anDateTimeCreated[3];
+Invalid format at line 374: unsigned nProfFileSig;
+Invalid format at line 375: unsigned nPrimPlatSig;
+Invalid format at line 376: unsigned nProfFlags;
+Invalid format at line 377: unsigned nDevManuf;
+Invalid format at line 378: unsigned nDevModel;
+Invalid format at line 379: unsigned anDevAttrib[2];
+Invalid format at line 380: unsigned nRenderIntent;
+Invalid format at line 381: unsigned anIllumPcsXyz[3];
+Invalid format at line 382: unsigned nProfCreatorSig;
+Invalid format at line 383: unsigned anProfId[4];
+Invalid format at line 384: unsigned anRsvd[7];
+Invalid format at line 386: // Read in all of the ICC header bytes
+Invalid format at line 387: nProfSz = ReadBe4(nPos);nPos+=4;
+Invalid format at line 388: nPrefCmmType = ReadBe4(nPos);nPos+=4;
+Invalid format at line 389: nProfVer = ReadBe4(nPos);nPos+=4;
+Invalid format at line 390: nProfDevClass = ReadBe4(nPos);nPos+=4;
+Invalid format at line 391: nDataColorSpace = ReadBe4(nPos);nPos+=4;
+Invalid format at line 392: nPcs = ReadBe4(nPos);nPos+=4;
+Invalid format at line 393: anDateTimeCreated[2] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 394: anDateTimeCreated[1] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 395: anDateTimeCreated[0] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 396: nProfFileSig = ReadBe4(nPos);nPos+=4;
+Invalid format at line 397: nPrimPlatSig = ReadBe4(nPos);nPos+=4;
+Invalid format at line 398: nProfFlags = ReadBe4(nPos);nPos+=4;
+Invalid format at line 399: nDevManuf = ReadBe4(nPos);nPos+=4;
+Invalid format at line 400: nDevModel = ReadBe4(nPos);nPos+=4;
+Invalid format at line 401: anDevAttrib[1] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 402: anDevAttrib[0] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 403: nRenderIntent = ReadBe4(nPos);nPos+=4;
+Invalid format at line 404: anIllumPcsXyz[2] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 405: anIllumPcsXyz[1] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 406: anIllumPcsXyz[0] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 407: nProfCreatorSig = ReadBe4(nPos);nPos+=4;
+Invalid format at line 408: anProfId[3] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 409: anProfId[2] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 410: anProfId[1] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 411: anProfId[0] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 412: anRsvd[6] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 413: anRsvd[5] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 414: anRsvd[4] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 415: anRsvd[3] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 416: anRsvd[2] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 417: anRsvd[1] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 418: anRsvd[0] = ReadBe4(nPos);nPos+=4;
+Invalid format at line 420: // Now output the formatted version of the above data structures
+Invalid format at line 421: strTmp.Format(_T(" %-33s : %u bytes"),_T("Profile Size"),nProfSz);
+Invalid format at line 422: m_pLog->AddLine(strTmp);
+Invalid format at line 424: strTmp.Format(_T(" %-33s : %s"),_T("Preferred CMM Type"),(LPCTSTR)Uint2Chars(nPrefCmmType));
+Invalid format at line 425: m_pLog->AddLine(strTmp);
+Invalid format at line 427: strTmp.Format(_T(" %-33s : %u.%u.%u.%u (0x%08X)"),_T("Profile Version"),
+Invalid format at line 428: ((nProfVer & 0xF0000000)>>28),
+Invalid format at line 429: ((nProfVer & 0x0F000000)>>24),
+Invalid format at line 430: ((nProfVer & 0x00F00000)>>20),
+Invalid format at line 431: ((nProfVer & 0x000F0000)>>16),
+Invalid format at line 432: nProfVer);
+Invalid format at line 433: m_pLog->AddLine(strTmp);
+Invalid format at line 435: switch (nProfDevClass) {
+Invalid format at line 436: case 'scnr':
+Invalid format at line 437: strTmp1.Format(_T("Input Device profile"));break;
+Invalid format at line 438: case 'mntr':
+Invalid format at line 439: strTmp1.Format(_T("Display Device profile"));break;
+Invalid format at line 440: case 'prtr':
+Invalid format at line 441: strTmp1.Format(_T("Output Device profile"));break;
+Invalid format at line 442: case 'link':
+Invalid format at line 443: strTmp1.Format(_T("DeviceLink Device profile"));break;
+Invalid format at line 444: case 'spac':
+Invalid format at line 445: strTmp1.Format(_T("ColorSpace Conversion profile"));break;
+Invalid format at line 446: case 'abst':
+Invalid format at line 447: strTmp1.Format(_T("Abstract profile"));break;
+Invalid format at line 448: case 'nmcl':
+Invalid format at line 449: strTmp1.Format(_T("Named colour profile"));break;
+Invalid format at line 450: default:
+Invalid format at line 451: strTmp1.Format(_T("? (0x%08X)"),nProfDevClass);
+Invalid format at line 452: break;
+Invalid format at line 453: }
+Invalid format at line 454: strTmp.Format(_T(" %-33s : %s (%s)"),_T("Profile Device/Class"),(LPCTSTR)strTmp1,(LPCTSTR)Uint2Chars(nProfDevClass));
+Invalid format at line 455: m_pLog->AddLine(strTmp);
+Invalid format at line 457: switch (nDataColorSpace) {
+Invalid format at line 458: case 'XYZ ':
+Invalid format at line 459: strTmp1.Format(_T("XYZData"));break;
+Invalid format at line 460: case 'Lab ':
+Invalid format at line 461: strTmp1.Format(_T("labData"));break;
+Invalid format at line 462: case 'Luv ':
+Invalid format at line 463: strTmp1.Format(_T("lubData"));break;
+Invalid format at line 464: case 'YCbr':
+Invalid format at line 465: strTmp1.Format(_T("YCbCrData"));break;
+Invalid format at line 466: case 'Yxy ':
+Invalid format at line 467: strTmp1.Format(_T("YxyData"));break;
+Invalid format at line 468: case 'RGB ':
+Invalid format at line 469: strTmp1.Format(_T("rgbData"));break;
+Invalid format at line 470: case 'GRAY':
+Invalid format at line 471: strTmp1.Format(_T("grayData"));break;
+Invalid format at line 472: case 'HSV ':
+Invalid format at line 473: strTmp1.Format(_T("hsvData"));break;
+Invalid format at line 474: case 'HLS ':
+Invalid format at line 475: strTmp1.Format(_T("hlsData"));break;
+Invalid format at line 476: case 'CMYK':
+Invalid format at line 477: strTmp1.Format(_T("cmykData"));break;
+Invalid format at line 478: case 'CMY ':
+Invalid format at line 479: strTmp1.Format(_T("cmyData"));break;
+Invalid format at line 480: case '2CLR':
+Invalid format at line 481: strTmp1.Format(_T("2colourData"));break;
+Invalid format at line 482: case '3CLR':
+Invalid format at line 483: strTmp1.Format(_T("3colourData"));break;
+Invalid format at line 484: case '4CLR':
+Invalid format at line 485: strTmp1.Format(_T("4colourData"));break;
+Invalid format at line 486: case '5CLR':
+Invalid format at line 487: strTmp1.Format(_T("5colourData"));break;
+Invalid format at line 488: case '6CLR':
+Invalid format at line 489: strTmp1.Format(_T("6colourData"));break;
+Invalid format at line 490: case '7CLR':
+Invalid format at line 491: strTmp1.Format(_T("7colourData"));break;
+Invalid format at line 492: case '8CLR':
+Invalid format at line 493: strTmp1.Format(_T("8colourData"));break;
+Invalid format at line 494: case '9CLR':
+Invalid format at line 495: strTmp1.Format(_T("9colourData"));break;
+Invalid format at line 496: case 'ACLR':
+Invalid format at line 497: strTmp1.Format(_T("10colourData"));break;
+Invalid format at line 498: case 'BCLR':
+Invalid format at line 499: strTmp1.Format(_T("11colourData"));break;
+Invalid format at line 500: case 'CCLR':
+Invalid format at line 501: strTmp1.Format(_T("12colourData"));break;
+Invalid format at line 502: case 'DCLR':
+Invalid format at line 503: strTmp1.Format(_T("13colourData"));break;
+Invalid format at line 504: case 'ECLR':
+Invalid format at line 505: strTmp1.Format(_T("14colourData"));break;
+Invalid format at line 506: case 'FCLR':
+Invalid format at line 507: strTmp1.Format(_T("15colourData"));break;
+Invalid format at line 508: default:
+Invalid format at line 509: strTmp1.Format(_T("? (0x%08X)"),nDataColorSpace);
+Invalid format at line 510: break;
+Invalid format at line 511: }
+Invalid format at line 512: strTmp.Format(_T(" %-33s : %s (%s)"),_T("Data Colour Space"),(LPCTSTR)strTmp1,(LPCTSTR)Uint2Chars(nDataColorSpace));
+Invalid format at line 513: m_pLog->AddLine(strTmp);
+Invalid format at line 515: strTmp.Format(_T(" %-33s : %s"),_T("Profile connection space (PCS)"),(LPCTSTR)Uint2Chars(nPcs));
+Invalid format at line 516: m_pLog->AddLine(strTmp);
+Invalid format at line 518: strTmp.Format(_T(" %-33s : %s"),_T("Profile creation date"),(LPCTSTR)DecodeIccDateTime(anDateTimeCreated));
+Invalid format at line 519: m_pLog->AddLine(strTmp);
+Invalid format at line 521: strTmp.Format(_T(" %-33s : %s"),_T("Profile file signature"),(LPCTSTR)Uint2Chars(nProfFileSig));
+Invalid format at line 522: m_pLog->AddLine(strTmp);
+Invalid format at line 524: switch (nPrimPlatSig) {
+Invalid format at line 525: case 'APPL':
+Invalid format at line 526: strTmp1.Format(_T("Apple Computer, Inc."));break;
+Invalid format at line 527: case 'MSFT':
+Invalid format at line 528: strTmp1.Format(_T("Microsoft Corporation"));break;
+Invalid format at line 529: case 'SGI ':
+Invalid format at line 530: strTmp1.Format(_T("Silicon Graphics, Inc."));break;
+Invalid format at line 531: case 'SUNW':
+Invalid format at line 532: strTmp1.Format(_T("Sun Microsystems, Inc."));break;
+Invalid format at line 533: default:
+Invalid format at line 534: strTmp1.Format(_T("? (0x%08X)"),nPrimPlatSig);
+Invalid format at line 535: break;
+Invalid format at line 536: }
+Invalid format at line 537: strTmp.Format(_T(" %-33s : %s (%s)"),_T("Primary platform"),(LPCTSTR)strTmp1,(LPCTSTR)Uint2Chars(nPrimPlatSig));
+Invalid format at line 538: m_pLog->AddLine(strTmp);
+Invalid format at line 540: strTmp.Format(_T(" %-33s : 0x%08X"),_T("Profile flags"),nProfFlags);
+Invalid format at line 541: m_pLog->AddLine(strTmp);
+Invalid format at line 542: strTmp1 = (TestBit(nProfFlags,0))?"Embedded profile":"Profile not embedded";
+Invalid format at line 543: strTmp.Format(_T(" %-35s > %s"),_T("Profile flags"),(LPCTSTR)strTmp1);
+Invalid format at line 544: m_pLog->AddLine(strTmp);
+Invalid format at line 545: strTmp1 = (TestBit(nProfFlags,1))?"Profile can be used independently of embedded":"Profile can't be used independently of embedded";
+Invalid format at line 546: strTmp.Format(_T(" %-35s > %s"),_T("Profile flags"),(LPCTSTR)strTmp1);
+Invalid format at line 547: m_pLog->AddLine(strTmp);
+Invalid format at line 549: strTmp.Format(_T(" %-33s : %s"),_T("Device Manufacturer"),(LPCTSTR)Uint2Chars(nDevManuf));
+Invalid format at line 550: m_pLog->AddLine(strTmp);
+Invalid format at line 552: strTmp.Format(_T(" %-33s : %s"),_T("Device Model"),(LPCTSTR)Uint2Chars(nDevModel));
+Invalid format at line 553: m_pLog->AddLine(strTmp);
+Invalid format at line 555: strTmp.Format(_T(" %-33s : 0x%08X_%08X"),_T("Device attributes"),anDevAttrib[1],anDevAttrib[0]);
+Invalid format at line 556: m_pLog->AddLine(strTmp);
+Invalid format at line 557: strTmp1 = (TestBit(anDevAttrib[0],0))?"Transparency":"Reflective";
+Invalid format at line 558: strTmp.Format(_T(" %-35s > %s"),_T("Device attributes"),(LPCTSTR)strTmp1);
+Invalid format at line 559: m_pLog->AddLine(strTmp);
+Invalid format at line 560: strTmp1 = (TestBit(anDevAttrib[0],1))?"Matte":"Glossy";
+Invalid format at line 561: strTmp.Format(_T(" %-35s > %s"),_T("Device attributes"),(LPCTSTR)strTmp1);
+Invalid format at line 562: m_pLog->AddLine(strTmp);
+Invalid format at line 563: strTmp1 = (TestBit(anDevAttrib[0],2))?"Media polarity = positive":"Media polarity = negative";
+Invalid format at line 564: strTmp.Format(_T(" %-35s > %s"),_T("Device attributes"),(LPCTSTR)strTmp1);
+Invalid format at line 565: m_pLog->AddLine(strTmp);
+Invalid format at line 566: strTmp1 = (TestBit(anDevAttrib[0],3))?"Colour media":"Black & white media";
+Invalid format at line 567: strTmp.Format(_T(" %-35s > %s"),_T("Device attributes"),(LPCTSTR)strTmp1);
+Invalid format at line 568: m_pLog->AddLine(strTmp);
+Invalid format at line 570: switch(nRenderIntent) {
+Invalid format at line 571: case 0x00000000: strTmp1.Format(_T("Perceptual"));break;
+Invalid format at line 572: case 0x00000001: strTmp1.Format(_T("Media-Relative Colorimetric"));break;
+Invalid format at line 573: case 0x00000002: strTmp1.Format(_T("Saturation"));break;
+Invalid format at line 574: case 0x00000003: strTmp1.Format(_T("ICC-Absolute Colorimetric"));break;
+Invalid format at line 575: default:
+Invalid format at line 576: strTmp1.Format(_T("0x%08X"),nRenderIntent);
+Invalid format at line 577: break;
+Invalid format at line 578: }
+Invalid format at line 579: strTmp.Format(_T(" %-33s : %s"),_T("Rendering intent"),(LPCTSTR)strTmp1);
+Invalid format at line 580: m_pLog->AddLine(strTmp);
+Invalid format at line 582: // PCS illuminant
+Invalid format at line 584: strTmp.Format(_T(" %-33s : %s"),_T("Profile creator"),(LPCTSTR)Uint2Chars(nProfCreatorSig));
+Invalid format at line 585: m_pLog->AddLine(strTmp);
+Invalid format at line 587: strTmp.Format(_T(" %-33s : 0x%08X_%08X_%08X_%08X"),_T("Profile ID"),
+Invalid format at line 588: anProfId[3],anProfId[2],anProfId[1],anProfId[0]);
+Invalid format at line 589: m_pLog->AddLine(strTmp);
+Invalid format at line 591: return 0;
+Invalid format at line 664: AllocatePageTableMemory (
+Invalid format at line 665: IN UINTN Pages
+Invalid format at line 666: )
+Invalid format at line 667: {
+Invalid format at line 668: VOID *Address;
+Invalid format at line 670: Address = AllocatePages(Pages);
+Invalid format at line 671: if (Address != NULL) {
+Invalid format at line 672: ZeroMem(Address, EFI_PAGES_TO_SIZE (Pages));
+Invalid format at line 673: }
+Invalid format at line 675: return Address;
+Invalid format at line 907: void RateTransposer::setChannels(int nChannels)
+Invalid format at line 908: {
+Invalid format at line 909: assert(nChannels > 0);
+Invalid format at line 911: if (pTransposer->numChannels == nChannels) return;
+Invalid format at line 912: pTransposer->setChannels(nChannels);
+Invalid format at line 914: inputBuffer.setChannels(nChannels);
+Invalid format at line 915: midBuffer.setChannels(nChannels);
+Invalid format at line 916: outputBuffer.setChannels(nChannels);
+Invalid format at line 1015: int WavInFile::readHeaderBlock()
+Invalid format at line 1016: {
+Invalid format at line 1017: char label[5];
+Invalid format at line 1018: string sLabel;
+Invalid format at line 1020: // lead label string
+Invalid format at line 1021: if (fread(label, 1, 4, fptr) !=4) return -1;
+Invalid format at line 1022: label[4] = 0;
+Invalid format at line 1024: if (isAlphaStr(label) == 0) return -1; // not a valid label
+Invalid format at line 1026: // Decode blocks according to their label
+Invalid format at line 1027: if (strcmp(label, fmtStr) == 0)
+Invalid format at line 1028: {
+Invalid format at line 1029: int nLen, nDump;
+Invalid format at line 1031: // 'fmt ' block
+Invalid format at line 1032: memcpy(header.format.fmt, fmtStr, 4);
+Invalid format at line 1034: // read length of the format field
+Invalid format at line 1035: if (fread(&nLen, sizeof(int), 1, fptr) != 1) return -1;
+Invalid format at line 1036: // swap byte order if necessary
+Invalid format at line 1037: _swap32(nLen);
+Invalid format at line 1039: // calculate how much length differs from expected
+Invalid format at line 1040: nDump = nLen - ((int)sizeof(header.format) - 8);
+Invalid format at line 1042: // verify that header length isn't smaller than expected structure
+Invalid format at line 1043: if (nDump < 0) return -1;
+Invalid format at line 1045: header.format.format_len = nLen;
+Invalid format at line 1047: // if format_len is larger than expected, read only as much data as we've space for
+Invalid format at line 1048: if (nDump > 0)
+Invalid format at line 1049: {
+Invalid format at line 1050: nLen = sizeof(header.format) - 8;
+Invalid format at line 1051: }
+Invalid format at line 1053: // read data
+Invalid format at line 1054: if (fread(&(header.format.fixed), nLen, 1, fptr) != 1) return -1;
+Invalid format at line 1056: // swap byte order if necessary
+Invalid format at line 1057: _swap16((short &)header.format.fixed); // short int fixed;
+Invalid format at line 1058: _swap16((short &)header.format.channel_number); // short int channel_number;
+Invalid format at line 1059: _swap32((int &)header.format.sample_rate); // int sample_rate;
+Invalid format at line 1060: _swap32((int &)header.format.byte_rate); // int byte_rate;
+Invalid format at line 1061: _swap16((short &)header.format.byte_per_sample); // short int byte_per_sample;
+Invalid format at line 1062: _swap16((short &)header.format.bits_per_sample); // short int bits_per_sample;
+Invalid format at line 1064: // if format_len is larger than expected, skip the extra data
+Invalid format at line 1065: if (nDump > 0)
+Invalid format at line 1066: {
+Invalid format at line 1067: fseek(fptr, nDump, SEEK_CUR);
+Invalid format at line 1068: }
+Invalid format at line 1070: return 0;
+Invalid format at line 1071: }
+Invalid format at line 1072: else if (strcmp(label, factStr) == 0)
+Invalid format at line 1073: {
+Invalid format at line 1074: int nLen, nDump;
+Invalid format at line 1076: // 'fact' block
+Invalid format at line 1077: memcpy(header.fact.fact_field, factStr, 4);
+Invalid format at line 1079: // read length of the fact field
+Invalid format at line 1080: if (fread(&nLen, sizeof(int), 1, fptr) != 1) return -1;
+Invalid format at line 1081: // swap byte order if necessary
+Invalid format at line 1082: _swap32(nLen);
+Invalid format at line 1084: // calculate how much length differs from expected
+Invalid format at line 1085: nDump = nLen - ((int)sizeof(header.fact) - 8);
+Invalid format at line 1087: // verify that fact length isn't smaller than expected structure
+Invalid format at line 1088: if (nDump < 0) return -1;
+Invalid format at line 1090: header.fact.fact_len = nLen;
+Invalid format at line 1092: // if format_len is larger than expected, read only as much data as we've space for
+Invalid format at line 1093: if (nDump > 0)
+Invalid format at line 1094: {
+Invalid format at line 1095: nLen = sizeof(header.fact) - 8;
+Invalid format at line 1096: }
+Invalid format at line 1098: // read data
+Invalid format at line 1099: if (fread(&(header.fact.fact_sample_len), nLen, 1, fptr) != 1) return -1;
+Invalid format at line 1101: // swap byte order if necessary
+Invalid format at line 1102: _swap32((int &)header.fact.fact_sample_len); // int sample_length;
+Invalid format at line 1104: // if fact_len is larger than expected, skip the extra data
+Invalid format at line 1105: if (nDump > 0)
+Invalid format at line 1106: {
+Invalid format at line 1107: fseek(fptr, nDump, SEEK_CUR);
+Invalid format at line 1108: }
+Invalid format at line 1110: return 0;
+Invalid format at line 1111: }
+Invalid format at line 1112: else if (strcmp(label, dataStr) == 0)
+Invalid format at line 1113: {
+Invalid format at line 1114: // 'data' block
+Invalid format at line 1115: memcpy(header.data.data_field, dataStr, 4);
+Invalid format at line 1116: if (fread(&(header.data.data_len), sizeof(uint), 1, fptr) != 1) return -1;
+Invalid format at line 1118: // swap byte order if necessary
+Invalid format at line 1119: _swap32((int &)header.data.data_len);
+Invalid format at line 1121: return 1;
+Invalid format at line 1122: }
+Invalid format at line 1123: else
+Invalid format at line 1124: {
+Invalid format at line 1125: uint len, i;
+Invalid format at line 1126: uint temp;
+Invalid format at line 1127: // unknown block
+Invalid format at line 1129: // read length
+Invalid format at line 1130: if (fread(&len, sizeof(len), 1, fptr) != 1) return -1;
+Invalid format at line 1131: // scan through the block
+Invalid format at line 1132: for (i = 0; i < len; i ++)
+Invalid format at line 1133: {
+Invalid format at line 1134: if (fread(&temp, 1, 1, fptr) != 1) return -1;
+Invalid format at line 1135: if (feof(fptr)) return -1; // unexpected eof
+Invalid format at line 1136: }
+Invalid format at line 1137: }
+Invalid format at line 1138: return 0;
+Invalid format at line 1631: void __fastcall TSCPFileSystem::SCPSink(const UnicodeString TargetDir,
+Invalid format at line 1632: const UnicodeString FileName, const UnicodeString SourceDir,
+Invalid format at line 1633: const TCopyParamType * CopyParam, bool & Success,
+Invalid format at line 1634: TFileOperationProgressType * OperationProgress, int Params,
+Invalid format at line 1635: int Level)
+Invalid format at line 1636: {
+Invalid format at line 1637: struct
+Invalid format at line 1638: {
+Invalid format at line 1639: int SetTime;
+Invalid format at line 1640: TDateTime Modification;
+Invalid format at line 1641: TRights RemoteRights;
+Invalid format at line 1642: int Attrs;
+Invalid format at line 1643: bool Exists;
+Invalid format at line 1644: } FileData;
+Invalid format at line 1646: bool SkipConfirmed = false;
+Invalid format at line 1647: bool Initialized = (Level > 0);
+Invalid format at line 1649: FileData.SetTime = 0;
+Invalid format at line 1651: FSecureShell->SendNull();
+Invalid format at line 1653: while (!OperationProgress->Cancel)
+Invalid format at line 1654: {
+Invalid format at line 1655: // See (switch ... case 'T':)
+Invalid format at line 1656: if (FileData.SetTime) FileData.SetTime--;
+Invalid format at line 1658: // In case of error occurred before control record arrived.
+Invalid format at line 1659: // We can finally use full path here, as we get current path in FileName param
+Invalid format at line 1660: // (we used to set the file into OperationProgress->FileName, but it collided
+Invalid format at line 1661: // with progress outputting, particularly for scripting)
+Invalid format at line 1662: UnicodeString FullFileName = FileName;
+Invalid format at line 1664: try
+Invalid format at line 1665: {
+Invalid format at line 1666: // Receive control record
+Invalid format at line 1667: UnicodeString Line = FSecureShell->ReceiveLine();
+Invalid format at line 1669: if (Line.Length() == 0) FTerminal->FatalError(NULL, LoadStr(SCP_EMPTY_LINE));
+Invalid format at line 1671: if (IsLastLine(Line))
+Invalid format at line 1672: {
+Invalid format at line 1673: // Remote side finished copying, so remote SCP was closed
+Invalid format at line 1674: // and we don't need to terminate it manually, see CopyToLocal()
+Invalid format at line 1675: OperationProgress->SetCancel(csRemoteAbort);
+Invalid format at line 1676: /* TODO 1 : Show stderror to user? */
+Invalid format at line 1677: FSecureShell->ClearStdError();
+Invalid format at line 1678: try
+Invalid format at line 1679: {
+Invalid format at line 1680: // coIgnoreWarnings should allow batch transfer to continue when
+Invalid format at line 1681: // download of one the files fails (user denies overwriting
+Invalid format at line 1682: // of target local file, no read permissions...)
+Invalid format at line 1683: ReadCommandOutput(coExpectNoOutput | coRaiseExcept |
+Invalid format at line 1684: coOnlyReturnCode | coIgnoreWarnings);
+Invalid format at line 1685: if (!Initialized)
+Invalid format at line 1686: {
+Invalid format at line 1687: throw Exception(L"");
+Invalid format at line 1688: }
+Invalid format at line 1689: }
+Invalid format at line 1690: catch(Exception & E)
+Invalid format at line 1691: {
+Invalid format at line 1692: if (!Initialized && FTerminal->Active)
+Invalid format at line 1693: {
+Invalid format at line 1694: FTerminal->TerminalError(&E, LoadStr(SCP_INIT_ERROR));
+Invalid format at line 1695: }
+Invalid format at line 1696: else
+Invalid format at line 1697: {
+Invalid format at line 1698: throw;
+Invalid format at line 1699: }
+Invalid format at line 1700: }
+Invalid format at line 1701: return;
+Invalid format at line 1702: }
+Invalid format at line 1703: else
+Invalid format at line 1704: {
+Invalid format at line 1705: Initialized = true;
+Invalid format at line 1707: // First character distinguish type of control record
+Invalid format at line 1708: wchar_t Ctrl = Line[1];
+Invalid format at line 1709: Line.Delete(1, 1);
+Invalid format at line 1711: switch (Ctrl) {
+Invalid format at line 1712: case 1:
+Invalid format at line 1713: // Error (already logged by ReceiveLine())
+Invalid format at line 1714: throw EScpFileSkipped(NULL, FMTLOAD(REMOTE_ERROR, (Line)));
+Invalid format at line 1716: case 2:
+Invalid format at line 1717: // Fatal error, terminate copying
+Invalid format at line 1718: FTerminal->TerminalError(Line);
+Invalid format at line 1719: return; // Unreachable
+Invalid format at line 1721: case L'E': // Exit
+Invalid format at line 1722: FSecureShell->SendNull();
+Invalid format at line 1723: return;
+Invalid format at line 1725: case L'T':
+Invalid format at line 1726: unsigned long MTime, ATime;
+Invalid format at line 1727: if (swscanf(Line.c_str(), L"%ld %*d %ld %*d", &MTime, &ATime) == 2)
+Invalid format at line 1728: {
+Invalid format at line 1729: FileData.Modification = UnixToDateTime(MTime, FTerminal->SessionData->DSTMode);
+Invalid format at line 1730: FSecureShell->SendNull();
+Invalid format at line 1731: // File time is only valid until next pass
+Invalid format at line 1732: FileData.SetTime = 2;
+Invalid format at line 1733: continue;
+Invalid format at line 1734: }
+Invalid format at line 1735: else
+Invalid format at line 1736: {
+Invalid format at line 1737: SCPError(LoadStr(SCP_ILLEGAL_TIME_FORMAT), False);
+Invalid format at line 1738: }
+Invalid format at line 1740: case L'C':
+Invalid format at line 1741: case L'D':
+Invalid format at line 1742: break; // continue pass switch{}
+Invalid format at line 1744: default:
+Invalid format at line 1745: FTerminal->FatalError(NULL, FMTLOAD(SCP_INVALID_CONTROL_RECORD, (Ctrl, Line)));
+Invalid format at line 1746: }
+Invalid format at line 1748: TFileMasks::TParams MaskParams;
+Invalid format at line 1749: MaskParams.Modification = FileData.Modification;
+Invalid format at line 1751: // We reach this point only if control record was 'C' or 'D'
+Invalid format at line 1752: try
+Invalid format at line 1753: {
+Invalid format at line 1754: FileData.RemoteRights.Octal = CutToChar(Line, L' ', True);
+Invalid format at line 1755: // do not trim leading spaces of the filename
+Invalid format at line 1756: __int64 TSize = StrToInt64(CutToChar(Line, L' ', False).TrimRight());
+Invalid format at line 1757: MaskParams.Size = TSize;
+Invalid format at line 1758: // Security fix: ensure the file ends up where we asked for it.
+Invalid format at line 1759: // (accept only filename, not path)
+Invalid format at line 1760: UnicodeString OnlyFileName = UnixExtractFileName(Line);
+Invalid format at line 1761: if (Line != OnlyFileName)
+Invalid format at line 1762: {
+Invalid format at line 1763: FTerminal->LogEvent(FORMAT(L"Warning: Remote host set a compound pathname '%s'", (Line)));
+Invalid format at line 1764: }
+Invalid format at line 1766: FullFileName = SourceDir + OnlyFileName;
+Invalid format at line 1767: OperationProgress->SetFile(FullFileName);
+Invalid format at line 1768: OperationProgress->SetTransferSize(TSize);
+Invalid format at line 1769: }
+Invalid format at line 1770: catch (Exception &E)
+Invalid format at line 1771: {
+Invalid format at line 1772: {
+Invalid format at line 1773: TSuspendFileOperationProgress Suspend(OperationProgress);
+Invalid format at line 1774: FTerminal->Log->AddException(&E);
+Invalid format at line 1775: }
+Invalid format at line 1776: SCPError(LoadStr(SCP_ILLEGAL_FILE_DESCRIPTOR), false);
+Invalid format at line 1777: }
+Invalid format at line 1779: // last possibility to cancel transfer before it starts
+Invalid format at line 1780: if (OperationProgress->Cancel)
+Invalid format at line 1781: {
+Invalid format at line 1782: throw ESkipFile(NULL, MainInstructions(LoadStr(USER_TERMINATED)));
+Invalid format at line 1783: }
+Invalid format at line 1785: bool Dir = (Ctrl == L'D');
+Invalid format at line 1786: UnicodeString BaseFileName = FTerminal->GetBaseFileName(FullFileName);
+Invalid format at line 1787: if (!CopyParam->AllowTransfer(BaseFileName, osRemote, Dir, MaskParams, IsUnixHiddenFile(BaseFileName)))
+Invalid format at line 1788: {
+Invalid format at line 1789: FTerminal->LogEvent(FORMAT(L"File \"%s\" excluded from transfer",
+Invalid format at line 1790: (FullFileName)));
+Invalid format at line 1791: SkipConfirmed = true;
+Invalid format at line 1792: SCPError(L"", false);
+Invalid format at line 1793: }
+Invalid format at line 1795: if (CopyParam->SkipTransfer(FullFileName, Dir))
+Invalid format at line 1796: {
+Invalid format at line 1797: SkipConfirmed = true;
+Invalid format at line 1798: SCPError(L"", false);
+Invalid format at line 1799: OperationProgress->AddSkippedFileSize(MaskParams.Size);
+Invalid format at line 1800: }
+Invalid format at line 1802: FTerminal->LogFileDetails(FileName, FileData.Modification, MaskParams.Size);
+Invalid format at line 1804: UnicodeString DestFileNameOnly =
+Invalid format at line 1805: FTerminal->ChangeFileName(
+Invalid format at line 1806: CopyParam, OperationProgress->FileName, osRemote,
+Invalid format at line 1807: Level == 0);
+Invalid format at line 1808: UnicodeString DestFileName =
+Invalid format at line 1809: IncludeTrailingBackslash(TargetDir) + DestFileNameOnly;
+Invalid format at line 1811: FileData.Attrs = FileGetAttrFix(ApiPath(DestFileName));
+Invalid format at line 1812: // If getting attrs fails, we suppose, that file/folder doesn't exists
+Invalid format at line 1813: FileData.Exists = (FileData.Attrs != -1);
+Invalid format at line 1814: if (Dir)
+Invalid format at line 1815: {
+Invalid format at line 1816: if (FileData.Exists && !(FileData.Attrs & faDirectory))
+Invalid format at line 1817: {
+Invalid format at line 1818: SCPError(FMTLOAD(NOT_DIRECTORY_ERROR, (DestFileName)), false);
+Invalid format at line 1819: }
+Invalid format at line 1821: if (!FileData.Exists)
+Invalid format at line 1822: {
+Invalid format at line 1823: FILE_OPERATION_LOOP_BEGIN
+Invalid format at line 1824: {
+Invalid format at line 1825: THROWOSIFFALSE(ForceDirectories(ApiPath(DestFileName)));
+Invalid format at line 1826: }
+Invalid format at line 1827: FILE_OPERATION_LOOP_END(FMTLOAD(CREATE_DIR_ERROR, (DestFileName)));
+Invalid format at line 1828: /* SCP: can we set the timestamp for directories ? */
+Invalid format at line 1829: }
+Invalid format at line 1830: UnicodeString FullFileName = SourceDir + OperationProgress->FileName;
+Invalid format at line 1831: SCPSink(DestFileName, FullFileName, UnixIncludeTrailingBackslash(FullFileName),
+Invalid format at line 1832: CopyParam, Success, OperationProgress, Params, Level + 1);
+Invalid format at line 1833: continue;
+Invalid format at line 1834: }
+Invalid format at line 1835: else if (Ctrl == L'C')
+Invalid format at line 1836: {
+Invalid format at line 1837: TDownloadSessionAction Action(FTerminal->ActionLog);
+Invalid format at line 1838: Action.FileName(FTerminal->AbsolutePath(FullFileName, true));
+Invalid format at line 1840: try
+Invalid format at line 1841: {
+Invalid format at line 1842: HANDLE File = NULL;
+Invalid format at line 1843: TStream * FileStream = NULL;
+Invalid format at line 1845: /* TODO 1 : Turn off read-only attr */
+Invalid format at line 1847: try
+Invalid format at line 1848: {
+Invalid format at line 1849: try
+Invalid format at line 1850: {
+Invalid format at line 1851: if (FileExists(ApiPath(DestFileName)))
+Invalid format at line 1852: {
+Invalid format at line 1853: __int64 MTime;
+Invalid format at line 1854: TOverwriteFileParams FileParams;
+Invalid format at line 1855: FileParams.SourceSize = OperationProgress->TransferSize;
+Invalid format at line 1856: FileParams.SourceTimestamp = FileData.Modification;
+Invalid format at line 1857: FTerminal->OpenLocalFile(DestFileName, GENERIC_READ,
+Invalid format at line 1858: NULL, NULL, NULL, &MTime, NULL,
+Invalid format at line 1859: &FileParams.DestSize);
+Invalid format at line 1860: FileParams.DestTimestamp = UnixToDateTime(MTime,
+Invalid format at line 1861: FTerminal->SessionData->DSTMode);
+Invalid format at line 1863: unsigned int Answer =
+Invalid format at line 1864: ConfirmOverwrite(OperationProgress->FileName, DestFileNameOnly, osLocal,
+Invalid format at line 1865: &FileParams, CopyParam, Params, OperationProgress);
+Invalid format at line 1867: switch (Answer)
+Invalid format at line 1868: {
+Invalid format at line 1869: case qaCancel:
+Invalid format at line 1870: OperationProgress->SetCancel(csCancel); // continue on next case
+Invalid format at line 1871: case qaNo:
+Invalid format at line 1872: SkipConfirmed = true;
+Invalid format at line 1873: EXCEPTION;
+Invalid format at line 1874: }
+Invalid format at line 1875: }
+Invalid format at line 1877: Action.Destination(DestFileName);
+Invalid format at line 1879: if (!FTerminal->CreateLocalFile(DestFileName, OperationProgress,
+Invalid format at line 1880: &File, FLAGSET(Params, cpNoConfirmation)))
+Invalid format at line 1881: {
+Invalid format at line 1882: SkipConfirmed = true;
+Invalid format at line 1883: EXCEPTION;
+Invalid format at line 1884: }
+Invalid format at line 1886: FileStream = new TSafeHandleStream((THandle)File);
+Invalid format at line 1887: }
+Invalid format at line 1888: catch (Exception &E)
+Invalid format at line 1889: {
+Invalid format at line 1890: // In this step we can still cancel transfer, so we do it
+Invalid format at line 1891: SCPError(E.Message, false);
+Invalid format at line 1892: throw;
+Invalid format at line 1893: }
+Invalid format at line 1895: // We succeeded, so we confirm transfer to remote side
+Invalid format at line 1896: FSecureShell->SendNull();
+Invalid format at line 1897: // From now we need to finish file transfer, if not it's fatal error
+Invalid format at line 1898: OperationProgress->SetTransferringFile(true);
+Invalid format at line 1900: // Suppose same data size to transfer as to write
+Invalid format at line 1901: // (not true with ASCII transfer)
+Invalid format at line 1902: OperationProgress->SetLocalSize(OperationProgress->TransferSize);
+Invalid format at line 1904: // Will we use ASCII of BINARY file transfer?
+Invalid format at line 1905: OperationProgress->SetAsciiTransfer(
+Invalid format at line 1906: CopyParam->UseAsciiTransfer(BaseFileName, osRemote, MaskParams));
+Invalid format at line 1907: if (FTerminal->Configuration->ActualLogProtocol >= 0)
+Invalid format at line 1908: {
+Invalid format at line 1909: FTerminal->LogEvent(UnicodeString((OperationProgress->AsciiTransfer ? L"Ascii" : L"Binary")) +
+Invalid format at line 1910: L" transfer mode selected.");
+Invalid format at line 1911: }
+Invalid format at line 1913: try
+Invalid format at line 1914: {
+Invalid format at line 1915: // Buffer for one block of data
+Invalid format at line 1916: TFileBuffer BlockBuf;
+Invalid format at line 1917: bool ConvertToken = false;
+Invalid format at line 1919: do
+Invalid format at line 1920: {
+Invalid format at line 1921: BlockBuf.Size = OperationProgress->TransferBlockSize();
+Invalid format at line 1922: BlockBuf.Position = 0;
+Invalid format at line 1924: FSecureShell->Receive(reinterpret_cast<unsigned char *>(BlockBuf.Data), BlockBuf.Size);
+Invalid format at line 1925: OperationProgress->AddTransferred(BlockBuf.Size);
+Invalid format at line 1927: if (OperationProgress->AsciiTransfer)
+Invalid format at line 1928: {
+Invalid format at line 1929: unsigned int PrevBlockSize = BlockBuf.Size;
+Invalid format at line 1930: BlockBuf.Convert(FTerminal->SessionData->EOLType,
+Invalid format at line 1931: FTerminal->Configuration->LocalEOLType, 0, ConvertToken);
+Invalid format at line 1932: OperationProgress->SetLocalSize(
+Invalid format at line 1933: OperationProgress->LocalSize - PrevBlockSize + BlockBuf.Size);
+Invalid format at line 1934: }
+Invalid format at line 1936: // This is crucial, if it fails during file transfer, it's fatal error
+Invalid format at line 1937: FILE_OPERATION_LOOP_BEGIN
+Invalid format at line 1938: {
+Invalid format at line 1939: BlockBuf.WriteToStream(FileStream, BlockBuf.Size);
+Invalid format at line 1940: }
+Invalid format at line 1941: FILE_OPERATION_LOOP_END_EX(FMTLOAD(WRITE_ERROR, (DestFileName)), folNone);
+Invalid format at line 1943: OperationProgress->AddLocallyUsed(BlockBuf.Size);
+Invalid format at line 1945: if (OperationProgress->Cancel == csCancelTransfer)
+Invalid format at line 1946: {
+Invalid format at line 1947: throw Exception(MainInstructions(LoadStr(USER_TERMINATED)));
+Invalid format at line 1948: }
+Invalid format at line 1949: }
+Invalid format at line 1950: while (!OperationProgress->IsLocallyDone() || !
+Invalid format at line 1951: OperationProgress->IsTransferDone());
+Invalid format at line 1952: }
+Invalid format at line 1953: catch (Exception &E)
+Invalid format at line 1954: {
+Invalid format at line 1955: // Every exception during file transfer is fatal
+Invalid format at line 1956: FTerminal->FatalError(&E,
+Invalid format at line 1957: FMTLOAD(COPY_FATAL, (OperationProgress->FileName)));
+Invalid format at line 1958: }
+Invalid format at line 1960: OperationProgress->SetTransferringFile(false);
+Invalid format at line 1962: try
+Invalid format at line 1963: {
+Invalid format at line 1964: SCPResponse();
+Invalid format at line 1965: // If one of following exception occurs, we still need
+Invalid format at line 1966: // to send confirmation to other side
+Invalid format at line 1967: }
+Invalid format at line 1968: catch (EScp &E)
+Invalid format at line 1969: {
+Invalid format at line 1970: FSecureShell->SendNull();
+Invalid format at line 1971: throw;
+Invalid format at line 1972: }
+Invalid format at line 1973: catch (EScpFileSkipped &E)
+Invalid format at line 1974: {
+Invalid format at line 1975: FSecureShell->SendNull();
+Invalid format at line 1976: throw;
+Invalid format at line 1977: }
+Invalid format at line 1979: FSecureShell->SendNull();
+Invalid format at line 1981: if (FileData.SetTime && CopyParam->PreserveTime)
+Invalid format at line 1982: {
+Invalid format at line 1983: FTerminal->UpdateTargetTime(File, FileData.Modification, FTerminal->SessionData->DSTMode);
+Invalid format at line 1984: }
+Invalid format at line 1985: }
+Invalid format at line 1986: __finally
+Invalid format at line 1987: {
+Invalid format at line 1988: if (File) CloseHandle(File);
+Invalid format at line 1989: if (FileStream) delete FileStream;
+Invalid format at line 1990: }
+Invalid format at line 1991: }
+Invalid format at line 1992: catch(Exception & E)
+Invalid format at line 1993: {
+Invalid format at line 1994: if (SkipConfirmed)
+Invalid format at line 1995: {
+Invalid format at line 1996: Action.Cancel();
+Invalid format at line 1997: }
+Invalid format at line 1998: else
+Invalid format at line 1999: {
+Invalid format at line 2000: FTerminal->RollbackAction(Action, OperationProgress, &E);
+Invalid format at line 2001: }
+Invalid format at line 2002: throw;
+Invalid format at line 2003: }
+Invalid format at line 2005: if (FileData.Attrs == -1) FileData.Attrs = faArchive;
+Invalid format at line 2006: int NewAttrs = CopyParam->LocalFileAttrs(FileData.RemoteRights);
+Invalid format at line 2007: if ((NewAttrs & FileData.Attrs) != NewAttrs)
+Invalid format at line 2008: {
+Invalid format at line 2009: FILE_OPERATION_LOOP_BEGIN
+Invalid format at line 2010: {
+Invalid format at line 2011: THROWOSIFFALSE(FileSetAttr(ApiPath(DestFileName), FileData.Attrs | NewAttrs) == 0);
+Invalid format at line 2012: }
+Invalid format at line 2013: FILE_OPERATION_LOOP_END(FMTLOAD(CANT_SET_ATTRS, (DestFileName)));
+Invalid format at line 2014: }
+Invalid format at line 2016: FTerminal->LogFileDone(OperationProgress, DestFileName);
+Invalid format at line 2017: }
+Invalid format at line 2018: }
+Invalid format at line 2019: }
+Invalid format at line 2020: catch (EScpFileSkipped &E)
+Invalid format at line 2021: {
+Invalid format at line 2022: if (!SkipConfirmed)
+Invalid format at line 2023: {
+Invalid format at line 2024: TSuspendFileOperationProgress Suspend(OperationProgress);
+Invalid format at line 2025: TQueryParams Params(qpAllowContinueOnError);
+Invalid format at line 2026: if (FTerminal->QueryUserException(FMTLOAD(COPY_ERROR, (FullFileName)),
+Invalid format at line 2027: &E, qaOK | qaAbort, &Params, qtError) == qaAbort)
+Invalid format at line 2028: {
+Invalid format at line 2029: OperationProgress->SetCancel(csCancel);
+Invalid format at line 2030: }
+Invalid format at line 2031: FTerminal->Log->AddException(&E);
+Invalid format at line 2032: }
+Invalid format at line 2033: // this was inside above condition, but then transfer was considered
+Invalid format at line 2034: // successful, even when for example user refused to overwrite file
+Invalid format at line 2035: Success = false;
+Invalid format at line 2036: }
+Invalid format at line 2037: catch (ESkipFile &E)
+Invalid format at line 2038: {
+Invalid format at line 2039: SCPSendError(E.Message, false);
+Invalid format at line 2040: Success = false;
+Invalid format at line 2041: if (!FTerminal->HandleException(&E)) throw;
+Invalid format at line 2042: }
+Invalid format at line 2043: }
+   ✅ Train: 1230 samples
+   ✅ Eval: 526 samples
+
+📝 Creating Initial Prompts
+======================================================================
+   ✅ Created 16 prompts
+      Layer 1: 1
+      Layer 2: 6
+      Layer 3: 9
+
+🔧 Creating Detector
+======================================================================
+   🎯 Type: RAG-Enhanced Three-Layer
+   📊 RAG top-k: 2
+   🔍 Retriever: lexical
+   ⚡ Scale enhancement: True
+
+📊 Baseline Evaluation
+======================================================================
+
+📊 Running Evaluation
+======================================================================
+   🔍 Evaluating on 1000 samples...
+Could not normalize 'This code appears to be safe and does not contain any vulnerabilities. It is setting parameters for JPEG 2000 encoding based on specific requirements and constraints, such as disabling tiling, setting codeblock size, adjusting resolution levels, setting precincts, and limiting bit-rate for encoding. The code also includes warning messages for certain conditions to inform the user about adjustments made to meet profile requirements. Overall, the code seems well-structured and focused on configuring parameters for JPEG 2000 encoding.', using first middle category
+Could not normalize 'This code snippet appears to be safe as it is simply checking if the floating point register state is valid for a given CPU by comparing the FPU owner context and the last used CPU. There are no obvious vulnerabilities present in this code.', using first middle category
+Could not normalize 'The provided code appears to be a snippet from a daemon-like program (likely `radvd`), handling command-line argument parsing, logging setup, privilege dropping, PID file management, daemonization, and signal handling.
+
+**Security and Safety Analysis:**
+
+1. **Command-line parsing:**
+   - Uses `getopt`/`getopt_long` safely.
+   - Checks for unknown options and missing parameters.
+   - Uses `strdup` for `username` and `chrootdir` without later freeing them in this snippet, but this is not a security vulnerability per se (may be a minor memory leak if the program runs long).
+
+2. **Chroot and privilege dropping:**
+   - Explicitly refuses to chroot as root without specifying a username, which is a good security practice.
+   - Calls `chroot()` and `chdir("/")` with error checking.
+   - Drops privileges if a username is specified.
+   - Initializes privilege separation (`privsep_init()`) if not in single process mode.
+
+3. **PID file handling:**
+   - Opens existing PID file, reads PID, checks if process is running via `kill(pid, 0)`.
+   - If running, exits to avoid multiple instances.
+   - Creates/truncates PID file with proper permissions.
+   - Writes current PID with error checking.
+   - Closes file descriptor properly.
+
+4. **Daemonization:**
+   - Calls `daemon(0, 0)` only if debug level is zero.
+   - Closes and reopens log files appropriately.
+   - Adjusts logging method to avoid logging to stderr after daemonizing unless explicitly requested.
+
+5. **Signal handling:**
+   - Sets handlers for `SIGHUP`, `SIGTERM`, `SIGINT`, and `SIGUSR1`.
+   - No signal handler code is shown, but assuming they are implemented correctly.
+
+6. **Other checks:**
+   - Opens raw ICMPv6 socket with error checking.
+   - Checks file permissions and IPv6 forwarding.
+   - Reads configuration file with error handling.
+   - Logs version info and errors appropriately.
+
+7. **Potential issues:**
+   - No obvious buffer overflows or format string vulnerabilities.
+   - No unchecked user input used in unsafe ways.
+   - No race conditions visible in PID file handling (uses `O_EXCL` when creating).
+   - No direct use of unsafe functions like `strcpy` without bounds checking.
+   - The code snippet does not show the full implementation of functions like `drop_root_privileges()`, `privsep_init()`, or signal handlers, but the usage pattern is standard.
+
+**Conclusion:**
+
+- The code follows standard best practices for a Unix daemon.
+- It includes proper error checking and privilege management.
+- No evident vulnerabilities such as buffer overflows, injection, or race conditions are present in the shown code.
+- The note about chrooting as root is a good security precaution.
+- The code is **safe** and **does not contain known vulnerabilities** based on the provided snippet.
+
+---
+
+### **Final confirmation:**
+
+**This code is BENIGN (safe) with no apparent security vulnerabilities.**', using first middle category
+Could not normalize 'This code is safe as it is only retrieving information about the number of processors available on the system. There are no obvious vulnerabilities present in this code snippet.', using first middle category
+API call failed (attempt 1): Connection error.
+API call failed (attempt 2): Connection error.
+API call failed (attempt 3): Connection error.
+Layer 2 classification failed: All API attempts failed. Last error: Connection error.
+Layer 2 classification failed for Memory
+API call failed (attempt 1): Connection error.
+API call failed (attempt 2): Connection error.
+API call failed (attempt 3): Connection error.
+Scale enhancement failed: All API attempts failed. Last error: Connection error.
+API call failed (attempt 1): Connection error.
+API call failed (attempt 2): Connection error.
+API call failed (attempt 3): Connection error.
+Layer 1 classification failed: All API attempts failed. Last error: Connection error.
+Layer 1 classification failed
+API call failed (attempt 1): Connection error.
+API call failed (attempt 2): Connection error.
+API call failed (attempt 3): Connection error.
+Scale enhancement failed: All API attempts failed. Last error: Connection error.
+API call failed (attempt 1): Connection error.
+API call failed (attempt 2): Connection error.
+API call failed (attempt 3): Connection error.
+Layer 1 classification failed: All API attempts failed. Last error: Connection error.
+Layer 1 classification failed
+API call failed (attempt 1): Connection error.
+API call failed (attempt 2): Connection error.
+API call failed (attempt 3): Connection error.
+Scale enhancement failed: All API attempts failed. Last error: Connection error.
+API call failed (attempt 1): Connection error.
+API call failed (attempt 2): Connection error.
+API call failed (attempt 3): Connection error.
