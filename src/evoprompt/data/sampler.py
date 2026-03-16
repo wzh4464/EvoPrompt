@@ -35,21 +35,8 @@ class BalancedSampler:
         if balance_mode == "target":
             return str(target_int)
 
-        if balance_mode == "major":
-            if target_int == 0:
-                return "Benign"
-
-            cwe_codes = item.get("cwe", [])
-            if isinstance(cwe_codes, str):
-                cwe_codes = [cwe_codes] if cwe_codes else []
-            elif not isinstance(cwe_codes, list):
-                cwe_codes = []
-
-            major = map_cwe_to_major(cwe_codes) if cwe_codes else "Other"
-            return major or "Other"
-
-        if balance_mode == "layer1":
-            # Use simplified category names (same as "major" mode)
+        if balance_mode in ("major", "layer1"):
+            # "layer1" is an alias for "major" — both use simplified category names
             if target_int == 0:
                 return "Benign"
 
