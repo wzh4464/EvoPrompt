@@ -683,10 +683,17 @@ class PrimeVulLayer1Pipeline:
 
                     if predicted_category is None:
                         response_lower = response.lower()
-                        if "benign" in response_lower or "no vuln" in response_lower:
-                            predicted_category = "Benign"
-                        else:
-                            predicted_category = "Other"
+                        # Try CWE-ID extraction as fallback
+                        predicted_category = canonicalize_category(response_lower)
+                        # Broader benign detection
+                        if predicted_category is None:
+                            if any(p in response_lower for p in (
+                                "benign", "no vuln", "no security issue",
+                                "not vulnerable", "safe", "secure code",
+                            )):
+                                predicted_category = "Benign"
+                            else:
+                                predicted_category = "Other"
                         if batch_idx == 0 and idx < 3:
                             print(f"        ⚠️ 无法解析，回退为: '{predicted_category}'")
 

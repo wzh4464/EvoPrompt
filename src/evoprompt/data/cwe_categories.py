@@ -90,13 +90,13 @@ _CATEGORY_DESCRIPTIONS: dict = {
 }
 
 # Verify every non-Benign category in CWE_MAJOR_CATEGORIES has a description.
+# Uses assert so it fires during development/testing but not with python -O.
 _described = set(_CATEGORY_DESCRIPTIONS.keys())
 _expected = {c for c in CWE_MAJOR_CATEGORIES if c != "Benign"}
-if _described != _expected:
-    raise ValueError(
-        f"_CATEGORY_DESCRIPTIONS out of sync with CWE_MAJOR_CATEGORIES. "
-        f"Missing: {_expected - _described}, Extra: {_described - _expected}"
-    )
+assert _described == _expected, (
+    f"_CATEGORY_DESCRIPTIONS out of sync with CWE_MAJOR_CATEGORIES. "
+    f"Missing: {_expected - _described}, Extra: {_described - _expected}"
+)
 
 CATEGORY_DESCRIPTIONS_BLOCK = "\n".join(
     f"- {cat}: {_CATEGORY_DESCRIPTIONS[cat]}"
