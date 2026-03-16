@@ -682,9 +682,13 @@ class PrimeVulLayer1Pipeline:
                         print(f"        🎯 解析结果: '{predicted_category}'")
 
                     if predicted_category is None:
-                        predicted_category = "Other"
+                        response_lower = response.lower()
+                        if "benign" in response_lower or "no vuln" in response_lower:
+                            predicted_category = "Benign"
+                        else:
+                            predicted_category = "Other"
                         if batch_idx == 0 and idx < 3:
-                            print(f"        ⚠️ 无法解析，回退为: 'Other'")
+                            print(f"        ⚠️ 无法解析，回退为: '{predicted_category}'")
 
                     predictions.append(predicted_category)
 
