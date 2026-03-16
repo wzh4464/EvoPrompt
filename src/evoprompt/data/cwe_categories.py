@@ -73,6 +73,20 @@ _CWE_ID_TO_MAJOR = {
     200: "Information Exposure",  # Information Exposure
 }
 
+# Human-readable descriptions for each major category
+CATEGORY_DESCRIPTIONS_BLOCK = "\n".join([
+    "- Buffer Errors: Out-of-bounds read/write, stack/heap buffer overflow, incorrect buffer size calculation (CWE-119, CWE-120, CWE-125, CWE-787)",
+    "- Injection: SQL injection, OS command injection, cross-site scripting, code injection (CWE-74, CWE-77, CWE-78, CWE-79, CWE-89)",
+    "- Memory Management: Use-after-free, double free, memory leak, missing release of resources (CWE-416, CWE-415, CWE-401)",
+    "- Pointer Dereference: NULL pointer dereference, invalid pointer access (CWE-476)",
+    "- Integer Errors: Integer overflow/underflow, wraparound, incorrect type conversion (CWE-190, CWE-191)",
+    "- Concurrency Issues: Race conditions, improper synchronization, TOCTOU (CWE-362)",
+    "- Path Traversal: Directory traversal, improper pathname restriction (CWE-22)",
+    "- Cryptography Issues: Weak algorithms, missing encryption, hardcoded keys, insufficient randomness (CWE-310, CWE-327, CWE-330)",
+    "- Information Exposure: Sensitive data disclosure via logs, error messages, or improper access control (CWE-200)",
+    "- Other: Vulnerability patterns not covered by the categories above",
+])
+
 _CWE_ID_REGEX = re.compile(r"CWE-(\d+)")
 
 

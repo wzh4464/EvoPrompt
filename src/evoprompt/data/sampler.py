@@ -49,6 +49,7 @@ class BalancedSampler:
             return major or "Other"
 
         if balance_mode == "layer1":
+            # Use simplified category names (same as "major" mode)
             if target_int == 0:
                 return "Benign"
 
@@ -58,8 +59,8 @@ class BalancedSampler:
             elif not isinstance(cwe_codes, list):
                 cwe_codes = []
 
-            layer1 = map_cwe_to_layer1(cwe_codes) if cwe_codes else "Other"
-            return layer1 or "Other"
+            major = map_cwe_to_major(cwe_codes) if cwe_codes else "Other"
+            return major or "Other"
 
         raise ValueError(f"Unsupported balance_mode: {balance_mode}")
 
