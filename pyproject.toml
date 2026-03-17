@@ -226,3 +226,9 @@ ignore_missing_imports = true
 [tool.uv.sources]
 transformers = { git = "https://github.com/huggingface/transformers.git" }
 easse = { git = "https://github.com/feralvam/easse.git" }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-timeout>=2.4.0",
+]
