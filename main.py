@@ -913,10 +913,14 @@ class PrimeVulLayer1Pipeline:
         else:
             print(f"   使用已有采样数据 {sample_dir} (balance_mode={balance_mode})")
 
-        # Load from JSONL to preserve CWE metadata needed for ground truth mapping.
-        # The tab format (train.txt/dev.txt) only has func+target, no CWE codes.
+        # Prefer JSONL (has CWE metadata for ground truth mapping).
+        # Fall back to tab format for backward compatibility.
         train_file = sample_dir / "train_sample.jsonl"
         dev_file = sample_dir / "dev_sample.jsonl"
+        if not train_file.exists():
+            train_file = sample_dir / "train.txt"
+        if not dev_file.exists():
+            dev_file = sample_dir / "dev.txt"
 
         train_dataset = PrimevulDataset(str(train_file), "train")
         dev_dataset = PrimevulDataset(str(dev_file), "dev")
