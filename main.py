@@ -32,6 +32,7 @@ from evoprompt.data.cwe_categories import (
     map_cwe_to_major,
     CATEGORY_DESCRIPTIONS_BLOCK,
 )
+from evoprompt.strategies import create_strategy
 from evoprompt.llm.client import create_default_client, create_meta_prompt_client
 from evoprompt.algorithms.base import Individual, Population
 from evoprompt.utils.checkpoint import (
@@ -476,6 +477,9 @@ class PrimeVulLayer1Pipeline:
             exponential_backoff=True
         )
         self.recovery = ExperimentRecovery(self.exp_dir)
+        self.strategy = create_strategy(
+            config.get("mode", "flat"), self.llm_client, config
+        )
 
         print(f"✅ 初始化 PrimeVul Layer-1 Pipeline")
         print(f"   实验 ID: {self.exp_id}")
@@ -632,73 +636,13 @@ class PrimeVulLayer1Pipeline:
         samples: List[Any],
         batch_idx: int
     ) -> Tuple[List[str], List[str]]:
-        """批量预测一个 batch 的样本"""
-        predictions = []
-        ground_truths = []
+        """批量预测一个 batch 的样本，委托给 strategy"""
+        ground_truths = [self.strategy.get_ground_truth(s) for s in samples]
 
-        # 准备批量查询
-        queries = []
-        for sample in samples:
-            code = sample.input_text
-            query = safe_format(prompt, input=code)
-            queries.append(query)
-
-            # 获取 ground truth
-            ground_truth_binary = int(sample.target)
-            cwe_codes = sample.metadata.get("cwe", [])
-
-            if ground_truth_binary == 1 and cwe_codes:
-                ground_truth_category = map_cwe_to_major(cwe_codes)
-            else:
-                ground_truth_category = "Benign"
-
-            ground_truths.append(ground_truth_category)
-
-        # 批量调用 LLM (带重试机制)
-        print(f"      🔍 批量预测 {len(queries)} 个样本...")
         try:
-            # 使用重试管理器包装 API 调用
-            def batch_generate_with_retry():
-                return self.llm_client.batch_generate(
-                    queries,
-                    temperature=0.1,
-                    max_tokens=20,
-                    batch_size=min(8, len(queries)),
-                    concurrent=True
-                )
-
-            responses = self.retry_manager.retry_with_backoff(batch_generate_with_retry)
-
-            # 规范化输出
-            for idx, response in enumerate(responses):
-                if response == "error":
-                    predictions.append("Other")
-                else:
-                    predicted_category = canonicalize_category(response)
-
-                    # 调试：打印前几个响应
-                    if batch_idx == 0 and idx < 3:
-                        print(f"        🔍 调试响应 {idx+1}: '{response[:100]}...'")
-                        print(f"        🎯 解析结果: '{predicted_category}'")
-
-                    if predicted_category is None:
-                        response_lower = response.lower()
-                        # Try CWE-ID extraction as fallback
-                        predicted_category = canonicalize_category(response_lower)
-                        # Broader benign detection
-                        if predicted_category is None:
-                            if any(p in response_lower for p in (
-                                "benign", "no vuln", "no security issue",
-                                "not vulnerable", "safe", "secure code",
-                            )):
-                                predicted_category = "Benign"
-                            else:
-                                predicted_category = "Other"
-                        if batch_idx == 0 and idx < 3:
-                            print(f"        ⚠️ 无法解析，回退为: '{predicted_category}'")
-
-                    predictions.append(predicted_category)
-
+            def _predict_with_retry():
+                return self.strategy.predict_batch(prompt, samples, batch_idx)
+            predictions = self.retry_manager.retry_with_backoff(_predict_with_retry)
         except Exception as e:
             print(f"      ❌ 批量预测失败 (已达最大重试次数): {e}")
             predictions = ["Other"] * len(samples)
@@ -1187,6 +1131,8 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="EvoPrompt Main - PrimeVul Layer-1 并发漏洞分类")
+    parser.add_argument("--mode", choices=["flat", "hierarchical", "mulvul", "baseline", "coevolution"],
+                       default="flat", help="检测策略: flat=11类平铺, hierarchical=三层级联, mulvul=路由+检测+聚合, baseline=零样本, coevolution=多智能体协同")
     parser.add_argument("--batch-size", type=int, default=16, help="每个 batch 的样本数")
     parser.add_argument("--max-generations", type=int, default=5, help="最大进化代数")
     parser.add_argument("--primevul-dir", type=str, default="./data/primevul/primevul",
@@ -1236,6 +1182,7 @@ def main():
         "retry_delay": args.retry_delay,
         "enable_checkpoint": not args.no_checkpoint,
         "auto_recover": args.auto_recover,
+        "mode": args.mode,
         "balance_mode": args.balance_mode,
         "sample_ratio": args.sample_ratio,
         "dev_ratio": args.dev_ratio,
