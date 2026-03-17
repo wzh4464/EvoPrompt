@@ -195,8 +195,14 @@ class BalancedSampler:
         dev_ratio: float = 0.3,
         target_field: str = "target",
         label_field: Optional[str] = None,
+        min_dev_per_label: int = 1,
     ) -> Tuple[List[Dict], List[Dict]]:
-        """将采样数据分割为训练集和开发集，保持平衡。"""
+        """将采样数据分割为训练集和开发集，保持平衡。
+
+        Args:
+            min_dev_per_label: 每个标签在 dev 集中的最少样本数。
+                对于样本数 >= 2 的标签，保证至少 min_dev_per_label 个进入 dev。
+        """
 
         group_field = label_field or target_field
 
@@ -213,7 +219,12 @@ class BalancedSampler:
         for label, items in label_groups.items():
             random.shuffle(items)
 
-            dev_count = int(len(items) * dev_ratio)
+            if len(items) >= 2:
+                dev_count = max(min_dev_per_label, int(len(items) * dev_ratio))
+            else:
+                # 只有 1 个样本时放入 dev 以确保评估覆盖
+                dev_count = 1
+            dev_count = min(dev_count, len(items))  # 不超过总数
             train_count = len(items) - dev_count
 
             train_data.extend(items[:train_count])
@@ -237,6 +248,10 @@ def sample_primevul_1percent(
     output_dir: str,
     seed: int = 42,
     balance_mode: str = "layer1",
+    sample_ratio: float = 0.01,
+    dev_ratio: float = 0.3,
+    remove_benign_train: bool = False,
+    min_dev_per_label: int = 1,
 ) -> Dict[str, Any]:
     """
     从Primevul数据集采样1%均衡数据的便捷函数。
@@ -272,10 +287,10 @@ def sample_primevul_1percent(
     
     logger.info(f"Using data file: {dev_file}")
     
-    # 采样1%数据
+    # 采样数据
     sampled_data, stats = sampler.sample_primevul_balanced(
         data_file=str(dev_file),
-        sample_ratio=0.1,
+        sample_ratio=sample_ratio,
         balance_mode=balance_mode,
     )
     
@@ -286,22 +301,25 @@ def sample_primevul_1percent(
     # 分割为训练和开发集
     train_data, dev_data = sampler.create_train_dev_split(
         sampled_data,
-        dev_ratio=0.3,
+        dev_ratio=dev_ratio,
         label_field="_balance_label",
+        min_dev_per_label=min_dev_per_label,
     )
 
-    original_train_len = len(train_data)
-    train_data = [item for item in train_data if item.get("_balance_label") != "Benign"]
-    removed_benign = original_train_len - len(train_data)
+    removed_benign = 0
+    if remove_benign_train:
+        original_train_len = len(train_data)
+        train_data = [item for item in train_data if item.get("_balance_label") != "Benign"]
+        removed_benign = original_train_len - len(train_data)
 
-    if removed_benign:
-        logger.info(
-            "Removed %d Benign samples from training split to focus on vulnerable categories",
-            removed_benign,
-        )
+        if removed_benign:
+            logger.info(
+                "Removed %d Benign samples from training split to focus on vulnerable categories",
+                removed_benign,
+            )
 
-    if not train_data:
-        raise ValueError("Training split is empty after removing Benign samples.")
+        if not train_data:
+            raise ValueError("Training split is empty after removing Benign samples.")
     
     # 保存数据文件
     files = {}
@@ -336,13 +354,14 @@ def sample_primevul_1percent(
     stats["train_without_benign"] = len(train_data)
     stats["train_removed_benign"] = removed_benign
     stats["sampling_config"] = {
-        "sample_ratio": 0.01,
-        "dev_ratio": 0.3,
+        "sample_ratio": sample_ratio,
+        "dev_ratio": dev_ratio,
         "seed": seed,
         "source_file": str(dev_file),
         "balance_mode": balance_mode,
-        "train_remove_benign": True,
+        "train_remove_benign": remove_benign_train,
         "removed_benign_train": removed_benign,
+        "min_dev_per_label": min_dev_per_label,
     }
     
     with open(stats_file, 'w', encoding='utf-8') as f:
