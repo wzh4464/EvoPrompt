@@ -1151,6 +1151,9 @@ class PrimeVulLayer1Pipeline:
 
 def main():
     """主入口函数"""
+    from dotenv import load_dotenv
+    load_dotenv()
+
     import argparse
 
     parser = argparse.ArgumentParser(description="EvoPrompt Main - PrimeVul Layer-1 并发漏洞分类")
