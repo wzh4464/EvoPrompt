@@ -481,6 +481,29 @@ class PrimeVulLayer1Pipeline:
             config.get("mode", "flat"), self.llm_client, config
         )
 
+        if config.get("enable_rag"):
+            from evoprompt.strategies.rag_wrapper import RAGStrategyWrapper
+            from evoprompt.rag.knowledge_base import KnowledgeBase, KnowledgeBaseBuilder
+            from evoprompt.rag.retriever import CodeSimilarityRetriever
+            from pathlib import Path as _Path
+
+            kb_path = _Path(config.get("sample_dir", ".")) / "knowledge_base.json"
+            if kb_path.exists():
+                print(f"  [RAG] Loading knowledge base from {kb_path}")
+                kb = KnowledgeBase.load(str(kb_path))
+            else:
+                print(f"  [RAG] Knowledge base not found at {kb_path}, using built-in defaults")
+                kb = KnowledgeBaseBuilder.create_default_kb()
+
+            retriever = CodeSimilarityRetriever(kb, contrastive=True)
+            self.strategy = RAGStrategyWrapper(self.strategy, retriever, config)
+            print(f"  [RAG] Strategy wrapped with RAG retrieval (vuln_top_k=2, clean_top_k=1)")
+
+        if config.get("enable_meta"):
+            from evoprompt.strategies.meta_wrapper import MetaEvolutionWrapper
+            self.prompt_evolver = MetaEvolutionWrapper(self.prompt_evolver, self.meta_llm_client, config)
+            print(f"  [Meta] Prompt evolver wrapped with error accumulation + meta-learning")
+
         print(f"✅ 初始化 PrimeVul Layer-1 Pipeline")
         print(f"   实验 ID: {self.exp_id}")
         print(f"   Batch 大小: {self.batch_size}")
@@ -1168,6 +1191,16 @@ def main():
         action="store_true",
         help="无论采样目录是否存在都重新采样",
     )
+    parser.add_argument(
+        "--enable-rag",
+        action="store_true",
+        help="启用 RAG 检索增强",
+    )
+    parser.add_argument(
+        "--enable-meta",
+        action="store_true",
+        help="启用错误累积+元学习调优",
+    )
 
     args = parser.parse_args()
 
@@ -1189,6 +1222,8 @@ def main():
         "remove_benign_train": args.remove_benign_train,
         "min_dev_per_label": args.min_dev_per_label,
         "force_resample": args.force_resample,
+        "enable_rag": args.enable_rag,
+        "enable_meta": args.enable_meta,
     }
 
     # 创建并运行 pipeline
