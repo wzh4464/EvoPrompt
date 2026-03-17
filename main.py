@@ -26,15 +26,11 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from evoprompt.data.sampler import sample_primevul_1percent
 from evoprompt.data.dataset import PrimevulDataset
-from evoprompt.data.cwe_layer1 import (
-    CWE_ID_PATTERN,
-    LAYER1_ALIAS_MAP,
-    LAYER1_CLASS_LABELS,
-    LAYER1_CATEGORY_DESCRIPTIONS_BLOCK,
-    LAYER1_DESCENDANT_TO_ROOT,
-    LAYER1_SUBCATEGORY_REFERENCE,
-    canonicalize_layer1_category,
-    map_cwe_to_layer1,
+from evoprompt.data.cwe_categories import (
+    CWE_MAJOR_CATEGORIES,
+    canonicalize_category,
+    map_cwe_to_major,
+    CATEGORY_DESCRIPTIONS_BLOCK,
 )
 from evoprompt.llm.client import create_default_client, create_meta_prompt_client
 from evoprompt.algorithms.base import Individual, Population
@@ -307,10 +303,9 @@ class PromptEvolver:
         self.config = config
         self.evolution_history = []
         self.builder = StructuredPromptBuilder(
-            LAYER1_CLASS_LABELS,
+            CWE_MAJOR_CATEGORIES,
             self.DEFAULT_GUIDANCE,
-            subcategory_reference=LAYER1_SUBCATEGORY_REFERENCE,
-            category_descriptions=LAYER1_CATEGORY_DESCRIPTIONS_BLOCK,
+            category_descriptions=CATEGORY_DESCRIPTIONS_BLOCK,
         )
 
     def evolve_with_feedback(
@@ -653,7 +648,7 @@ class PrimeVulLayer1Pipeline:
             cwe_codes = sample.metadata.get("cwe", [])
 
             if ground_truth_binary == 1 and cwe_codes:
-                ground_truth_category = map_cwe_to_layer1(cwe_codes)
+                ground_truth_category = map_cwe_to_major(cwe_codes)
             else:
                 ground_truth_category = "Benign"
 
@@ -679,7 +674,7 @@ class PrimeVulLayer1Pipeline:
                 if response == "error":
                     predictions.append("Other")
                 else:
-                    predicted_category = canonicalize_layer1_category(response)
+                    predicted_category = canonicalize_category(response)
 
                     # 调试：打印前几个响应
                     if batch_idx == 0 and idx < 3:
@@ -688,30 +683,19 @@ class PrimeVulLayer1Pipeline:
 
                     if predicted_category is None:
                         response_lower = response.lower()
-                        for key, mapped_label in LAYER1_ALIAS_MAP.items():
-                            if len(key) <= 4:
-                                continue
-                            if key in response_lower:
-                                predicted_category = mapped_label
-                                break
-
+                        # Try CWE-ID extraction as fallback
+                        predicted_category = canonicalize_category(response_lower)
+                        # Broader benign detection
                         if predicted_category is None:
-                            match = CWE_ID_PATTERN.search(response_lower)
-                            if match:
-                                candidate_label = LAYER1_DESCENDANT_TO_ROOT.get(match.group().upper())
-                                if candidate_label:
-                                    predicted_category = candidate_label
-
-                        if predicted_category is None:
-                            if "benign" in response_lower:
+                            if any(p in response_lower for p in (
+                                "benign", "no vuln", "no security issue",
+                                "not vulnerable", "safe", "secure code",
+                            )):
                                 predicted_category = "Benign"
-                            elif "unknown" in response_lower or "other" in response_lower:
-                                predicted_category = "Other"
                             else:
                                 predicted_category = "Other"
-
                         if batch_idx == 0 and idx < 3:
-                            print(f"        ⚠️ 使用层级映射回退: '{predicted_category}'")
+                            print(f"        ⚠️ 无法解析，回退为: '{predicted_category}'")
 
                     predictions.append(predicted_category)
 
@@ -818,7 +802,7 @@ class PrimeVulLayer1Pipeline:
         report = classification_report(
             all_ground_truths,
             all_predictions,
-            labels=LAYER1_CLASS_LABELS,
+            labels=CWE_MAJOR_CATEGORIES,
             output_dict=True,
             zero_division=0
         )
@@ -827,7 +811,7 @@ class PrimeVulLayer1Pipeline:
         cm = confusion_matrix(
             all_ground_truths,
             all_predictions,
-            labels=LAYER1_CLASS_LABELS
+            labels=CWE_MAJOR_CATEGORIES
         )
 
         return {
@@ -1122,7 +1106,7 @@ class PrimeVulLayer1Pipeline:
             f.write(f"{'Category':<25} {'Precision':>10} {'Recall':>10} {'F1-Score':>10} {'Support':>10}\n")
             f.write(f"{'-'*80}\n")
 
-            for category in LAYER1_CLASS_LABELS:
+            for category in CWE_MAJOR_CATEGORIES:
                 if category in report:
                     metrics = report[category]
                     f.write(f"{category:<25} {metrics['precision']:>10.4f} {metrics['recall']:>10.4f} "
@@ -1142,7 +1126,7 @@ class PrimeVulLayer1Pipeline:
         confusion_file = self.exp_dir / "confusion_matrix.json"
         with open(confusion_file, "w", encoding="utf-8") as f:
             json.dump({
-                "labels": LAYER1_CLASS_LABELS,
+                "labels": CWE_MAJOR_CATEGORIES,
                 "matrix": best_result["confusion_matrix"]
             }, f, indent=2, ensure_ascii=False)
         print(f"  ✓ {confusion_file}")
@@ -1177,7 +1161,7 @@ class PrimeVulLayer1Pipeline:
         print(f"{'Category':<25} {'Precision':>10} {'Recall':>10} {'F1-Score':>10} {'Support':>10}")
         print(f"{'-'*80}")
 
-        for category in LAYER1_CLASS_LABELS:
+        for category in CWE_MAJOR_CATEGORIES:
             if category in report:
                 metrics = report[category]
                 print(f"{category:<25} {metrics['precision']:>10.4f} {metrics['recall']:>10.4f} "
