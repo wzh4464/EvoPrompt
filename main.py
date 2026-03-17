@@ -905,6 +905,10 @@ class PrimeVulLayer1Pipeline:
                 str(sample_dir),
                 seed=42,
                 balance_mode=balance_mode,
+                sample_ratio=float(self.config.get("sample_ratio", 0.01)),
+                dev_ratio=float(self.config.get("dev_ratio", 0.3)),
+                remove_benign_train=bool(self.config.get("remove_benign_train", False)),
+                min_dev_per_label=int(self.config.get("min_dev_per_label", 2)),
             )
         else:
             print(f"   使用已有采样数据 {sample_dir} (balance_mode={balance_mode})")
@@ -1195,10 +1199,18 @@ def main():
                        help="自动从 checkpoint 恢复（不询问）")
     parser.add_argument(
         "--balance-mode",
-        choices=["target", "major"],
-        default="target",
-        help="采样均衡模式: target=二分类, major=CWE大类",
+        choices=["target", "major", "layer1"],
+        default="layer1",
+        help="采样均衡模式: target=二分类, major/layer1=CWE大类",
     )
+    parser.add_argument("--sample-ratio", type=float, default=0.01,
+                       help="采样比例 (默认 0.01 = 1%%)")
+    parser.add_argument("--dev-ratio", type=float, default=0.3,
+                       help="开发集比例 (默认 0.3)")
+    parser.add_argument("--remove-benign-train", action="store_true",
+                       help="从训练集中移除 Benign 样本")
+    parser.add_argument("--min-dev-per-label", type=int, default=2,
+                       help="每个类别在 dev 集中的最少样本数 (默认 2)")
     parser.add_argument(
         "--force-resample",
         action="store_true",
@@ -1219,6 +1231,10 @@ def main():
         "enable_checkpoint": not args.no_checkpoint,
         "auto_recover": args.auto_recover,
         "balance_mode": args.balance_mode,
+        "sample_ratio": args.sample_ratio,
+        "dev_ratio": args.dev_ratio,
+        "remove_benign_train": args.remove_benign_train,
+        "min_dev_per_label": args.min_dev_per_label,
         "force_resample": args.force_resample,
     }
 
