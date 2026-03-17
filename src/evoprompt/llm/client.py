@@ -137,20 +137,30 @@ class SVENLLMClient(LLMClient):
         raise Exception("All API endpoints and retries exhausted")
     
     def generate(self, prompt: str, **kwargs) -> str:
-        """Generate text from a single prompt."""
-        messages = [{"role": "user", "content": prompt}]
-        
+        """Generate text from a single prompt.
+
+        If ``system_prompt`` is provided in *kwargs*, it is sent as a
+        ``{"role": "system", ...}`` message so that claude-max-api-proxy
+        (and other OpenAI-compatible endpoints) can use ``--system-prompt``
+        to override the default system prompt.
+        """
+        messages = []
+        system_prompt = kwargs.get("system_prompt")
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
         # Extract parameters
         temperature = kwargs.get("temperature", 0.1)
         max_tokens = kwargs.get("max_tokens", None)
         task = kwargs.get("task", False)
-        
+
         result = self._make_request(messages, temperature, max_tokens)
-        
+
         # Task-oriented truncation (like SVEN)
         if task:
             result = result.split("\n\n")[0]
-        
+
         return result
     
     def batch_generate(self, prompts: List[str], **kwargs) -> List[str]:
@@ -347,20 +357,30 @@ class OpenAICompatibleClient(LLMClient):
         raise Exception("All API attempts exhausted")
     
     def generate(self, prompt: str, **kwargs) -> str:
-        """Generate text from a single prompt."""
-        messages = [{"role": "user", "content": prompt}]
-        
+        """Generate text from a single prompt.
+
+        If ``system_prompt`` is provided in *kwargs*, it is sent as a
+        ``{"role": "system", ...}`` message so that claude-max-api-proxy
+        (and other OpenAI-compatible endpoints) can use ``--system-prompt``
+        to override the default system prompt.
+        """
+        messages = []
+        system_prompt = kwargs.get("system_prompt")
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
         # Extract parameters
         temperature = kwargs.get("temperature", 0.1)
         max_tokens = kwargs.get("max_tokens", None)
         task = kwargs.get("task", False)
-        
+
         result = self._make_request(messages, temperature, max_tokens)
-        
+
         # Task-oriented truncation (like SVEN)
         if task:
             result = result.split("\n\n")[0]
-        
+
         return result
     
     def batch_generate(self, prompts: List[str], **kwargs) -> List[str]:
