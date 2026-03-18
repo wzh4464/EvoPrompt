@@ -62,7 +62,9 @@ def get_fitness(config: Dict[str, Any], eval_result: Dict[str, Any]) -> Tuple[st
     initial-evaluation loop and the per-generation evolution loop.
 
     Raises ``ValueError`` if the configured metric is not in
-    :data:`VALID_FITNESS_METRICS`.
+    :data:`VALID_FITNESS_METRICS`.  If the chosen metric is absent from
+    *eval_result* (e.g. when resuming from an older checkpoint), falls back to
+    ``"accuracy"`` with a warning instead of crashing.
     """
     fitness_metric = config.get("fitness_metric", DEFAULT_FITNESS_METRIC)
     if fitness_metric not in VALID_FITNESS_METRICS:
@@ -71,11 +73,17 @@ def get_fitness(config: Dict[str, Any], eval_result: Dict[str, Any]) -> Tuple[st
             f"expected one of {sorted(VALID_FITNESS_METRICS)}"
         )
     if fitness_metric not in eval_result:
-        raise KeyError(
-            f"Fitness metric {fitness_metric!r} not found in eval_result "
-            f"(available keys: {sorted(eval_result.keys())}). "
-            f"This may happen when resuming from an older checkpoint."
+        # Gracefully handle older checkpoints that lack newer metrics.
+        fallback = "accuracy"
+        logger.warning(
+            "Fitness metric %r not found in eval_result "
+            "(available keys: %s); falling back to %r. "
+            "This can happen when resuming from an older checkpoint.",
+            fitness_metric,
+            sorted(eval_result.keys()),
+            fallback,
         )
+        fitness_metric = fallback
     fitness = eval_result[fitness_metric]
     return fitness_metric, fitness
 
