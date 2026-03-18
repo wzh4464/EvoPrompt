@@ -491,6 +491,14 @@ class PromptEvolver:
         return stripped[:limit].rstrip() + "\n... (truncated)"
 
 
+DEFAULT_MAX_CATEGORY_DROP = 0.15
+
+# sklearn classification_report aggregate keys that are not real categories
+_REPORT_AGGREGATE_KEYS = frozenset({
+    "accuracy", "macro avg", "weighted avg", "micro avg", "samples avg",
+})
+
+
 class PrimeVulLayer1Pipeline:
     """PrimeVul Layer-1 并发漏洞分类流水线"""
 
@@ -856,6 +864,46 @@ class PrimeVulLayer1Pipeline:
             "ground_truths": all_ground_truths,
         }
 
+    def _check_category_regression(
+        self,
+        old_report: Dict[str, Any],
+        new_report: Dict[str, Any],
+        max_drop: float,
+    ) -> Tuple[bool, List[Tuple[str, float, float, float]]]:
+        """Check if any category F1 dropped more than max_drop.
+
+        Iterates over CWE_MAJOR_CATEGORIES plus any additional category
+        keys found in either report (excluding sklearn aggregates like
+        ``accuracy``, ``macro avg``, ``weighted avg``).  Categories
+        missing from one report are treated as having f1-score of 0.0.
+
+        Returns (passed: bool, regressions: list of (category, old_f1, new_f1, drop))
+        """
+        regressions = []
+        # Start with known CWE categories, then add any extra report keys
+        # that look like per-class entries (dict with "f1-score").
+        all_categories = set(CWE_MAJOR_CATEGORIES)
+        for k in set(old_report) | set(new_report):
+            if k in _REPORT_AGGREGATE_KEYS or k in all_categories:
+                continue
+            entry = old_report.get(k) or new_report.get(k)
+            if isinstance(entry, dict) and "f1-score" in entry:
+                all_categories.add(k)
+
+        for cat in sorted(all_categories):
+            old_entry = old_report.get(cat)
+            new_entry = new_report.get(cat)
+            if old_entry is None and new_entry is None:
+                continue
+            old_f1 = old_entry.get("f1-score", 0.0) if old_entry is not None else 0.0
+            # Treat a category that disappeared from the new report as f1=0.0
+            # so that dropping a previously-evaluated category counts as regression
+            new_f1 = new_entry.get("f1-score", 0.0) if new_entry is not None else 0.0
+            drop = old_f1 - new_f1
+            if old_f1 > 0 and drop > max_drop:
+                regressions.append((cat, old_f1, new_f1, drop))
+        return len(regressions) == 0, regressions
+
     def run_evolution(self) -> Dict[str, Any]:
         """运行完整的进化流程 (支持断点恢复)"""
         print("\n" + "="*80)
@@ -1032,8 +1080,24 @@ class PrimeVulLayer1Pipeline:
                     print(f"    进化后适应度: {evolved_individual.fitness:.4f} ({fitness_metric})")
 
                     if evolved_individual.fitness > best_individual.fitness:
-                        print(f"    ✅ 接受进化后的 prompt!")
-                        population[0] = (evolved_individual, eval_result)
+                        # Check for category regression before accepting
+                        max_drop = self.config.get("max_category_drop", DEFAULT_MAX_CATEGORY_DROP)
+                        old_cr = best_result.get("classification_report")
+                        new_cr = eval_result.get("classification_report")
+                        if not isinstance(old_cr, dict) or not isinstance(new_cr, dict):
+                            print("    [warn] classification_report missing or not a dict, rejecting candidate")
+                            passed, regressions = False, []
+                        else:
+                            passed, regressions = self._check_category_regression(
+                                old_cr, new_cr, max_drop,
+                            )
+                        if not passed:
+                            print(f"    ⚠️ 拒绝进化: 类别退化超过阈值 (max_drop={max_drop:.2f})")
+                            for cat, old_f1, new_f1, drop in regressions:
+                                print(f"      {cat}: {old_f1:.3f} → {new_f1:.3f} (↓{drop:.3f})")
+                        else:
+                            print(f"    ✅ 接受进化后的 prompt!")
+                            population[0] = (evolved_individual, eval_result)
                     else:
                         print(f"    ❌ 保留原 prompt")
 
@@ -1277,8 +1341,19 @@ def main():
         action="store_true",
         help="启用错误累积+元学习调优",
     )
+    parser.add_argument(
+        "--max-category-drop",
+        type=float,
+        default=DEFAULT_MAX_CATEGORY_DROP,
+        help=f"最大允许的单类别 F1 下降幅度 (default: {DEFAULT_MAX_CATEGORY_DROP})",
+    )
 
     args = parser.parse_args()
+
+    if not (0.0 <= args.max_category_drop <= 1.0):
+        parser.error(
+            f"--max-category-drop must be between 0.0 and 1.0, got {args.max_category_drop}"
+        )
 
     # 创建配置
     config = {
@@ -1301,6 +1376,7 @@ def main():
         "force_resample": args.force_resample,
         "enable_rag": args.enable_rag,
         "enable_meta": args.enable_meta,
+        "max_category_drop": args.max_category_drop,
     }
 
     # 创建并运行 pipeline
