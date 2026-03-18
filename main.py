@@ -70,6 +70,12 @@ def get_fitness(config: Dict[str, Any], eval_result: Dict[str, Any]) -> Tuple[st
             f"Unknown fitness_metric {fitness_metric!r}; "
             f"expected one of {sorted(VALID_FITNESS_METRICS)}"
         )
+    if fitness_metric not in eval_result:
+        raise KeyError(
+            f"Fitness metric {fitness_metric!r} not found in eval_result "
+            f"(available keys: {sorted(eval_result.keys())}). "
+            f"This may happen when resuming from an older checkpoint."
+        )
     fitness = eval_result[fitness_metric]
     return fitness_metric, fitness
 
@@ -1233,7 +1239,7 @@ def main():
         default="layer1",
         help="采样均衡模式: target=二分类, major/layer1=CWE大类",
     )
-    parser.add_argument("--fitness-metric", choices=["accuracy", "macro_f1"], default=DEFAULT_FITNESS_METRIC,
+    parser.add_argument("--fitness-metric", choices=sorted(VALID_FITNESS_METRICS), default=DEFAULT_FITNESS_METRIC,
                        help=f"进化适应度指标 (default: {DEFAULT_FITNESS_METRIC})")
     parser.add_argument("--sample-ratio", type=float, default=0.10,
                        help="采样比例 (默认 0.10 = 10%%)")
