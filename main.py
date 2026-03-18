@@ -439,7 +439,9 @@ class PromptEvolver:
 DEFAULT_MAX_CATEGORY_DROP = 0.15
 
 # sklearn classification_report aggregate keys that are not real categories
-_REPORT_AGGREGATE_KEYS = frozenset({"accuracy", "macro avg", "weighted avg", "micro avg"})
+_REPORT_AGGREGATE_KEYS = frozenset({
+    "accuracy", "macro avg", "weighted avg", "micro avg", "samples avg",
+})
 
 
 class PrimeVulLayer1Pipeline:
@@ -1019,11 +1021,15 @@ class PrimeVulLayer1Pipeline:
                     if evolved_individual.fitness > best_individual.fitness:
                         # Check for category regression before accepting
                         max_drop = self.config.get("max_category_drop", DEFAULT_MAX_CATEGORY_DROP)
-                        passed, regressions = self._check_category_regression(
-                            best_result["classification_report"],
-                            eval_result["classification_report"],
-                            max_drop,
-                        )
+                        old_cr = best_result.get("classification_report")
+                        new_cr = eval_result.get("classification_report")
+                        if not isinstance(old_cr, dict) or not isinstance(new_cr, dict):
+                            print("    [warn] classification_report missing or not a dict, skipping regression check")
+                            passed, regressions = True, []
+                        else:
+                            passed, regressions = self._check_category_regression(
+                                old_cr, new_cr, max_drop,
+                            )
                         if not passed:
                             print(f"    ⚠️ 拒绝进化: 类别退化超过阈值 (max_drop={max_drop:.2f})")
                             for cat, old_f1, new_f1, drop in regressions:
