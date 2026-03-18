@@ -436,6 +436,9 @@ class PromptEvolver:
         return stripped[:limit].rstrip() + "\n... (truncated)"
 
 
+DEFAULT_MAX_CATEGORY_DROP = 0.15
+
+
 class PrimeVulLayer1Pipeline:
     """PrimeVul Layer-1 并发漏洞分类流水线"""
 
@@ -803,12 +806,33 @@ class PrimeVulLayer1Pipeline:
     ) -> Tuple[bool, List[Tuple[str, float, float, float]]]:
         """Check if any category F1 dropped more than max_drop.
 
+        Iterates over the union of categories present in both reports
+        (intersected with CWE_MAJOR_CATEGORIES) and logs when a category
+        is missing from either report.
+
         Returns (passed: bool, regressions: list of (category, old_f1, new_f1, drop))
         """
         regressions = []
-        for cat in CWE_MAJOR_CATEGORIES:
-            old_f1 = old_report.get(cat, {}).get("f1-score", 0.0)
-            new_f1 = new_report.get(cat, {}).get("f1-score", 0.0)
+        # Use all known categories, but also check for unexpected ones in reports
+        all_categories = set(CWE_MAJOR_CATEGORIES)
+        for key in list(old_report.keys()) + list(new_report.keys()):
+            if isinstance(old_report.get(key), dict) or isinstance(new_report.get(key), dict):
+                if key not in all_categories and key not in ("accuracy", "macro avg", "weighted avg"):
+                    all_categories.add(key)
+
+        for cat in sorted(all_categories):
+            old_entry = old_report.get(cat)
+            new_entry = new_report.get(cat)
+            if old_entry is None and new_entry is None:
+                continue
+            if old_entry is None:
+                print(f"      [info] category '{cat}' missing from old report, skipping regression check")
+                continue
+            if new_entry is None:
+                print(f"      [info] category '{cat}' missing from new report, skipping regression check")
+                continue
+            old_f1 = old_entry.get("f1-score", 0.0)
+            new_f1 = new_entry.get("f1-score", 0.0)
             drop = old_f1 - new_f1
             if old_f1 > 0 and drop > max_drop:
                 regressions.append((cat, old_f1, new_f1, drop))
@@ -991,14 +1015,14 @@ class PrimeVulLayer1Pipeline:
 
                     if evolved_individual.fitness > best_individual.fitness:
                         # Check for category regression before accepting
-                        max_drop = self.config.get("max_category_drop", 0.15)
+                        max_drop = self.config.get("max_category_drop", DEFAULT_MAX_CATEGORY_DROP)
                         passed, regressions = self._check_category_regression(
                             best_result["classification_report"],
                             eval_result["classification_report"],
                             max_drop,
                         )
                         if not passed:
-                            print(f"    ⚠️ 拒绝进化: 类别退化超过阈值")
+                            print(f"    ⚠️ 拒绝进化: 类别退化超过阈值 (max_drop={max_drop:.2f})")
                             for cat, old_f1, new_f1, drop in regressions:
                                 print(f"      {cat}: {old_f1:.3f} → {new_f1:.3f} (↓{drop:.3f})")
                         else:
@@ -1239,8 +1263,8 @@ def main():
     parser.add_argument(
         "--max-category-drop",
         type=float,
-        default=0.15,
-        help="最大允许的单类别 F1 下降幅度 (default: 0.15)",
+        default=DEFAULT_MAX_CATEGORY_DROP,
+        help=f"最大允许的单类别 F1 下降幅度 (default: {DEFAULT_MAX_CATEGORY_DROP})",
     )
 
     args = parser.parse_args()
