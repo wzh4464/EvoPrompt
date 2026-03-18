@@ -806,19 +806,21 @@ class PrimeVulLayer1Pipeline:
     ) -> Tuple[bool, List[Tuple[str, float, float, float]]]:
         """Check if any category F1 dropped more than max_drop.
 
-        Iterates over the union of categories present in both reports
-        (intersected with CWE_MAJOR_CATEGORIES) and logs when a category
-        is missing from either report.
+        Iterates over CWE_MAJOR_CATEGORIES plus any additional category
+        keys found in either report (excluding sklearn aggregates like
+        ``accuracy``, ``macro avg``, ``weighted avg``).  Categories
+        missing from one report are treated as having f1-score of 0.0.
 
         Returns (passed: bool, regressions: list of (category, old_f1, new_f1, drop))
         """
         regressions = []
-        # Use all known categories, but also check for unexpected ones in reports
-        all_categories = set(CWE_MAJOR_CATEGORIES)
-        for key in list(old_report.keys()) + list(new_report.keys()):
-            if isinstance(old_report.get(key), dict) or isinstance(new_report.get(key), dict):
-                if key not in all_categories and key not in ("accuracy", "macro avg", "weighted avg"):
-                    all_categories.add(key)
+        # Aggregate keys exclude list (sklearn classification_report aggregates)
+        _AGGREGATE_KEYS = {"accuracy", "macro avg", "weighted avg"}
+        all_categories = set(CWE_MAJOR_CATEGORIES) | {
+            k for k in set(old_report) | set(new_report)
+            if k not in _AGGREGATE_KEYS
+            and (isinstance(old_report.get(k), dict) or isinstance(new_report.get(k), dict))
+        }
 
         for cat in sorted(all_categories):
             old_entry = old_report.get(cat)
