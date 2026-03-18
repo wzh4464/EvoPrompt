@@ -84,15 +84,20 @@ def get_fitness(config: Dict[str, Any], eval_result: Dict[str, Any]) -> Tuple[st
             fallback,
         )
         fitness_metric = fallback
-    fitness = eval_result[fitness_metric]
+    fitness = eval_result.get(fitness_metric, 0.0)
+    if fitness_metric not in eval_result:
+        logger.warning(
+            "Fallback metric %r also missing from eval_result; using 0.0",
+            fitness_metric,
+        )
     return fitness_metric, fitness
 
 
 def _safe_metric(result: Dict[str, Any], key: str, default: float = 0.0) -> float:
-    """Return ``result[key]`` if present, else *default* with a warning."""
+    """Return ``result[key]`` if present, else *default* with a debug log."""
     if key in result:
         return result[key]
-    logger.warning("Metric %r missing from result dict; defaulting to %.1f", key, default)
+    logger.debug("Metric %r missing from result dict; defaulting to %.1f", key, default)
     return default
 
 
