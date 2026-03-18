@@ -772,7 +772,8 @@ class PrimeVulLayer1Pipeline:
 
             # 检查是否已有 checkpoint
             cached_batch = self.batch_checkpointer.load_batch_result(generation, batch_idx)
-            if cached_batch:
+            cached_prompt = cached_batch.get("prompt") if cached_batch else None
+            if cached_batch and cached_prompt == current_prompt:
                 print(f"        📦 从 checkpoint 加载结果")
                 predictions = cached_batch["predictions"]
                 ground_truths = cached_batch["ground_truths"]
