@@ -1024,8 +1024,8 @@ class PrimeVulLayer1Pipeline:
                         old_cr = best_result.get("classification_report")
                         new_cr = eval_result.get("classification_report")
                         if not isinstance(old_cr, dict) or not isinstance(new_cr, dict):
-                            print("    [warn] classification_report missing or not a dict, skipping regression check")
-                            passed, regressions = True, []
+                            print("    [warn] classification_report missing or not a dict, rejecting candidate")
+                            passed, regressions = False, []
                         else:
                             passed, regressions = self._check_category_regression(
                                 old_cr, new_cr, max_drop,
