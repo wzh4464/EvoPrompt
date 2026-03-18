@@ -866,16 +866,17 @@ class PrimeVulLayer1Pipeline:
             regenerate_samples = True
 
         if regenerate_samples:
-            print(f"   生成 1% 采样数据到 {sample_dir} (balance_mode={balance_mode})")
+            ratio_pct = float(self.config.get("sample_ratio", 0.10)) * 100
+            print(f"   生成 {ratio_pct:.0f}% 采样数据到 {sample_dir} (balance_mode={balance_mode})")
             sample_primevul_1percent(
                 str(primevul_dir),
                 str(sample_dir),
                 seed=42,
                 balance_mode=balance_mode,
-                sample_ratio=float(self.config.get("sample_ratio", 0.01)),
+                sample_ratio=float(self.config.get("sample_ratio", 0.10)),
                 dev_ratio=float(self.config.get("dev_ratio", 0.3)),
                 remove_benign_train=bool(self.config.get("remove_benign_train", False)),
-                min_dev_per_label=int(self.config.get("min_dev_per_label", 2)),
+                min_dev_per_label=int(self.config.get("min_dev_per_label", 5)),
             )
         else:
             print(f"   使用已有采样数据 {sample_dir} (balance_mode={balance_mode})")
@@ -1181,14 +1182,14 @@ def main():
         default="layer1",
         help="采样均衡模式: target=二分类, major/layer1=CWE大类",
     )
-    parser.add_argument("--sample-ratio", type=float, default=0.01,
-                       help="采样比例 (默认 0.01 = 1%%)")
+    parser.add_argument("--sample-ratio", type=float, default=0.10,
+                       help="采样比例 (默认 0.10 = 10%%)")
     parser.add_argument("--dev-ratio", type=float, default=0.3,
                        help="开发集比例 (默认 0.3)")
     parser.add_argument("--remove-benign-train", action="store_true",
                        help="从训练集中移除 Benign 样本")
-    parser.add_argument("--min-dev-per-label", type=int, default=2,
-                       help="每个类别在 dev 集中的最少样本数 (默认 2)")
+    parser.add_argument("--min-dev-per-label", type=int, default=5,
+                       help="每个类别在 dev 集中的最少样本数 (默认 5)")
     parser.add_argument(
         "--force-resample",
         action="store_true",
