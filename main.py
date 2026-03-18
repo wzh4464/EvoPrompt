@@ -438,6 +438,9 @@ class PromptEvolver:
 
 DEFAULT_MAX_CATEGORY_DROP = 0.15
 
+# sklearn classification_report aggregate keys that are not real categories
+_REPORT_AGGREGATE_KEYS = frozenset({"accuracy", "macro avg", "weighted avg", "micro avg"})
+
 
 class PrimeVulLayer1Pipeline:
     """PrimeVul Layer-1 并发漏洞分类流水线"""
@@ -814,13 +817,15 @@ class PrimeVulLayer1Pipeline:
         Returns (passed: bool, regressions: list of (category, old_f1, new_f1, drop))
         """
         regressions = []
-        # Aggregate keys exclude list (sklearn classification_report aggregates)
-        _AGGREGATE_KEYS = {"accuracy", "macro avg", "weighted avg"}
-        all_categories = set(CWE_MAJOR_CATEGORIES) | {
-            k for k in set(old_report) | set(new_report)
-            if k not in _AGGREGATE_KEYS
-            and (isinstance(old_report.get(k), dict) or isinstance(new_report.get(k), dict))
-        }
+        # Start with known CWE categories, then add any extra report keys
+        # that look like per-class entries (dict with "f1-score").
+        all_categories = set(CWE_MAJOR_CATEGORIES)
+        for k in set(old_report) | set(new_report):
+            if k in _REPORT_AGGREGATE_KEYS or k in all_categories:
+                continue
+            entry = old_report.get(k) or new_report.get(k)
+            if isinstance(entry, dict) and "f1-score" in entry:
+                all_categories.add(k)
 
         for cat in sorted(all_categories):
             old_entry = old_report.get(cat)
