@@ -45,6 +45,25 @@ from evoprompt.utils.text import safe_format
 from sklearn.metrics import classification_report, confusion_matrix
 import numpy as np
 
+# Module-level constant for the default fitness metric.
+# Used by both the CLI argument parser and all config.get() fallbacks
+# so that changing the default in one place keeps everything in sync.
+DEFAULT_FITNESS_METRIC = "macro_f1"
+
+
+def get_fitness(config: Dict[str, Any], eval_result: Dict[str, Any]) -> Tuple[str, float]:
+    """Return (metric_name, fitness_value) from *eval_result* based on *config*.
+
+    Centralises the fitness-metric lookup that was previously duplicated in the
+    initial-evaluation loop and the per-generation evolution loop.
+    """
+    fitness_metric = config.get("fitness_metric", DEFAULT_FITNESS_METRIC)
+    if fitness_metric == "macro_f1":
+        fitness = eval_result["macro_f1"]
+    else:
+        fitness = eval_result["accuracy"]
+    return fitness_metric, fitness
+
 
 class BatchAnalyzer:
     """Batch 级别的分析器，对比预测结果和 ground truth 并生成反馈"""
@@ -918,8 +937,7 @@ class PrimeVulLayer1Pipeline:
                     prompt_id=f"initial_{i}", enable_evolution=False
                 )
                 individual = Individual(prompt)
-                fitness_metric = self.config.get("fitness_metric", "macro_f1")
-                individual.fitness = result["macro_f1"] if fitness_metric == "macro_f1" else result["accuracy"]
+                fitness_metric, individual.fitness = get_fitness(self.config, result)
                 population.append((individual, result))
                 print(f"    ✓ 适应度: {individual.fitness:.4f} ({fitness_metric})")
 
@@ -972,8 +990,7 @@ class PrimeVulLayer1Pipeline:
                     )
 
                     evolved_individual = Individual(evolved_prompt)
-                    fitness_metric = self.config.get("fitness_metric", "macro_f1")
-                    evolved_individual.fitness = eval_result["macro_f1"] if fitness_metric == "macro_f1" else eval_result["accuracy"]
+                    fitness_metric, evolved_individual.fitness = get_fitness(self.config, eval_result)
 
                     print(f"    进化前适应度: {best_individual.fitness:.4f} ({fitness_metric})")
                     print(f"    进化后适应度: {evolved_individual.fitness:.4f} ({fitness_metric})")
@@ -1078,16 +1095,16 @@ class PrimeVulLayer1Pipeline:
 
         # 3. 保存分类报告的易读版本
         readable_report_file = self.exp_dir / "classification_report.txt"
-        fitness_metric = self.config.get("fitness_metric", "macro_f1")
+        fitness_metric = self.config.get("fitness_metric", DEFAULT_FITNESS_METRIC)
         with open(readable_report_file, "w", encoding="utf-8") as f:
             f.write(f"PrimeVul Layer-1 分类报告\n")
             f.write(f"{'='*80}\n")
             f.write(f"实验 ID: {self.exp_id}\n")
             f.write(f"适应度指标: {fitness_metric}\n")
             f.write(f"最终适应度: {best_individual.fitness:.4f}\n")
-            f.write(f"准确率: {best_result['accuracy']:.4f}\n")
-            f.write(f"Macro F1: {best_result['macro_f1']:.4f}\n")
-            f.write(f"Weighted F1: {best_result['weighted_f1']:.4f}\n")
+            f.write(f"准确率: {best_result.get('accuracy', 0.0):.4f}\n")
+            f.write(f"Macro F1: {best_result.get('macro_f1', 0.0):.4f}\n")
+            f.write(f"Weighted F1: {best_result.get('weighted_f1', 0.0):.4f}\n")
             f.write(f"总样本数: {best_result['total_samples']}\n")
             f.write(f"Batch 大小: {self.batch_size}\n")
             f.write(f"Batch 总数: {best_result['num_batches']}\n\n")
@@ -1135,11 +1152,11 @@ class PrimeVulLayer1Pipeline:
             "experiment_id": self.exp_id,
             "timestamp": datetime.now().isoformat(),
             "config": self.config,
-            "fitness_metric": self.config.get("fitness_metric", "macro_f1"),
+            "fitness_metric": self.config.get("fitness_metric", DEFAULT_FITNESS_METRIC),
             "best_fitness": best_individual.fitness,
-            "accuracy": best_result["accuracy"],
-            "macro_f1": best_result["macro_f1"],
-            "weighted_f1": best_result["weighted_f1"],
+            "accuracy": best_result.get("accuracy", 0.0),
+            "macro_f1": best_result.get("macro_f1", 0.0),
+            "weighted_f1": best_result.get("weighted_f1", 0.0),
             "best_prompt": best_individual.prompt,
             "total_samples": best_result["total_samples"],
             "num_batches": best_result["num_batches"],
@@ -1199,8 +1216,8 @@ def main():
         default="layer1",
         help="采样均衡模式: target=二分类, major/layer1=CWE大类",
     )
-    parser.add_argument("--fitness-metric", choices=["accuracy", "macro_f1"], default="macro_f1",
-                       help="进化适应度指标 (default: macro_f1)")
+    parser.add_argument("--fitness-metric", choices=["accuracy", "macro_f1"], default=DEFAULT_FITNESS_METRIC,
+                       help=f"进化适应度指标 (default: {DEFAULT_FITNESS_METRIC})")
     parser.add_argument("--sample-ratio", type=float, default=0.10,
                        help="采样比例 (默认 0.10 = 10%%)")
     parser.add_argument("--dev-ratio", type=float, default=0.3,
