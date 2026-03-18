@@ -795,6 +795,25 @@ class PrimeVulLayer1Pipeline:
             "ground_truths": all_ground_truths,
         }
 
+    def _check_category_regression(
+        self,
+        old_report: Dict[str, Any],
+        new_report: Dict[str, Any],
+        max_drop: float,
+    ) -> Tuple[bool, List[Tuple[str, float, float, float]]]:
+        """Check if any category F1 dropped more than max_drop.
+
+        Returns (passed: bool, regressions: list of (category, old_f1, new_f1, drop))
+        """
+        regressions = []
+        for cat in CWE_MAJOR_CATEGORIES:
+            old_f1 = old_report.get(cat, {}).get("f1-score", 0.0)
+            new_f1 = new_report.get(cat, {}).get("f1-score", 0.0)
+            drop = old_f1 - new_f1
+            if old_f1 > 0 and drop > max_drop:
+                regressions.append((cat, old_f1, new_f1, drop))
+        return len(regressions) == 0, regressions
+
     def run_evolution(self) -> Dict[str, Any]:
         """运行完整的进化流程 (支持断点恢复)"""
         print("\n" + "="*80)
@@ -971,8 +990,20 @@ class PrimeVulLayer1Pipeline:
                     print(f"    进化后适应度: {evolved_individual.fitness:.4f}")
 
                     if evolved_individual.fitness > best_individual.fitness:
-                        print(f"    ✅ 接受进化后的 prompt!")
-                        population[0] = (evolved_individual, eval_result)
+                        # Check for category regression before accepting
+                        max_drop = self.config.get("max_category_drop", 0.15)
+                        passed, regressions = self._check_category_regression(
+                            best_result["classification_report"],
+                            eval_result["classification_report"],
+                            max_drop,
+                        )
+                        if not passed:
+                            print(f"    ⚠️ 拒绝进化: 类别退化超过阈值")
+                            for cat, old_f1, new_f1, drop in regressions:
+                                print(f"      {cat}: {old_f1:.3f} → {new_f1:.3f} (↓{drop:.3f})")
+                        else:
+                            print(f"    ✅ 接受进化后的 prompt!")
+                            population[0] = (evolved_individual, eval_result)
                     else:
                         print(f"    ❌ 保留原 prompt")
 
@@ -1205,6 +1236,12 @@ def main():
         action="store_true",
         help="启用错误累积+元学习调优",
     )
+    parser.add_argument(
+        "--max-category-drop",
+        type=float,
+        default=0.15,
+        help="最大允许的单类别 F1 下降幅度 (default: 0.15)",
+    )
 
     args = parser.parse_args()
 
@@ -1228,6 +1265,7 @@ def main():
         "force_resample": args.force_resample,
         "enable_rag": args.enable_rag,
         "enable_meta": args.enable_meta,
+        "max_category_drop": args.max_category_drop,
     }
 
     # 创建并运行 pipeline
