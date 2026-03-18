@@ -10,6 +10,7 @@ EvoPrompt Main Entry - PrimeVul Layer-1 并发漏洞分类
 5. 输出最终 prompt 和各类别的 precision/recall/f1-score 到 result/ 文件夹
 """
 
+import logging
 import sys
 import json
 import time
@@ -44,6 +45,60 @@ from evoprompt.utils.checkpoint import (
 from evoprompt.utils.text import safe_format
 from sklearn.metrics import classification_report, confusion_matrix
 import numpy as np
+
+# Module-level constant for the default fitness metric.
+# Used by both the CLI argument parser and all config.get() fallbacks
+# so that changing the default in one place keeps everything in sync.
+DEFAULT_FITNESS_METRIC = "macro_f1"
+VALID_FITNESS_METRICS = {"accuracy", "macro_f1"}
+
+logger = logging.getLogger(__name__)
+
+
+def get_fitness(config: Dict[str, Any], eval_result: Dict[str, Any]) -> Tuple[str, float]:
+    """Return (metric_name, fitness_value) from *eval_result* based on *config*.
+
+    Centralises the fitness-metric lookup that was previously duplicated in the
+    initial-evaluation loop and the per-generation evolution loop.
+
+    Raises ``ValueError`` if the configured metric is not in
+    :data:`VALID_FITNESS_METRICS`.  If the chosen metric is absent from
+    *eval_result* (e.g. when resuming from an older checkpoint), falls back to
+    ``"accuracy"`` with a warning instead of crashing.
+    """
+    fitness_metric = config.get("fitness_metric", DEFAULT_FITNESS_METRIC)
+    if fitness_metric not in VALID_FITNESS_METRICS:
+        raise ValueError(
+            f"Unknown fitness_metric {fitness_metric!r}; "
+            f"expected one of {sorted(VALID_FITNESS_METRICS)}"
+        )
+    if fitness_metric not in eval_result:
+        # Gracefully handle older checkpoints that lack newer metrics.
+        fallback = "accuracy"
+        logger.warning(
+            "Fitness metric %r not found in eval_result "
+            "(available keys: %s); falling back to %r. "
+            "This can happen when resuming from an older checkpoint.",
+            fitness_metric,
+            sorted(eval_result.keys()),
+            fallback,
+        )
+        fitness_metric = fallback
+    fitness = eval_result.get(fitness_metric, 0.0)
+    if fitness_metric not in eval_result:
+        logger.warning(
+            "Fallback metric %r also missing from eval_result; using 0.0",
+            fitness_metric,
+        )
+    return fitness_metric, fitness
+
+
+def _safe_metric(result: Dict[str, Any], key: str, default: float = 0.0) -> float:
+    """Return ``result[key]`` if present, else *default* with a debug log."""
+    if key in result:
+        return result[key]
+    logger.debug("Metric %r missing from result dict; defaulting to %.1f", key, default)
+    return default
 
 
 class BatchAnalyzer:
@@ -781,11 +836,17 @@ class PrimeVulLayer1Pipeline:
             labels=CWE_MAJOR_CATEGORIES
         )
 
+        # Extract macro / weighted F1 for fitness selection
+        macro_f1 = report.get("macro avg", {}).get("f1-score", 0.0)
+        weighted_f1 = report.get("weighted avg", {}).get("f1-score", 0.0)
+
         return {
             "prompt_id": prompt_id,
             "generation": generation,
             "final_prompt": current_prompt,
             "accuracy": overall_accuracy,
+            "macro_f1": macro_f1,
+            "weighted_f1": weighted_f1,
             "total_samples": total_samples,
             "num_batches": num_batches,
             "batch_analyses": batch_analyses,
@@ -912,9 +973,9 @@ class PrimeVulLayer1Pipeline:
                     prompt_id=f"initial_{i}", enable_evolution=False
                 )
                 individual = Individual(prompt)
-                individual.fitness = result["accuracy"]
+                fitness_metric, individual.fitness = get_fitness(self.config, result)
                 population.append((individual, result))
-                print(f"    ✓ 适应度: {individual.fitness:.4f}")
+                print(f"    ✓ 适应度: {individual.fitness:.4f} ({fitness_metric})")
 
             # 保存初始 checkpoint
             self.checkpoint_manager.save_checkpoint(
@@ -965,10 +1026,10 @@ class PrimeVulLayer1Pipeline:
                     )
 
                     evolved_individual = Individual(evolved_prompt)
-                    evolved_individual.fitness = eval_result["accuracy"]
+                    fitness_metric, evolved_individual.fitness = get_fitness(self.config, eval_result)
 
-                    print(f"    进化前适应度: {best_individual.fitness:.4f}")
-                    print(f"    进化后适应度: {evolved_individual.fitness:.4f}")
+                    print(f"    进化前适应度: {best_individual.fitness:.4f} ({fitness_metric})")
+                    print(f"    进化后适应度: {evolved_individual.fitness:.4f} ({fitness_metric})")
 
                     if evolved_individual.fitness > best_individual.fitness:
                         print(f"    ✅ 接受进化后的 prompt!")
@@ -1070,11 +1131,16 @@ class PrimeVulLayer1Pipeline:
 
         # 3. 保存分类报告的易读版本
         readable_report_file = self.exp_dir / "classification_report.txt"
+        fitness_metric = self.config.get("fitness_metric", DEFAULT_FITNESS_METRIC)
         with open(readable_report_file, "w", encoding="utf-8") as f:
             f.write(f"PrimeVul Layer-1 分类报告\n")
             f.write(f"{'='*80}\n")
             f.write(f"实验 ID: {self.exp_id}\n")
-            f.write(f"最终准确率: {best_individual.fitness:.4f}\n")
+            f.write(f"适应度指标: {fitness_metric}\n")
+            f.write(f"最终适应度: {best_individual.fitness:.4f}\n")
+            f.write(f"准确率: {_safe_metric(best_result, 'accuracy'):.4f}\n")
+            f.write(f"Macro F1: {_safe_metric(best_result, 'macro_f1'):.4f}\n")
+            f.write(f"Weighted F1: {_safe_metric(best_result, 'weighted_f1'):.4f}\n")
             f.write(f"总样本数: {best_result['total_samples']}\n")
             f.write(f"Batch 大小: {self.batch_size}\n")
             f.write(f"Batch 总数: {best_result['num_batches']}\n\n")
@@ -1122,7 +1188,11 @@ class PrimeVulLayer1Pipeline:
             "experiment_id": self.exp_id,
             "timestamp": datetime.now().isoformat(),
             "config": self.config,
+            "fitness_metric": self.config.get("fitness_metric", DEFAULT_FITNESS_METRIC),
             "best_fitness": best_individual.fitness,
+            "accuracy": _safe_metric(best_result, "accuracy"),
+            "macro_f1": _safe_metric(best_result, "macro_f1"),
+            "weighted_f1": _safe_metric(best_result, "weighted_f1"),
             "best_prompt": best_individual.prompt,
             "total_samples": best_result["total_samples"],
             "num_batches": best_result["num_batches"],
@@ -1182,6 +1252,8 @@ def main():
         default="layer1",
         help="采样均衡模式: target=二分类, major/layer1=CWE大类",
     )
+    parser.add_argument("--fitness-metric", choices=sorted(VALID_FITNESS_METRICS), default=DEFAULT_FITNESS_METRIC,
+                       help=f"进化适应度指标 (default: {DEFAULT_FITNESS_METRIC})")
     parser.add_argument("--sample-ratio", type=float, default=0.10,
                        help="采样比例 (默认 0.10 = 10%%)")
     parser.add_argument("--dev-ratio", type=float, default=0.3,
@@ -1221,6 +1293,7 @@ def main():
         "auto_recover": args.auto_recover,
         "mode": args.mode,
         "balance_mode": args.balance_mode,
+        "fitness_metric": args.fitness_metric,
         "sample_ratio": args.sample_ratio,
         "dev_ratio": args.dev_ratio,
         "remove_benign_train": args.remove_benign_train,
