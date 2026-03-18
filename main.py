@@ -812,10 +812,6 @@ class PrimeVulLayer1Pipeline:
 
         Returns (passed: bool, regressions: list of (category, old_f1, new_f1, drop))
         """
-        if not (0.0 <= max_drop <= 1.0):
-            raise ValueError(
-                f"max_drop must be between 0.0 and 1.0, got {max_drop}"
-            )
         regressions = []
         # Use all known categories, but also check for unexpected ones in reports
         all_categories = set(CWE_MAJOR_CATEGORIES)
@@ -1268,6 +1264,11 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if not (0.0 <= args.max_category_drop <= 1.0):
+        parser.error(
+            f"--max-category-drop must be between 0.0 and 1.0, got {args.max_category_drop}"
+        )
 
     # 创建配置
     config = {
