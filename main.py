@@ -829,14 +829,10 @@ class PrimeVulLayer1Pipeline:
             new_entry = new_report.get(cat)
             if old_entry is None and new_entry is None:
                 continue
-            if old_entry is None:
-                print(f"      [info] category '{cat}' missing from old report, skipping regression check")
-                continue
-            if new_entry is None:
-                print(f"      [info] category '{cat}' missing from new report, skipping regression check")
-                continue
-            old_f1 = old_entry.get("f1-score", 0.0)
-            new_f1 = new_entry.get("f1-score", 0.0)
+            old_f1 = old_entry.get("f1-score", 0.0) if old_entry is not None else 0.0
+            # Treat a category that disappeared from the new report as f1=0.0
+            # so that dropping a previously-evaluated category counts as regression
+            new_f1 = new_entry.get("f1-score", 0.0) if new_entry is not None else 0.0
             drop = old_f1 - new_f1
             if old_f1 > 0 and drop > max_drop:
                 regressions.append((cat, old_f1, new_f1, drop))
