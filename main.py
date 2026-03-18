@@ -10,6 +10,7 @@ EvoPrompt Main Entry - PrimeVul Layer-1 并发漏洞分类
 5. 输出最终 prompt 和各类别的 precision/recall/f1-score 到 result/ 文件夹
 """
 
+import logging
 import sys
 import json
 import time
@@ -49,6 +50,9 @@ import numpy as np
 # Used by both the CLI argument parser and all config.get() fallbacks
 # so that changing the default in one place keeps everything in sync.
 DEFAULT_FITNESS_METRIC = "macro_f1"
+VALID_FITNESS_METRICS = {"accuracy", "macro_f1"}
+
+logger = logging.getLogger(__name__)
 
 
 def get_fitness(config: Dict[str, Any], eval_result: Dict[str, Any]) -> Tuple[str, float]:
@@ -56,13 +60,26 @@ def get_fitness(config: Dict[str, Any], eval_result: Dict[str, Any]) -> Tuple[st
 
     Centralises the fitness-metric lookup that was previously duplicated in the
     initial-evaluation loop and the per-generation evolution loop.
+
+    Raises ``ValueError`` if the configured metric is not in
+    :data:`VALID_FITNESS_METRICS`.
     """
     fitness_metric = config.get("fitness_metric", DEFAULT_FITNESS_METRIC)
-    if fitness_metric == "macro_f1":
-        fitness = eval_result["macro_f1"]
-    else:
-        fitness = eval_result["accuracy"]
+    if fitness_metric not in VALID_FITNESS_METRICS:
+        raise ValueError(
+            f"Unknown fitness_metric {fitness_metric!r}; "
+            f"expected one of {sorted(VALID_FITNESS_METRICS)}"
+        )
+    fitness = eval_result[fitness_metric]
     return fitness_metric, fitness
+
+
+def _safe_metric(result: Dict[str, Any], key: str, default: float = 0.0) -> float:
+    """Return ``result[key]`` if present, else *default* with a warning."""
+    if key in result:
+        return result[key]
+    logger.warning("Metric %r missing from result dict; defaulting to %.1f", key, default)
+    return default
 
 
 class BatchAnalyzer:
@@ -1102,9 +1119,9 @@ class PrimeVulLayer1Pipeline:
             f.write(f"实验 ID: {self.exp_id}\n")
             f.write(f"适应度指标: {fitness_metric}\n")
             f.write(f"最终适应度: {best_individual.fitness:.4f}\n")
-            f.write(f"准确率: {best_result.get('accuracy', 0.0):.4f}\n")
-            f.write(f"Macro F1: {best_result.get('macro_f1', 0.0):.4f}\n")
-            f.write(f"Weighted F1: {best_result.get('weighted_f1', 0.0):.4f}\n")
+            f.write(f"准确率: {_safe_metric(best_result, 'accuracy'):.4f}\n")
+            f.write(f"Macro F1: {_safe_metric(best_result, 'macro_f1'):.4f}\n")
+            f.write(f"Weighted F1: {_safe_metric(best_result, 'weighted_f1'):.4f}\n")
             f.write(f"总样本数: {best_result['total_samples']}\n")
             f.write(f"Batch 大小: {self.batch_size}\n")
             f.write(f"Batch 总数: {best_result['num_batches']}\n\n")
@@ -1154,9 +1171,9 @@ class PrimeVulLayer1Pipeline:
             "config": self.config,
             "fitness_metric": self.config.get("fitness_metric", DEFAULT_FITNESS_METRIC),
             "best_fitness": best_individual.fitness,
-            "accuracy": best_result.get("accuracy", 0.0),
-            "macro_f1": best_result.get("macro_f1", 0.0),
-            "weighted_f1": best_result.get("weighted_f1", 0.0),
+            "accuracy": _safe_metric(best_result, "accuracy"),
+            "macro_f1": _safe_metric(best_result, "macro_f1"),
+            "weighted_f1": _safe_metric(best_result, "weighted_f1"),
             "best_prompt": best_individual.prompt,
             "total_samples": best_result["total_samples"],
             "num_batches": best_result["num_batches"],
