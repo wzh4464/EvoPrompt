@@ -70,14 +70,26 @@ class MulVulStrategy:
         self.llm_client = llm_client
         self.config = config or {}
 
-        k = self.config.get("k", 3)
+        max_agents = self.config.get("max_agents", self.config.get("k", 3))
         parallel = self.config.get("parallel", True)
+        adaptive_agents = self.config.get("adaptive_agents", True)
 
         self.detector = MulVulDetector.create_default(
             llm_client=llm_client,
             retriever=self.config.get("retriever"),
-            k=k,
+            max_agents=max_agents,
             parallel=parallel,
+            adaptive=adaptive_agents,
+            min_agents=self.config.get("min_agents", 1),
+            routing_confidence_threshold=self.config.get(
+                "routing_confidence_threshold", 0.2
+            ),
+            routing_relative_threshold=self.config.get(
+                "routing_relative_threshold", 0.6
+            ),
+            benign_short_circuit_threshold=self.config.get(
+                "benign_short_circuit_threshold", 0.8
+            ),
         )
 
     # ------------------------------------------------------------------

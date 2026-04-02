@@ -3,6 +3,9 @@
 from dataclasses import dataclass, field
 from typing import Optional, List
 
+BENIGN_CATEGORY = "Benign"
+UNKNOWN_CATEGORY = "Unknown"
+
 
 @dataclass
 class DetectionResult:
@@ -29,7 +32,12 @@ class DetectionResult:
 
     def is_vulnerable(self) -> bool:
         """Check if prediction indicates vulnerability."""
-        return self.prediction.lower() not in ("benign", "safe", "non-vul", "non-vulnerable")
+        return self.prediction.lower() not in (
+            BENIGN_CATEGORY.lower(),
+            "safe",
+            "non-vul",
+            "non-vulnerable",
+        )
 
     def to_dict(self) -> dict:
         return {
@@ -45,7 +53,7 @@ class DetectionResult:
 
 @dataclass
 class RoutingResult:
-    """Result from Router Agent with top-k categories."""
+    """Result from Router Agent with ranked categories."""
 
     categories: List[tuple]  # [(category, confidence), ...]
     evidence_used: List[dict] = field(default_factory=list)
@@ -53,11 +61,13 @@ class RoutingResult:
 
     @property
     def top_category(self) -> str:
-        return self.categories[0][0] if self.categories else "Unknown"
+        return self.categories[0][0] if self.categories else UNKNOWN_CATEGORY
 
     @property
     def top_confidence(self) -> float:
         return self.categories[0][1] if self.categories else 0.0
 
-    def get_top_k(self, k: int = 3) -> List[tuple]:
+    def get_top_k(self, k: Optional[int] = None) -> List[tuple]:
+        if k is None:
+            return list(self.categories)
         return self.categories[:k]

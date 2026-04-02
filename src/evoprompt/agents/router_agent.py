@@ -1,23 +1,26 @@
-"""Router Agent for top-k category routing.
+"""Router Agent for ranked category routing.
 
 Implements Stage I from method.md Algorithm 3:
 1. Convert code to SCALE representation T(x)
 2. Retrieve cross-type contrastive evidence from K
-3. Predict top-k categories with confidence scores
+3. Predict ranked categories with confidence scores
 """
 
 import json
 import re
 from typing import List, Tuple, Optional, Dict, Any
 
-from .base import RoutingResult
+from .base import BENIGN_CATEGORY, RoutingResult
 
 # Major categories aligned with CWE taxonomy
-MAJOR_CATEGORIES = ["Memory", "Injection", "Logic", "Input", "Crypto", "Benign"]
+MAJOR_CATEGORIES = ["Memory", "Injection", "Logic", "Input", "Crypto", BENIGN_CATEGORY]
 
 DEFAULT_ROUTER_PROMPT = """You are a security expert routing code to specialized vulnerability detectors.
 
-Analyze the code and predict the TOP-3 most likely vulnerability categories.
+Analyze the code and rank the vulnerability categories by likelihood.
+Return as many categories as needed (1-6) in descending confidence order.
+If the code appears benign, include "Benign" with the highest confidence, but
+still include any plausible vulnerable alternatives with lower confidence.
 
 ## Categories:
 - Memory: Buffer overflow, use-after-free, null pointer, integer overflow
@@ -39,8 +42,8 @@ Analyze the code and predict the TOP-3 most likely vulnerability categories.
 {{
   "predictions": [
     {{"category": "Memory", "confidence": 0.85, "reason": "Buffer operations without bounds checking"}},
-    {{"category": "Benign", "confidence": 0.10, "reason": "Could be safe if inputs are validated"}},
-    {{"category": "Injection", "confidence": 0.05, "reason": "No obvious injection points"}}
+    {{"category": "Injection", "confidence": 0.55, "reason": "Untrusted input may reach a query or command"}},
+    {{"category": "Benign", "confidence": 0.10, "reason": "Could still be safe if validation is present"}}
   ]
 }}
 
@@ -48,7 +51,7 @@ Respond with ONLY the JSON object."""
 
 
 class RouterAgent:
-    """Routes code to top-k most relevant Detector Agents.
+    """Routes code to ranked Detector Agents.
 
     Uses cross-type contrastive retrieval to provide evidence
     spanning multiple vulnerability categories.
@@ -59,23 +62,23 @@ class RouterAgent:
         llm_client,
         retriever=None,
         prompt: str = DEFAULT_ROUTER_PROMPT,
-        k: int = 3,
+        max_candidates: Optional[int] = None,
         categories: List[str] = None,
     ):
         self.llm_client = llm_client
         self.retriever = retriever
         self.prompt = prompt
-        self.k = k
+        self.max_candidates = max_candidates
         self.categories = categories or MAJOR_CATEGORIES
 
     def route(self, code: str) -> RoutingResult:
-        """Route code to top-k categories.
+        """Route code to ranked categories.
 
         Args:
             code: Source code to analyze
 
         Returns:
-            RoutingResult with top-k categories and confidence scores
+            RoutingResult with ranked categories and confidence scores
         """
         # 1. Retrieve cross-type contrastive evidence
         evidence = self._retrieve_contrastive_evidence(code)
@@ -89,9 +92,11 @@ class RouterAgent:
 
         # 4. Parse response
         categories = self._parse_response(response)
+        if self.max_candidates is not None:
+            categories = categories[:self.max_candidates]
 
         return RoutingResult(
-            categories=categories[:self.k],
+            categories=categories,
             evidence_used=evidence,
             raw_response=response,
         )
@@ -103,7 +108,7 @@ class RouterAgent:
 
         evidence = []
         for category in self.categories:
-            if category == "Benign":
+            if category == BENIGN_CATEGORY:
                 continue
             samples = self.retriever.retrieve_from_category(
                 code, category, top_k=n_per_category
@@ -134,10 +139,18 @@ class RouterAgent:
             if json_match:
                 data = json.loads(json_match.group())
                 predictions = data.get("predictions", [])
-                return [
-                    (p.get("category", "Unknown"), float(p.get("confidence", 0.5)))
-                    for p in predictions
-                ]
+                best: dict[str, float] = {}
+                for prediction in predictions:
+                    category = prediction.get("category", "Unknown")
+                    if category not in self.categories:
+                        continue
+                    confidence = float(prediction.get("confidence", 0.5))
+                    if category not in best or confidence > best[category]:
+                        best[category] = confidence
+                parsed = list(best.items())
+
+                if parsed:
+                    return sorted(parsed, key=lambda item: item[1], reverse=True)
         except (json.JSONDecodeError, ValueError):
             pass
 
@@ -162,6 +175,6 @@ class RouterAgent:
 
         # Ensure we have at least one prediction
         if not scores:
-            scores = [("Benign", 0.5)]
+            scores = [(BENIGN_CATEGORY, 0.5)]
 
         return scores
