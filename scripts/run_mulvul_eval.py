@@ -2,7 +2,7 @@
 """MulVul 多智能体系统评估脚本
 
 使用完整的 Router-Detector-Aggregator 架构:
-- RouterAgent: Top-k 路由 + 跨类型对比检索
+- RouterAgent: 自适应路由 + 跨类型对比检索
 - DetectorAgent: 类别专用检测器
 - DecisionAggregator: 置信度加权聚合
 - Recall@k / F1 评估指标
@@ -164,10 +164,11 @@ def run_mulvul_evaluation(
     max_workers: int = 32,
     max_samples: Optional[int] = None,
     output_dir: str = "./outputs",
-    k: int = 3,
+    max_agents: int = 3,
     balanced: bool = False,
     seed: int = None,
     kb_path: str = None,
+    adaptive_agents: bool = True,
 ) -> Dict[str, Any]:
     """运行 MulVul 多智能体评估"""
 
@@ -176,7 +177,8 @@ def run_mulvul_evaluation(
     print("=" * 70)
     print("🔥 MulVul 多智能体系统评估")
     print("=" * 70)
-    print(f"   🔀 Router: Top-{k} routing")
+    routing_mode = "Adaptive" if adaptive_agents else "Fixed"
+    print(f"   🔀 Router: {routing_mode} routing (max_agents={max_agents})")
     print(f"   🔍 Detectors: Category-specific (Memory/Injection/Logic/Input/Crypto)")
     print(f"   📊 Aggregator: Confidence-based")
     if balanced:
@@ -220,7 +222,7 @@ def run_mulvul_evaluation(
     print(f"\n🚀 启动并发评估 (workers={max_workers})")
 
     # 统计结构
-    router_metrics = RouterMetrics(k=k)
+    router_metrics = RouterMetrics(k=max_agents)
     detector_metrics = MultiClassMetrics()
     major_stats = defaultdict(lambda: {"total": 0, "routing_correct": 0, "final_correct": 0})
 
@@ -233,7 +235,13 @@ def run_mulvul_evaluation(
         def evaluate_with_detector(args):
             item, expected_major = args
             llm_client = create_llm_client()
-            detector = MulVulDetector.create_default(llm_client, retriever=retriever, k=k, parallel=False)
+            detector = MulVulDetector.create_default(
+                llm_client,
+                retriever=retriever,
+                max_agents=max_agents,
+                parallel=False,
+                adaptive=adaptive_agents,
+            )
             return evaluate_single_sample(item, detector, expected_major)
 
         futures = {
@@ -293,8 +301,8 @@ def run_mulvul_evaluation(
     print("📊 MulVul 评估结果")
     print("=" * 70)
 
-    print(f"\n🔀 Router Agent (Top-{k} Routing):")
-    print(f"   Recall@{k}: {recall_k:.2%} ({routing_correct}/{total})")
+    print(f"\n🔀 Router Agent ({routing_mode}, max_agents={max_agents}):")
+    print(f"   Recall@{max_agents}: {recall_k:.2%} ({routing_correct}/{total})")
     router_report = router_metrics.get_report()
     print(f"   MRR: {router_report['mrr']:.4f}")
 
@@ -322,7 +330,9 @@ def run_mulvul_evaluation(
     summary = {
         "timestamp": datetime.now().isoformat(),
         "data_file": data_file,
-        "k": k,
+        "k": max_agents,
+        "max_agents": max_agents,
+        "adaptive_agents": adaptive_agents,
         "total_samples": total,
         "elapsed_seconds": elapsed,
         "router": {
@@ -351,7 +361,19 @@ def main():
     parser.add_argument("--workers", type=int, default=32)
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--output", default="./outputs")
-    parser.add_argument("--k", type=int, default=3, help="Top-k routing")
+    parser.add_argument(
+        "--max-agents",
+        "--k",
+        dest="max_agents",
+        type=int,
+        default=3,
+        help="Adaptive routing的最大 detector agent 数",
+    )
+    parser.add_argument(
+        "--fixed-agents",
+        action="store_true",
+        help="禁用自适应 routing，始终运行 max_agents 个 detector",
+    )
     parser.add_argument("--epochs", type=int, default=1, help="Number of evaluation runs")
     parser.add_argument("--balanced", action="store_true", help="Balance benign:vul = 1:1")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for balanced sampling")
@@ -375,10 +397,11 @@ def main():
             max_workers=args.workers,
             max_samples=args.max_samples,
             output_dir=args.output,
-            k=args.k,
+            max_agents=args.max_agents,
             balanced=args.balanced,
             seed=args.seed + epoch if args.balanced else None,
             kb_path=args.kb,
+            adaptive_agents=not args.fixed_agents,
         )
         all_results.append(summary)
 

@@ -118,10 +118,11 @@ def run_cwe_evaluation(
     max_workers: int = 32,
     max_samples: Optional[int] = None,
     output_dir: str = "./outputs",
-    k: int = 3,
+    max_agents: int = 3,
     balanced: bool = False,
     seed: int = 42,
     kb_path: str = None,
+    adaptive_agents: bool = True,
 ) -> Dict[str, Any]:
     """运行 CWE 级别评估"""
 
@@ -130,7 +131,8 @@ def run_cwe_evaluation(
     print("=" * 70)
     print("🔥 MulVul CWE 级别评估")
     print("=" * 70)
-    print(f"   🔀 Router: Top-{k} routing")
+    routing_mode = "Adaptive" if adaptive_agents else "Fixed"
+    print(f"   🔀 Router: {routing_mode} routing (max_agents={max_agents})")
     print(f"   📊 评估层级: Major → Middle → CWE")
     if kb_path:
         print(f"   📚 Knowledge Base: {kb_path}")
@@ -189,7 +191,13 @@ def run_cwe_evaluation(
         def evaluate_with_detector(args):
             item, expected = args
             llm_client = create_llm_client()
-            detector = MulVulDetector.create_default(llm_client, retriever=retriever, k=k, parallel=False)
+            detector = MulVulDetector.create_default(
+                llm_client,
+                retriever=retriever,
+                max_agents=max_agents,
+                parallel=False,
+                adaptive=adaptive_agents,
+            )
             return evaluate_single_sample(item, detector, expected)
 
         futures = {
@@ -227,7 +235,7 @@ def run_cwe_evaluation(
     print("📊 CWE 级别评估结果")
     print("=" * 70)
 
-    print(f"\n🔀 Router (Recall@{k}): {routing_correct/total:.2%} ({routing_correct}/{total})")
+    print(f"\n🔀 Router (Recall@{max_agents}): {routing_correct/total:.2%} ({routing_correct}/{total})")
     print(f"🎯 Major Accuracy: {major_correct/total:.2%} ({major_correct}/{total})")
     print(f"🎯 CWE Accuracy: {cwe_correct/total:.2%} ({cwe_correct}/{total})")
 
@@ -246,7 +254,9 @@ def run_cwe_evaluation(
     summary = {
         "timestamp": datetime.now().isoformat(),
         "data_file": data_file,
-        "k": k,
+        "k": max_agents,
+        "max_agents": max_agents,
+        "adaptive_agents": adaptive_agents,
         "total_samples": total,
         "elapsed_seconds": elapsed,
         "routing_recall_k": routing_correct / total,
@@ -269,7 +279,19 @@ def main():
     parser.add_argument("--workers", type=int, default=32)
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--output", default="./outputs")
-    parser.add_argument("--k", type=int, default=3, help="Top-k routing")
+    parser.add_argument(
+        "--max-agents",
+        "--k",
+        dest="max_agents",
+        type=int,
+        default=3,
+        help="Adaptive routing的最大 detector agent 数",
+    )
+    parser.add_argument(
+        "--fixed-agents",
+        action="store_true",
+        help="禁用自适应 routing，始终运行 max_agents 个 detector",
+    )
     parser.add_argument("--balanced", action="store_true", help="Balance benign:vul = 1:1")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--kb", default="./data/knowledge_base_hierarchical.json", help="Knowledge base path")
@@ -285,10 +307,11 @@ def main():
         max_workers=args.workers,
         max_samples=args.max_samples,
         output_dir=args.output,
-        k=args.k,
+        max_agents=args.max_agents,
         balanced=args.balanced,
         seed=args.seed,
         kb_path=args.kb,
+        adaptive_agents=not args.fixed_agents,
     )
     return 0
 

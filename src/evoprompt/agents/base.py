@@ -45,7 +45,7 @@ class DetectionResult:
 
 @dataclass
 class RoutingResult:
-    """Result from Router Agent with top-k categories."""
+    """Result from Router Agent with ranked categories."""
 
     categories: List[tuple]  # [(category, confidence), ...]
     evidence_used: List[dict] = field(default_factory=list)
@@ -59,5 +59,7 @@ class RoutingResult:
     def top_confidence(self) -> float:
         return self.categories[0][1] if self.categories else 0.0
 
-    def get_top_k(self, k: int = 3) -> List[tuple]:
+    def get_top_k(self, k: Optional[int] = None) -> List[tuple]:
+        if k is None:
+            return list(self.categories)
         return self.categories[:k]

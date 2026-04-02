@@ -25,8 +25,9 @@ def demo_mulvul():
     detector = MulVulDetector.create_default(
         llm_client=llm_client,
         retriever=None,  # No RAG for demo
-        k=3,
+        max_agents=3,
         parallel=True,
+        adaptive=True,
     )
 
     # Test cases
@@ -90,7 +91,8 @@ def main():
 
         # Print routing info
         print(f"\n🔀 Router Agent:")
-        print(f"   Top-k categories: {details['routing']['top_k']}")
+        print(f"   Ranked categories: {details['routing']['ranked']}")
+        print(f"   Selected detector categories: {details['routing']['selected']}")
 
         # Print detector results
         print(f"\n🔍 Detector Results:")
