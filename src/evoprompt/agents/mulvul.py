@@ -9,7 +9,12 @@ Implements the complete detection pipeline from method.md Algorithm 3:
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional, Tuple
 
-from .base import DetectionResult, RoutingResult
+from .base import (
+    BENIGN_CATEGORY,
+    UNKNOWN_CATEGORY,
+    DetectionResult,
+    RoutingResult,
+)
 from .router_agent import RouterAgent
 from .detector_agent import DetectorAgent, DetectorAgentFactory
 from .aggregator import DecisionAggregator
@@ -160,7 +165,7 @@ class MulVulDetector:
         """Return True when a Benign router result should skip specialists."""
         top_vulnerable_confidence = vulnerable_categories[0][1]
         return (
-            routing_result.top_category == "Benign"
+            routing_result.top_category == BENIGN_CATEGORY
             and routing_result.top_confidence
             >= self.benign_short_circuit_threshold
             and top_vulnerable_confidence
@@ -188,11 +193,8 @@ class MulVulDetector:
         vulnerable_categories: List[tuple],
     ) -> List[tuple]:
         """Fallback to the highest-ranked vulnerable categories."""
-        min_required = min(
-            len(vulnerable_categories),
-            self.max_agents,
-            self.min_agents,
-        )
+        max_possible = min(len(vulnerable_categories), self.max_agents)
+        min_required = min(max_possible, max(self.min_agents, 1))
         return vulnerable_categories[:min_required]
 
     def _handle_empty_selection(
@@ -200,20 +202,24 @@ class MulVulDetector:
         routing_result: RoutingResult,
     ) -> DetectionResult:
         """Handle cases where no specialist detector should be invoked."""
-        if routing_result.top_category == "Benign":
+        if routing_result.top_category == BENIGN_CATEGORY:
             return DetectionResult(
-                prediction="Benign",
+                prediction=BENIGN_CATEGORY,
                 confidence=routing_result.top_confidence,
-                evidence="Router predicted Benign, so no specialist detector was invoked.",
-                category="Benign",
+                evidence=(
+                    "Router predicted Benign, so no specialist detector "
+                    "was invoked."
+                ),
+                category=BENIGN_CATEGORY,
                 agent_id="router_benign",
                 raw_response=routing_result.raw_response,
             )
 
         return DetectionResult(
-            prediction="Unknown",
+            prediction=UNKNOWN_CATEGORY,
             confidence=0.0,
             evidence="Router did not return any supported detector category.",
+            category=UNKNOWN_CATEGORY,
             agent_id="router_empty",
             raw_response=routing_result.raw_response,
         )

@@ -1,13 +1,30 @@
 """Tests for adaptive MulVul detector routing."""
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from evoprompt.agents.base import DetectionResult, RoutingResult
+from evoprompt.agents.base import (
+    BENIGN_CATEGORY,
+    UNKNOWN_CATEGORY,
+    DetectionResult,
+    RoutingResult,
+)
 from evoprompt.agents.mulvul import MulVulDetector
 from evoprompt.agents.router_agent import RouterAgent
+
+
+class StubLLMClient:
+    """LLM stub returning a fixed router response."""
+
+    def __init__(self, response: str):
+        self.response = response
+        self.prompts = []
+
+    def generate(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        return self.response
 
 
 class StubRouter:
@@ -55,8 +72,8 @@ def _build_detectors():
 
 
 def test_router_parse_response_sorts_and_filters_predictions():
-    router = RouterAgent(llm_client=object())
-    response = """
+    llm_client = StubLLMClient(
+        """
     {
       "predictions": [
         {"category": "Injection", "confidence": 0.52},
@@ -66,8 +83,10 @@ def test_router_parse_response_sorts_and_filters_predictions():
       ]
     }
     """
+    )
+    router = RouterAgent(llm_client=llm_client)
 
-    parsed = router._parse_response(response)
+    parsed = router.route("int main() { return 0; }").categories
 
     assert parsed == [("Memory", 0.81), ("Injection", 0.52)]
 
@@ -79,7 +98,7 @@ def test_adaptive_routing_selects_single_detector_for_confident_router():
             ("Memory", 0.92),
             ("Injection", 0.40),
             ("Input", 0.32),
-            ("Benign", 0.05),
+            (BENIGN_CATEGORY, 0.05),
         ]),
         detectors=detectors,
         parallel=False,
@@ -110,7 +129,7 @@ def test_adaptive_routing_selects_multiple_detectors_when_router_is_uncertain():
             ("Injection", 0.46),
             ("Input", 0.31),
             ("Crypto", 0.18),
-            ("Benign", 0.07),
+            (BENIGN_CATEGORY, 0.07),
         ]),
         detectors=detectors,
         parallel=False,
@@ -137,7 +156,7 @@ def test_benign_short_circuit_skips_specialist_detectors():
     detectors = _build_detectors()
     detector = MulVulDetector(
         router=StubRouter([
-            ("Benign", 0.88),
+            (BENIGN_CATEGORY, 0.88),
             ("Memory", 0.42),
             ("Injection", 0.19),
         ]),
@@ -151,8 +170,8 @@ def test_benign_short_circuit_skips_specialist_detectors():
 
     result = detector.detect("code sample")
 
-    assert result.prediction == "Benign"
-    assert result.category == "Benign"
+    assert result.prediction == BENIGN_CATEGORY
+    assert result.category == BENIGN_CATEGORY
     assert all(stub.calls == 0 for stub in detectors.values())
 
 
@@ -160,7 +179,7 @@ def test_benign_high_confidence_but_competitive_vuln_does_not_short_circuit():
     detectors = _build_detectors()
     detector = MulVulDetector(
         router=StubRouter([
-            ("Benign", 0.88),
+            (BENIGN_CATEGORY, 0.88),
             ("Memory", 0.70),
             ("Injection", 0.19),
         ]),
@@ -189,9 +208,10 @@ def test_unknown_when_router_has_no_supported_categories():
 
     result = detector.detect("code sample")
 
-    assert result.prediction == "Unknown"
+    assert result.prediction == UNKNOWN_CATEGORY
     assert result.confidence == 0.0
     assert result.evidence == "Router did not return any supported detector category."
+    assert result.category == UNKNOWN_CATEGORY
     assert result.agent_id == "router_empty"
     assert all(stub.calls == 0 for stub in detectors.values())
 

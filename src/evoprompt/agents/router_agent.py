@@ -10,10 +10,10 @@ import json
 import re
 from typing import List, Tuple, Optional, Dict, Any
 
-from .base import RoutingResult
+from .base import BENIGN_CATEGORY, RoutingResult
 
 # Major categories aligned with CWE taxonomy
-MAJOR_CATEGORIES = ["Memory", "Injection", "Logic", "Input", "Crypto", "Benign"]
+MAJOR_CATEGORIES = ["Memory", "Injection", "Logic", "Input", "Crypto", BENIGN_CATEGORY]
 
 DEFAULT_ROUTER_PROMPT = """You are a security expert routing code to specialized vulnerability detectors.
 
@@ -108,7 +108,7 @@ class RouterAgent:
 
         evidence = []
         for category in self.categories:
-            if category == "Benign":
+            if category == BENIGN_CATEGORY:
                 continue
             samples = self.retriever.retrieve_from_category(
                 code, category, top_k=n_per_category
@@ -176,6 +176,6 @@ class RouterAgent:
 
         # Ensure we have at least one prediction
         if not scores:
-            scores = [("Benign", 0.5)]
+            scores = [(BENIGN_CATEGORY, 0.5)]
 
         return scores
