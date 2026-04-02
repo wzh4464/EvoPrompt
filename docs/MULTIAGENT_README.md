@@ -103,13 +103,13 @@ BACKUP_API_BASE_URL=https://backup-api.example.com/v1
 运行采样脚本生成1%均衡数据:
 
 ```bash
-uv run python scripts/demo_primevul_1percent.py
+uv run python scripts/ablations/demo_primevul_1percent.py
 ```
 
 ### 3. 运行Multi-agent协同进化
 
 ```bash
-uv run python scripts/demo_multiagent_coevolution.py
+uv run python scripts/ablations/demo_multiagent_coevolution.py
 ```
 
 ## 🔬 核心组件说明

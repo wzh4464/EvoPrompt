@@ -2,7 +2,7 @@
 """Summarize cost metrics from JSONL files.
 
 Usage:
-    uv run python scripts/summarize_cost.py outputs/cost/*.jsonl
+    uv run python scripts/ablations/summarize_cost.py outputs/cost/*.jsonl
 """
 
 import json

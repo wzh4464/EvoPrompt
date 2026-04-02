@@ -53,7 +53,7 @@ data/primevul_1percent_sample/
 验证系统是否正常工作:
 
 ```bash
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 ```
 
 **预期输出**:
@@ -100,7 +100,7 @@ uv run python scripts/test_quick.py
 最简单的使用方式:
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --eval-samples 50
 ```
 
@@ -115,7 +115,7 @@ uv run python scripts/train_three_layer.py \
 使用RAG提升准确性:
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag \
     --eval-samples 50
 ```
@@ -130,7 +130,7 @@ uv run python scripts/train_three_layer.py \
 最佳配置:
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag \
     --use-scale \
     --eval-samples 50
@@ -141,7 +141,7 @@ uv run python scripts/train_three_layer.py \
 #### 2.1 快速训练 (小规模测试)
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --population-size 3 \
     --max-generations 5 \
@@ -158,7 +158,7 @@ uv run python scripts/train_three_layer.py \
 #### 2.2 完整训练 (论文实验)
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --use-rag \
     --kb-from-dataset \
@@ -180,7 +180,7 @@ uv run python scripts/train_three_layer.py \
 #### 2.3 最佳配置 (RAG + Scale + 训练)
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --use-rag \
     --use-scale \
@@ -270,37 +270,37 @@ outputs/three_layer_eval_rag_20250122_143000/
 
 ```bash
 # 快速测试
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 ```
 
 ### 场景2: 评估不同配置
 
 ```bash
 # 基线 (无RAG, 无Scale)
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 
 # + RAG
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 
 # + Scale
-uv run python scripts/train_three_layer.py --use-scale --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-scale --eval-samples 50
 
 # + RAG + Scale
-uv run python scripts/train_three_layer.py --use-rag --use-scale --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --use-scale --eval-samples 50
 ```
 
 ### 场景3: 训练优化
 
 ```bash
 # 快速训练测试
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --population-size 3 \
     --max-generations 5 \
     --eval-samples 30
 
 # 完整训练
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --use-rag \
     --kb-from-dataset \
@@ -315,25 +315,25 @@ uv run python scripts/train_three_layer.py \
 # 对比实验: 基线 vs RAG vs 训练 vs RAG+训练
 
 # 1. 基线
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --eval-samples 100 \
     --output-dir outputs/exp1_baseline
 
 # 2. + RAG
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag \
     --eval-samples 100 \
     --output-dir outputs/exp2_rag
 
 # 3. + 训练
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --max-generations 20 \
     --eval-samples 100 \
     --output-dir outputs/exp3_train
 
 # 4. RAG + 训练 (最佳)
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --use-rag \
     --kb-from-dataset \
@@ -386,10 +386,10 @@ ls data/primevul_1percent_sample/
 **解决**:
 ```bash
 # 使用默认知识库 (不使用 --kb-from-dataset)
-uv run python scripts/train_three_layer.py --use-rag
+uv run python scripts/ablations/train_three_layer.py --use-rag
 
 # 或手动构建
-uv run python scripts/build_knowledge_base.py \
+uv run python scripts/ablations/build_knowledge_base.py \
     --source default \
     --output outputs/kb.json
 ```

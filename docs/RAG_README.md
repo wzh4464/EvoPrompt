@@ -107,7 +107,7 @@ print(f"Layer 3 retrieved: {details['layer3_retrieval']['num_examples']} example
 ### 1. 运行演示
 
 ```bash
-uv run python scripts/demo_rag_detection.py
+uv run python scripts/ablations/demo_rag_detection.py
 ```
 
 演示内容:

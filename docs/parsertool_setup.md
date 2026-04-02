@@ -34,7 +34,7 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)/comment4vul/parserTool"
 ln -s $(pwd)/comment4vul/parserTool $(pwd)/parserTool
 
 # 方法 3: 在脚本中添加 (推荐)
-# 已在 scripts/preprocess_primevul_comment4vul.py 中实现
+# 已在 scripts/ablations/preprocess_primevul_comment4vul.py 中实现
 ```
 
 ### 步骤 3: 验证安装
@@ -122,7 +122,7 @@ uv run python scripts/test_parsertool_config.py --mode parsertool
 uv run python scripts/test_parsertool_config.py --mode adapter
 
 # 测试预处理脚本
-uv run python scripts/test_preprocess_basic.py
+uv run python scripts/ablations/test_preprocess_basic.py
 ```
 
 ## 故障排查
@@ -170,7 +170,7 @@ uv run python -c "from evoprompt.utils.parsertool_adapter import build_languages
 uv run python scripts/test_parsertool_config.py --mode adapter
 
 # 4. 运行预处理
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul_1percent_sample/train_sample.jsonl \
     --output outputs/primevul_nl_ast/train_nl_ast.jsonl \
     --limit 10 \

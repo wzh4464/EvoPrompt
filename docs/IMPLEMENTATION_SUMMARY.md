@@ -54,8 +54,8 @@
 ### ✅ 任务 3: 实现并测试 PrimeVul 预处理脚本
 
 **创建文件**:
-- `scripts/preprocess_primevul_comment4vul.py`: 完整的预处理脚本
-- `scripts/test_preprocess_basic.py`: 基本功能测试脚本
+- `scripts/ablations/preprocess_primevul_comment4vul.py`: 完整的预处理脚本
+- `scripts/ablations/test_preprocess_basic.py`: 基本功能测试脚本
 
 **脚本功能**:
 1. **数据加载**: 从 PrimeVul JSONL 文件读取样本
@@ -116,13 +116,13 @@ EvoPrompt/
 ### 基本测试
 ```bash
 # 运行基本功能测试(不需要 parserTool)
-uv run python scripts/test_preprocess_basic.py
+uv run python scripts/ablations/test_preprocess_basic.py
 ```
 
 ### 小规模测试
 ```bash
 # 处理 10 个样本
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul_1percent_sample/train_sample.jsonl \
     --output outputs/primevul_nl_ast/train_nl_ast.jsonl \
     --limit 10
@@ -131,7 +131,7 @@ uv run python scripts/preprocess_primevul_comment4vul.py \
 ### 完整处理
 ```bash
 # 处理完整数据集
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul/primevul/primevul_train.jsonl \
     --output outputs/primevul_nl_ast/train_nl_ast.jsonl
 ```
@@ -245,8 +245,8 @@ static int vt_disallocate(unsigned int vc_num)
 
 - **计划文档**: `.cursor/plans/comment-f89d650e.plan.md`
 - **集成指南**: `docs/primevul_comment4vul_integration.md`
-- **主脚本**: `scripts/preprocess_primevul_comment4vul.py`
-- **测试脚本**: `scripts/test_preprocess_basic.py`
+- **主脚本**: `scripts/ablations/preprocess_primevul_comment4vul.py`
+- **测试脚本**: `scripts/ablations/test_preprocess_basic.py`
 
 ## 结论
 

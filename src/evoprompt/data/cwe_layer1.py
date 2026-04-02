@@ -45,7 +45,7 @@ def load_layer1_hierarchy() -> Dict[str, Any]:
         import warnings
         warnings.warn(
             f"CWE hierarchy file not found: {CWE_RESEARCHVIEW_PATH}. "
-            "Using fallback CWE mapping. Run scripts/convert_cwe_researchview.py for full hierarchy.",
+            "Using fallback CWE mapping. Run scripts/ablations/convert_cwe_researchview.py for full hierarchy.",
             UserWarning
         )
         return {

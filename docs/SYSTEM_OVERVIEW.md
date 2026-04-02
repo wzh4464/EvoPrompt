@@ -128,17 +128,17 @@
 
 ```bash
 # 快速测试所有功能 (2-3分钟)
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 ```
 
 ### 主脚本
 
 ```bash
 # 评估 (5-10分钟)
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 
 # 训练 (2-4小时)
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train --use-rag --kb-from-dataset \
     --population-size 5 --max-generations 20
 ```
@@ -194,19 +194,19 @@ EOF
 ### 2. 快速测试
 
 ```bash
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 ```
 
 ### 3. 评估性能
 
 ```bash
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 ```
 
 ### 4. 完整训练
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train --use-rag --kb-from-dataset \
     --population-size 5 --max-generations 20
 ```
@@ -239,7 +239,7 @@ uv run python scripts/train_three_layer.py \
 
 1. 📖 阅读 [README_INDEX.md](README_INDEX.md) 选择文档
 2. 🚀 查看 [QUICKSTART.md](QUICKSTART.md) 快速上手
-3. 🧪 运行 `uv run python scripts/test_quick.py`
+3. 🧪 运行 `uv run python scripts/ablations/test_quick.py`
 4. 📊 评估性能并开始实验
 
 ## 项目结构
@@ -286,4 +286,4 @@ evoprompt/
 
 ---
 
-**开始使用**: 查看 [README_INDEX.md](README_INDEX.md) 或运行 `uv run python scripts/test_quick.py`
+**开始使用**: 查看 [README_INDEX.md](README_INDEX.md) 或运行 `uv run python scripts/ablations/test_quick.py`

@@ -111,7 +111,7 @@ Modify `AsyncLLMClient._query_single` and `OpenAICompatibleClient._make_request`
 - Accept optional `cost_tracker` parameter
 - Log calls when tracker provided
 
-### 2.3 Summary Script (`scripts/summarize_cost.py`)
+### 2.3 Summary Script (`scripts/ablations/summarize_cost.py`)
 
 Output format:
 ```
@@ -287,28 +287,28 @@ outputs/supplementary_experiments/
 
 ```bash
 # Baseline A: GPT-4o + RAG single-pass
-uv run python scripts/train_three_layer.py --method gpt4o_rag_singlepass --top-k 3
+uv run python scripts/ablations/train_three_layer.py --method gpt4o_rag_singlepass --top-k 3
 
 # Baseline B: Single-Agent + Tool + RAG
-uv run python scripts/train_three_layer.py --method single_agent_tool_rag --max-tool-calls 2
+uv run python scripts/ablations/train_three_layer.py --method single_agent_tool_rag --max-tool-calls 2
 
 # Cross-model pairing ablation
-uv run python scripts/train_three_layer.py --method pairing_ablation \
+uv run python scripts/ablations/train_three_layer.py --method pairing_ablation \
     --evo-generator-model claude --evo-executor-model gpt4o \
     --evo-cwe-subset configs/cwe_subset_pairing.json
 
-uv run python scripts/train_three_layer.py --method pairing_ablation \
+uv run python scripts/ablations/train_three_layer.py --method pairing_ablation \
     --evo-generator-model gpt4o --evo-executor-model gpt4o \
     --evo-cwe-subset configs/cwe_subset_pairing.json
 
 # Clean pool sensitivity
-uv run python scripts/train_three_layer.py --method clean_pool_sensitivity
+uv run python scripts/ablations/train_three_layer.py --method clean_pool_sensitivity
 
 # Generate cost summary
-uv run python scripts/summarize_cost.py outputs/supplementary_experiments/cost/*.jsonl
+uv run python scripts/ablations/summarize_cost.py outputs/supplementary_experiments/cost/*.jsonl
 
 # Generate rebuttal snippet
-uv run python scripts/generate_rebuttal_snippet.py outputs/supplementary_experiments/
+uv run python scripts/ablations/generate_rebuttal_snippet.py outputs/supplementary_experiments/
 ```
 
 ---

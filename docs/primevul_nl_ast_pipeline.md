@@ -8,7 +8,7 @@
 
 ✅ **已验证**: parserTool 集成成功
 - parserTool 路径已修复为使用相对路径
-- scripts/preprocess_primevul_comment4vul.py 已更新支持自动发现 parserTool
+- scripts/ablations/preprocess_primevul_comment4vul.py 已更新支持自动发现 parserTool
 - 小样本测试通过（10 条，成功率 100%）
 - NL AST 转换验证：注释成功嵌入到控制流语句中
 
@@ -33,7 +33,7 @@ return (Shader didn't validate, don't move forward with compiling translated sou
 #### 开发集（Dev Set）
 
 ```bash
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
   --primevul-path data/primevul/primevul/dev.jsonl \
   --output outputs/primevul_nl_ast/dev_nl_ast.jsonl
 ```
@@ -41,7 +41,7 @@ uv run python scripts/preprocess_primevul_comment4vul.py \
 #### 训练集（Train Set）
 
 ```bash
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
   --primevul-path data/primevul/primevul/primevul_train.jsonl \
   --output outputs/primevul_nl_ast/train_nl_ast.jsonl
 ```
@@ -49,7 +49,7 @@ uv run python scripts/preprocess_primevul_comment4vul.py \
 #### 测试集（Test Set）
 
 ```bash
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
   --primevul-path data/primevul/primevul/primevul_test.jsonl \
   --output outputs/primevul_nl_ast/test_nl_ast.jsonl
 ```
@@ -204,7 +204,7 @@ EOF
 
 ### parserTool 集成
 
-1. **路径配置**: scripts/preprocess_primevul_comment4vul.py:76-89
+1. **路径配置**: scripts/ablations/preprocess_primevul_comment4vul.py:76-89
    - 自动添加 `comment4vul/parserTool` 和 `comment4vul/SymbolicRule` 到 sys.path
    - 优先使用真正的 parserTool，失败时回退到 adapter
 
@@ -257,7 +257,7 @@ comment4vul/
 
 ## 文件位置参考
 
-- **预处理脚本**: `scripts/preprocess_primevul_comment4vul.py`
+- **预处理脚本**: `scripts/ablations/preprocess_primevul_comment4vul.py`
 - **parserTool**: `comment4vul/parserTool/parserTool/`
 - **测试脚本**: `test_parser_integration.py` (可选)
 - **输出目录**: `outputs/primevul_nl_ast/`

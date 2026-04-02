@@ -3,13 +3,13 @@
 
 Usage:
     # Train all detectors
-    uv run python scripts/run_hierarchical_train.py --train
+    uv run python scripts/ablations/run_hierarchical_train.py --train
 
     # Evaluate trained detectors
-    uv run python scripts/run_hierarchical_train.py --eval
+    uv run python scripts/ablations/run_hierarchical_train.py --eval
 
     # Both
-    uv run python scripts/run_hierarchical_train.py --train --eval
+    uv run python scripts/ablations/run_hierarchical_train.py --train --eval
 """
 
 import os

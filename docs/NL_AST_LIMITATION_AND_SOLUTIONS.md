@@ -90,20 +90,20 @@ uv run python run_primevul_1percent.py \
 #### 步骤 1: 生成语义注释
 ```bash
 # 测试(10个样本)
-uv run python scripts/generate_semantic_comments.py \
+uv run python scripts/ablations/generate_semantic_comments.py \
     --input data/primevul/primevul/primevul_train.jsonl \
     --output data/primevul/primevul_commented/train_commented.jsonl \
     --limit 10
 
 # 完整数据集(慎用,需要大量API调用)
-uv run python scripts/generate_semantic_comments.py \
+uv run python scripts/ablations/generate_semantic_comments.py \
     --input data/primevul/primevul/primevul_train.jsonl \
     --output data/primevul/primevul_commented/train_commented.jsonl
 ```
 
 #### 步骤 2: 生成 NL AST
 ```bash
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul/primevul_commented/train_commented.jsonl \
     --output data/primevul/primevul_nl_ast_true/train_nl_ast.jsonl \
     --use-adapter
@@ -168,13 +168,13 @@ uv run python run_primevul_1percent.py \
 
 ```bash
 # 1. 为 100 个样本生成注释(测试 LLM 效果)
-uv run python scripts/generate_semantic_comments.py \
+uv run python scripts/ablations/generate_semantic_comments.py \
     --input data/primevul_1percent_sample/train_sample.jsonl \
     --output data/primevul_commented_test/train.jsonl \
     --limit 100
 
 # 2. 生成真正的 NL AST
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul_commented_test/train.jsonl \
     --output data/primevul_nl_ast_test/train.jsonl \
     --use-adapter
@@ -217,5 +217,5 @@ head -1 data/primevul_nl_ast_test/train.jsonl | python -m json.tool | grep -A 5 
 ## 参考
 
 - comment4vul 论文: 说明了 LLM 注释的重要性
-- 注释生成脚本: `scripts/generate_semantic_comments.py`
+- 注释生成脚本: `scripts/ablations/generate_semantic_comments.py`
 - 完整集成报告: `docs/NL_AST_INTEGRATION_COMPLETE.md`

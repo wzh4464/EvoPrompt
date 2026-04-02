@@ -91,7 +91,7 @@ def test_config_and_params():
     """测试配置和参数传递"""
     print("\n⚙️ 测试配置和参数传递...")
     
-    from scripts.run_primevul_concurrent_optimized import create_optimized_config
+    from scripts.ablations.run_primevul_concurrent_optimized import create_optimized_config
     
     config = create_optimized_config()
     

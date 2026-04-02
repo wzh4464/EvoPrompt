@@ -13,9 +13,9 @@ Author: Zihan
 用法示例：
 ---------
 cd /path/to/project
-uv run python scripts/fix_dataset_braces.py 文件1 文件2 ...
+uv run python scripts/ablations/fix_dataset_braces.py 文件1 文件2 ...
 如：
-uv run python scripts/fix_dataset_braces.py data/primevul_1percent_sample/dev_sample.jsonl data/primevul_1percent_sample/train_sample.jsonl
+uv run python scripts/ablations/fix_dataset_braces.py data/primevul_1percent_sample/dev_sample.jsonl data/primevul_1percent_sample/train_sample.jsonl
 
 脚本会生成同目录下 `_fixed` 结尾的新数据集文件，可以直接用于主流程。
 

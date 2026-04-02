@@ -6,19 +6,19 @@
 ## 分层流程
 
 - **Layer 1 · 并发粗调**  
-  入口：`PrimeVul Layer 1 · 并发粗调` 调试配置，或命令 `uv run python scripts/run_primevul_concurrent_optimized.py`。  
+  入口：`PrimeVul Layer 1 · 并发粗调` 调试配置，或命令 `uv run python scripts/ablations/run_primevul_concurrent_optimized.py`。  
   关键动作：自动检查 `.env` 中的 API 配置，必要时重建 `data/primevul_1percent_sample/`，然后以 `max_concurrency=16`、样本级反馈等参数执行差分进化。  
   产物：`outputs/primevul_concurrent_feedback/<experiment_id>/top_prompts.txt`（后续层的初始 Prompt 库），以及完整的进化日志和样本记录。
 
 - **Layer 2 · 精调复盘**  
-  入口：`PrimeVul Layer 2 · 精调复盘` 调试配置，或命令 `uv run python scripts/run_primevul_layer2.py --top-prompts <path>`。  
+  入口：`PrimeVul Layer 2 · 精调复盘` 调试配置，或命令 `uv run python scripts/ablations/run_primevul_layer2.py --top-prompts <path>`。  
   关键动作：脚本读取 Layer 1 的 `top_prompts.txt`，确保 1% 采样数据可用，构建一个并发度较低（默认 8）、禁用 CWE 大类约束的精调配置并执行 `VulnerabilityDetectionWorkflow`。  
   产物：`outputs/primevul_layer2/<experiment_id>/` 下的 `final_results.json`、`prompt_evolution.jsonl` 等，用于评估精调效果。
 
 ## 调试与排错节点
 
 - 日志：Layer 1 输出到 `primevul_concurrent_evolution.log`，Layer 2 直接打印到终端，同时存档于实验目录。调试时可 `tail -f` 观测并发批次是否阻塞。  
-- 参数调整：在 `scripts/run_primevul_concurrent_optimized.py` 或运行 Layer 2 时传入 `--max-concurrency`、`--population-size` 等参数，即可测试不同并发和进化设置。  
+- 参数调整：在 `scripts/ablations/run_primevul_concurrent_optimized.py` 或运行 Layer 2 时传入 `--max-concurrency`、`--population-size` 等参数，即可测试不同并发和进化设置。  
 - 数据校验：Layer 2 脚本会自动再生 1% 样本；若路径错误，可通过 `--sample-dir` 与 `--primevul-dir` 重定向。  
 - 配置覆盖：Layer 2 支持 `--config configs/override.json` 合并额外参数，但会强制保留 `initial_prompts_file` 等关键键，防止意外覆盖。
 

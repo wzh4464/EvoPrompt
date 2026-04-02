@@ -72,7 +72,7 @@ metrics.print_report()
 
 ### 3. 更新主训练脚本
 
-**文件**: `scripts/train_three_layer.py`
+**文件**: `scripts/ablations/train_three_layer.py`
 
 **改进**:
 - ✅ 使用`verbose=True`评估
@@ -108,7 +108,7 @@ Layer 1 (Major Category)
 
 ### 4. 新增演示脚本
 
-**文件**: `scripts/demo_f1_metrics.py`
+**文件**: `scripts/ablations/demo_f1_metrics.py`
 
 **功能**:
 - ✅ 场景1: 平衡数据集
@@ -119,7 +119,7 @@ Layer 1 (Major Category)
 
 **运行**:
 ```bash
-uv run python scripts/demo_f1_metrics.py
+uv run python scripts/ablations/demo_f1_metrics.py
 ```
 
 ---
@@ -170,10 +170,10 @@ Vulnerable (漏洞代码): 100 samples, F1 = 0.30
 
 ```bash
 # 1. 查看F1指标演示
-uv run python scripts/demo_f1_metrics.py
+uv run python scripts/ablations/demo_f1_metrics.py
 
 # 2. 运行评估 (自动打印Macro/Weighted/Micro F1)
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 ```
 
 ### 在代码中使用
@@ -235,8 +235,8 @@ layer3_macro_f1 = metrics["layer3"]["macro_f1"]
 
 ### 脚本
 
-- `scripts/train_three_layer.py` - 主脚本 (verbose评估)
-- `scripts/demo_f1_metrics.py` - F1指标演示 ⭐
+- `scripts/ablations/train_three_layer.py` - 主脚本 (verbose评估)
+- `scripts/ablations/demo_f1_metrics.py` - F1指标演示 ⭐
 
 ### 文档
 
@@ -272,7 +272,7 @@ layer3_macro_f1 = metrics["layer3"]["macro_f1"]
 
 ```bash
 # F1指标对比演示 (推荐!)
-uv run python scripts/demo_f1_metrics.py
+uv run python scripts/ablations/demo_f1_metrics.py
 ```
 
 ### 阅读文档
@@ -285,7 +285,7 @@ uv run python scripts/demo_f1_metrics.py
 
 ```bash
 # 评估并查看详细指标
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 ```
 
 ---
@@ -315,4 +315,4 @@ uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
 
 ---
 
-**开始使用**: 运行 `uv run python scripts/demo_f1_metrics.py` 查看演示！
+**开始使用**: 运行 `uv run python scripts/ablations/demo_f1_metrics.py` 查看演示！

@@ -4,7 +4,7 @@ Run a tiny end-to-end check that our response parsing logic can recover the
 intended classification labels from real LLM outputs.
 
 Example:
-    uv run python scripts/verify_response_parsing.py \\
+    uv run python scripts/ablations/verify_response_parsing.py \\
         --llm-type openai --model-name gpt-4o-mini \\
         --max-samples 2 --temperature 0.0
 """

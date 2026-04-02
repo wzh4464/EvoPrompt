@@ -11,13 +11,13 @@
 
 Usage:
     # 全量训练 + 评估
-    uv run python scripts/run_full_pipeline.py
+    uv run python scripts/ablations/run_full_pipeline.py
 
     # 仅训练
-    uv run python scripts/run_full_pipeline.py --train-only
+    uv run python scripts/ablations/run_full_pipeline.py --train-only
 
     # 仅评估 (使用已训练的 prompts)
-    uv run python scripts/run_full_pipeline.py --eval-only
+    uv run python scripts/ablations/run_full_pipeline.py --eval-only
 """
 
 import os

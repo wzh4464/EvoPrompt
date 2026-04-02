@@ -29,7 +29,7 @@ uv add 'tree-sitter<0.22' tree-sitter-languages
 
 #### 1.2 NL AST 生成测试 ✅
 **文件**:
-- `scripts/preprocess_primevul_comment4vul.py` (已更新)
+- `scripts/ablations/preprocess_primevul_comment4vul.py` (已更新)
 
 **成果**:
 - 成功在 3 个样本上测试 NL AST 生成
@@ -38,7 +38,7 @@ uv add 'tree-sitter<0.22' tree-sitter-languages
 
 **使用方法**:
 ```bash
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul_1percent_sample/train_sample.jsonl \
     --output outputs/primevul_nl_ast/train_nl_ast.jsonl \
     --use-adapter \
@@ -142,7 +142,7 @@ Create an improved version that:
 3. `docs/primevul_comment4vul_integration.md` - 集成指南
 4. `docs/IMPLEMENTATION_SUMMARY.md` - 第一阶段总结
 5. `docs/NL_AST_INTEGRATION_COMPLETE.md` - 本文档
-6. `scripts/test_preprocess_basic.py` - 基础测试脚本
+6. `scripts/ablations/test_preprocess_basic.py` - 基础测试脚本
 7. `outputs/primevul_nl_ast/test_nl_ast.jsonl` - 测试输出
 8. `build/tree-sitter/` - 语言库构建目录
 
@@ -152,7 +152,7 @@ Create an improved version that:
 3. `src/evoprompt/workflows/vulnerability_detection.py` - 新增 NL AST 模板
 4. `src/evoprompt/algorithms/genetic.py` - 更新 meta-prompts
 5. `src/evoprompt/algorithms/differential.py` - 更新 meta-prompts
-6. `scripts/preprocess_primevul_comment4vul.py` - 添加适配器支持
+6. `scripts/ablations/preprocess_primevul_comment4vul.py` - 添加适配器支持
 
 ---
 
@@ -213,14 +213,14 @@ else:
 ### 1. 生成 NL AST 数据
 ```bash
 # 小规模测试
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul_1percent_sample/train_sample.jsonl \
     --output outputs/primevul_nl_ast/train_nl_ast.jsonl \
     --use-adapter \
     --limit 100
 
 # 完整数据集
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul/primevul/primevul_train.jsonl \
     --output outputs/primevul_nl_ast/train_nl_ast.jsonl \
     --use-adapter
@@ -304,19 +304,19 @@ uv run python demo_primevul_1percent.py \
 ### 1. 生成完整 NL AST 数据集
 ```bash
 # 训练集
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul/primevul/primevul_train.jsonl \
     --output data/primevul/primevul_nl_ast/train_nl_ast.jsonl \
     --use-adapter
 
 # 验证集
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul/primevul/primevul_valid.jsonl \
     --output data/primevul/primevul_nl_ast/valid_nl_ast.jsonl \
     --use-adapter
 
 # 测试集
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul/primevul/primevul_test.jsonl \
     --output data/primevul/primevul_nl_ast/test_nl_ast.jsonl \
     --use-adapter
@@ -411,7 +411,7 @@ uv run python run_primevul_1percent.py \
 
 2. **代码文档**:
    - `src/evoprompt/utils/parsertool_adapter.py` - 适配器实现和自测试
-   - `scripts/preprocess_primevul_comment4vul.py` - 预处理脚本使用说明
+   - `scripts/ablations/preprocess_primevul_comment4vul.py` - 预处理脚本使用说明
 
 3. **外部资源**:
    - comment4vul README - NL AST 原理说明

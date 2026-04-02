@@ -161,7 +161,7 @@ metrics = {
 ### 3. 可视化报告
 
 ```bash
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 ```
 
 输出示例：
@@ -249,7 +249,7 @@ for class_name, metrics in layer1_per_class.items():
 ### 查看F1指标对比
 
 ```bash
-uv run python scripts/demo_f1_metrics.py
+uv run python scripts/ablations/demo_f1_metrics.py
 ```
 
 这个脚本展示：
@@ -261,10 +261,10 @@ uv run python scripts/demo_f1_metrics.py
 
 ```bash
 # 基础评估 (会打印详细指标)
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 
 # RAG增强评估
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 ```
 
 ---

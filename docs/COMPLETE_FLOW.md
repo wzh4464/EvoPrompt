@@ -212,7 +212,7 @@
 ### 评估模式 (不训练)
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     [--use-rag]              # 可选: 启用RAG
     [--use-scale]            # 可选: 启用Scale
     --eval-samples 50        # 评估样本数
@@ -227,7 +227,7 @@ uv run python scripts/train_three_layer.py \
 ### 训练模式
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train                  # 启用训练
     [--use-rag]              # 可选: 启用RAG
     [--kb-from-dataset]      # 可选: 从数据集构建KB
@@ -336,7 +336,7 @@ if --use-scale:
 
 ```bash
 # 不使用 --use-rag 标志
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 ```
 
 **效果**:
@@ -350,7 +350,7 @@ uv run python scripts/train_three_layer.py --eval-samples 50
 
 ```bash
 # 不使用 --use-scale 标志
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 ```
 
 **效果**:
@@ -364,7 +364,7 @@ uv run python scripts/train_three_layer.py --eval-samples 50
 
 ```bash
 # 不使用 --train 标志
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 ```
 
 **效果**:
@@ -379,7 +379,7 @@ uv run python scripts/train_three_layer.py --eval-samples 50
 ### 最小配置 (基线)
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --eval-samples 50
 ```
 
@@ -392,7 +392,7 @@ uv run python scripts/train_three_layer.py \
 ### RAG增强评估
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag \
     --eval-samples 50
 ```
@@ -406,7 +406,7 @@ uv run python scripts/train_three_layer.py \
 ### 完整评估 (RAG + Scale)
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag \
     --use-scale \
     --eval-samples 50
@@ -421,7 +421,7 @@ uv run python scripts/train_three_layer.py \
 ### 快速训练测试
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --population-size 3 \
     --max-generations 5 \
@@ -437,7 +437,7 @@ uv run python scripts/train_three_layer.py \
 ### 完整训练 (最佳配置)
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --use-rag \
     --kb-from-dataset \

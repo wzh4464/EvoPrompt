@@ -6,9 +6,9 @@
 
 | 文件 | 用途 | 推荐度 |
 |------|------|--------|
-| `scripts/train_three_layer.py` | **主训练脚本** - 支持RAG/Scale/训练，完全自动化 | ⭐⭐⭐ |
-| `scripts/test_quick.py` | **快速测试** - 验证所有功能是否正常 | ⭐⭐⭐ |
-| `scripts/build_knowledge_base.py` | 构建知识库工具 | ⭐⭐ |
+| `scripts/ablations/train_three_layer.py` | **主训练脚本** - 支持RAG/Scale/训练，完全自动化 | ⭐⭐⭐ |
+| `scripts/ablations/test_quick.py` | **快速测试** - 验证所有功能是否正常 | ⭐⭐⭐ |
+| `scripts/ablations/build_knowledge_base.py` | 构建知识库工具 | ⭐⭐ |
 
 ### 📚 核心代码模块
 
@@ -43,7 +43,7 @@
 
 ### 1. RAG自动构建
 
-**实现位置**: `scripts/train_three_layer.py` 中的 `load_or_build_knowledge_base()`
+**实现位置**: `scripts/ablations/train_three_layer.py` 中的 `load_or_build_knowledge_base()`
 
 **功能**:
 - 自动检测是否有已存在的知识库
@@ -64,7 +64,7 @@
 
 ### 2. Scale自动启用
 
-**实现位置**: `scripts/train_three_layer.py` 中的 `create_detector()`
+**实现位置**: `scripts/ablations/train_three_layer.py` 中的 `create_detector()`
 
 **功能**:
 - 根据参数自动启用/关闭Scale
@@ -93,7 +93,7 @@
 
 ### 4. Multi-Agent训练
 
-**实现位置**: `scripts/train_three_layer.py` 中的 `run_training()`
+**实现位置**: `scripts/ablations/train_three_layer.py` 中的 `run_training()`
 
 **功能**:
 - Detection Agent批量检测
@@ -187,7 +187,7 @@ evoprompt/
 
 2. **快速测试**:
    ```bash
-   uv run python scripts/test_quick.py
+   uv run python scripts/ablations/test_quick.py
    ```
 
 3. **阅读流程**:
@@ -198,7 +198,7 @@ evoprompt/
 
 4. **运行评估**:
    ```bash
-   uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+   uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
    ```
 
 ### 深入使用 (2小时)
@@ -213,13 +213,13 @@ evoprompt/
 2. **运行对比实验**:
    ```bash
    # 基线
-   uv run python scripts/train_three_layer.py --eval-samples 50
+   uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 
    # + RAG
-   uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+   uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 
    # + Scale
-   uv run python scripts/train_three_layer.py --use-scale --eval-samples 50
+   uv run python scripts/ablations/train_three_layer.py --use-scale --eval-samples 50
    ```
 
 3. **分析结果**:
@@ -233,7 +233,7 @@ evoprompt/
 
 2. **运行训练**:
    ```bash
-   uv run python scripts/train_three_layer.py \
+   uv run python scripts/ablations/train_three_layer.py \
        --train --use-rag --kb-from-dataset \
        --population-size 5 --max-generations 20 --eval-samples 100
    ```
@@ -252,17 +252,17 @@ evoprompt/
 **想了解RAG**:
 - 代码: `src/evoprompt/rag/`
 - 文档: `RAG_README.md`
-- 演示: `scripts/demo_rag_detection.py`
+- 演示: `scripts/ablations/demo_rag_detection.py`
 
 **想了解三层检测**:
 - 代码: `src/evoprompt/detectors/three_layer_detector.py`
 - 文档: `THREE_LAYER_README.md`
-- 演示: `scripts/demo_three_layer_detection.py`
+- 演示: `scripts/ablations/demo_three_layer_detection.py`
 
 **想了解训练**:
 - 代码: `src/evoprompt/multiagent/`
 - 文档: `MULTIAGENT_README.md`
-- 演示: `scripts/demo_multiagent_coevolution.py`
+- 演示: `scripts/ablations/demo_multiagent_coevolution.py`
 
 ### 按目的查找
 
@@ -314,8 +314,8 @@ evoprompt/
 
 ### 必用脚本 (优先级⭐⭐⭐)
 
-1. `scripts/test_quick.py` - 快速测试
-2. `scripts/train_three_layer.py` - 主脚本
+1. `scripts/ablations/test_quick.py` - 快速测试
+2. `scripts/ablations/train_three_layer.py` - 主脚本
 
 ### 核心模块
 
@@ -354,13 +354,13 @@ evoprompt/
 
 ```bash
 # 1. 快速测试
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 
 # 2. 查看文档
 cat START_HERE.md
 
 # 3. 运行评估
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 ```
 
 **祝你使用愉快!** 🚀

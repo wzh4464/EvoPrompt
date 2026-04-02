@@ -113,7 +113,7 @@ comment4vul 使用 Tree-sitter 进行 AST 解析。需要:
 
 ```bash
 # 处理 10 个样本进行测试
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul_1percent_sample/train_sample.jsonl \
     --output outputs/primevul_nl_ast/train_nl_ast.jsonl \
     --limit 10
@@ -123,17 +123,17 @@ uv run python scripts/preprocess_primevul_comment4vul.py \
 
 ```bash
 # 处理训练集
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul/primevul/primevul_train.jsonl \
     --output outputs/primevul_nl_ast/train_nl_ast.jsonl
 
 # 处理验证集
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul/primevul/primevul_valid.jsonl \
     --output outputs/primevul_nl_ast/valid_nl_ast.jsonl
 
 # 处理测试集
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul/primevul/primevul_test.jsonl \
     --output outputs/primevul_nl_ast/test_nl_ast.jsonl
 ```
@@ -142,7 +142,7 @@ uv run python scripts/preprocess_primevul_comment4vul.py \
 
 ```bash
 # 从索引 100 继续处理
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
     --primevul-path data/primevul_1percent_sample/train_sample.jsonl \
     --output outputs/primevul_nl_ast/train_nl_ast.jsonl \
     --start-idx 100

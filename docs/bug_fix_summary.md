@@ -28,7 +28,7 @@ if (texture < GL_TEXTURE0 || texture > GL_TEXTURE0+32 )  ✅ 条件保留
 
 ## 根本原因
 
-1. **错误代码位置**：`scripts/preprocess_primevul_comment4vul.py` 中的 `print_ast_node` 函数
+1. **错误代码位置**：`scripts/ablations/preprocess_primevul_comment4vul.py` 中的 `print_ast_node` 函数
    - Line 213（if_statement，第一个分支）
    - Line 226（if_statement，第二个分支）
    - Line 257（while_statement）
@@ -50,7 +50,7 @@ New_line = Begin + original_expr[:-1] + " /* " + comment.strip() + " */" + origi
 
 ## 修复文件
 
-### 1. scripts/preprocess_primevul_comment4vul.py
+### 1. scripts/ablations/preprocess_primevul_comment4vul.py
 
 **修复位置**：
 - Line 208-217：if_statement 第一个分支
@@ -75,7 +75,7 @@ New_line = Begin + original_expr[:-1] + " /* " + comment.strip() + " */" + origi
 ### 小样本测试（3 样本）
 
 ```bash
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
   --primevul-path /tmp/scale_test_3samples.jsonl \
   --output /tmp/scale_final_test.jsonl \
   --use-llm-comments
@@ -89,7 +89,7 @@ uv run python scripts/preprocess_primevul_comment4vul.py \
 ### 中样本测试（500 样本）
 
 ```bash
-uv run python scripts/preprocess_primevul_comment4vul.py \
+uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
   --primevul-path /tmp/dev_500.jsonl \
   --output outputs/primevul_scale/dev_500_scale.jsonl \
   --use-llm-comments

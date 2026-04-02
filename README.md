@@ -1,9 +1,15 @@
-# EvoPrompt: Evolutionary Prompt Optimization for Vulnerability Detection
+# EvoPrompt: Two-Line Prompt Evolution for Vulnerability Detection
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-EvoPrompt is a modern prompt evolution framework specifically designed for vulnerability detection tasks. It uses evolutionary algorithms to automatically optimize prompts for better performance on security code analysis.
+EvoPrompt is organized around two first-class workflows:
+
+1. Evolve the best prompt for each router/detector stage.
+2. Freeze that prompt bundle and evaluate end-to-end vulnerability detection.
+
+Other ideas such as RAG, parallel scoring, top-k routing, and alternative
+detectors should be treated as ablations layered on top of this baseline.
 
 ## 🎯 Focus Areas
 
@@ -11,13 +17,11 @@ EvoPrompt is a modern prompt evolution framework specifically designed for vulne
 - **SVEN Dataset**: Support for CWE-based vulnerability classification
 - **Primevul Dataset**: Large-scale vulnerability detection dataset support
 
-## ✨ Key Features
+## ✨ Mainline Workflows
 
-- **Modern Architecture**: Built with modern Python packaging (pyproject.toml, src layout)
-- **SVEN Integration**: Compatible with SVEN submodule API calls
-- **Evolutionary Algorithms**: Genetic Algorithm (GA) and Differential Evolution (DE)
-- **Real-time Tracking**: Complete prompt evolution tracking and analysis
-- **Balanced Sampling**: Smart data sampling for imbalanced datasets
+- **Prompt Evolution**: Train stage-specific prompts for router and detector nodes.
+- **Frozen Evaluation**: Load the best prompt artifact and test vulnerability detection.
+- **Ablation Layering**: Add optional features back with explicit ablation flags.
 
 ## 🚀 Quick Start
 
@@ -46,14 +50,23 @@ MODEL_NAME=kimi-k2-code
 ### Basic Usage
 
 ```bash
-# Run main entry point
-uv run python main.py
+# 1. Evolve best prompts for each stage
+uv run python scripts/run_mainline_evolution.py \
+  --train-file data/primevul/primevul/primevul_train.jsonl \
+  --output-dir outputs/mainline/evolution
 
-# Run Primevul 1% sampling experiment
-uv run python scripts/run_primevul_1percent.py
+# 2. Evaluate the frozen prompt bundle
+uv run python scripts/run_mainline_evaluation.py \
+  --eval-file data/primevul/primevul/primevul_valid.jsonl \
+  --prompts-path outputs/mainline/evolution/prompt_artifact.json \
+  --output-dir outputs/mainline/evaluation
 
-# Run full pipeline
-uv run python scripts/run_full_pipeline.py
+# Optional ablations
+uv run python scripts/run_mainline_evaluation.py \
+  --eval-file data/primevul/primevul/primevul_valid.jsonl \
+  --prompts-path outputs/mainline/evolution/prompt_artifact.json \
+  --ablation rag \
+  --ablation parallel
 ```
 
 ## 📊 Supported Datasets
@@ -84,18 +97,13 @@ uv run python scripts/run_full_pipeline.py
 
 ```
 EvoPrompt/
-├── src/evoprompt/           # Modern package structure
-│   ├── algorithms/          # Evolutionary algorithms
-│   ├── core/               # Core functionality
-│   ├── data/               # Data processing
-│   ├── llm/                # SVEN-compatible LLM client
-│   └── workflows/          # Vulnerability detection workflow
-├── data/                   # Datasets
-│   ├── vul_detection/      # Processed vulnerability data
-│   └── primevul/           # Primevul dataset
-├── sven/                   # SVEN submodule
-├── demo_primevul_1percent.py # Demo script
-└── run_primevul_1percent.py  # Production script
+├── src/evoprompt/mainline/   # First-class workflows and prompt artifacts
+├── src/evoprompt/agents/     # Reused router/detector building blocks
+├── src/evoprompt/rag/        # Retrieval components, only via ablations
+├── scripts/ablations/        # Legacy experiments, demos, and utilities
+├── scripts/run_mainline_evolution.py
+├── scripts/run_mainline_evaluation.py
+└── tests/test_mainline_*.py
 ```
 
 ## 🔧 API Usage
@@ -153,8 +161,12 @@ EvoPrompt provides comprehensive tracking of the evolution process:
 ## 🔄 Development Commands
 
 ```bash
-# All Python commands use uv run
-uv run python script_name.py
+# Mainline workflows
+uv run python scripts/run_mainline_evolution.py
+uv run python scripts/run_mainline_evaluation.py
+
+# Legacy experiments and ablations
+uv run python scripts/ablations/<name>.py
 
 # Run tests
 uv run pytest tests/
@@ -166,11 +178,11 @@ uv run mypy src/
 
 ## 🧪 Response Parsing Harness
 
-Use `scripts/verify_response_parsing.py` to run a handful of real LLM calls and
+Use `scripts/ablations/verify_response_parsing.py` to run a handful of real LLM calls and
 confirm that the parser recovers the intended labels:
 
 ```bash
-uv run python scripts/verify_response_parsing.py \
+uv run python scripts/ablations/verify_response_parsing.py \
   --llm-type openai \
   --model-name gpt-4o-mini \
   --sample-file data/primevul_1percent_sample/dev_sample.jsonl \
@@ -182,7 +194,7 @@ uv run python scripts/verify_response_parsing.py \
 - To run with full PrimeVul samples and output archiving:
 
 ```bash
-uv run python scripts/verify_response_parsing.py \
+uv run python scripts/ablations/verify_response_parsing.py \
   --model-name gpt-4o \
   --sample-file data/primevul_1percent_sample/dev_sample.jsonl \
   --max-samples 10 \

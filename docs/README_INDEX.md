@@ -163,7 +163,7 @@
 **推荐阅读顺序**:
 1. [QUICKSTART.md](QUICKSTART.md) - 快速开始
 2. [SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md) - 脚本使用
-3. 运行 `uv run python scripts/test_quick.py`
+3. 运行 `uv run python scripts/ablations/test_quick.py`
 
 **预计时间**: 30分钟
 
@@ -178,10 +178,10 @@
 **运行命令**:
 ```bash
 # 基线
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 
 # + RAG
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 ```
 
 **预计时间**: 1小时
@@ -197,7 +197,7 @@ uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
 **运行命令**:
 ```bash
 # RAG增强评估
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag \
     --kb-from-dataset \
     --kb-samples-per-category 5 \
@@ -217,14 +217,14 @@ uv run python scripts/train_three_layer.py \
 **运行命令**:
 ```bash
 # 快速训练测试
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --population-size 3 \
     --max-generations 5 \
     --eval-samples 30
 
 # 完整训练
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --use-rag \
     --kb-from-dataset \
@@ -250,25 +250,25 @@ uv run python scripts/train_three_layer.py \
 # 对比实验组
 
 # 1. 基线
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --eval-samples 100 \
     --output-dir outputs/exp1_baseline
 
 # 2. + RAG
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag \
     --eval-samples 100 \
     --output-dir outputs/exp2_rag
 
 # 3. + 训练
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --max-generations 20 \
     --eval-samples 100 \
     --output-dir outputs/exp3_train
 
 # 4. RAG + 训练 (最佳)
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --use-rag \
     --kb-from-dataset \

@@ -33,7 +33,7 @@
 
 ```bash
 # 运行演示
-uv run python scripts/demo_three_layer_detection.py
+uv run python scripts/ablations/demo_three_layer_detection.py
 ```
 
 ```python
@@ -62,10 +62,10 @@ print(f"Path: {details['layer1']} → {details['layer2']} → {details['layer3']
 
 ```bash
 # 构建知识库
-uv run python scripts/build_knowledge_base.py --source default --output outputs/kb.json
+uv run python scripts/ablations/build_knowledge_base.py --source default --output outputs/kb.json
 
 # 运行RAG演示
-uv run python scripts/demo_rag_detection.py
+uv run python scripts/ablations/demo_rag_detection.py
 ```
 
 ```python
@@ -104,7 +104,7 @@ print(f"Retrieved examples: {details['layer1_retrieval']['num_examples']}")
 
 ```bash
 # 运行Multi-agent协同进化
-uv run python scripts/demo_multiagent_coevolution.py
+uv run python scripts/ablations/demo_multiagent_coevolution.py
 ```
 
 ```python
@@ -275,12 +275,12 @@ dataset = PrimevulDataset(
 
 ```bash
 # 从默认示例
-uv run python scripts/build_knowledge_base.py \
+uv run python scripts/ablations/build_knowledge_base.py \
     --source default \
     --output outputs/kb.json
 
 # 从数据集
-uv run python scripts/build_knowledge_base.py \
+uv run python scripts/ablations/build_knowledge_base.py \
     --source dataset \
     --dataset data/primevul_1percent_sample/train.txt \
     --samples-per-category 3 \
@@ -373,7 +373,7 @@ data_dir = "./data/primevul_1percent_sample"  # 526样本
 **解决**:
 ```bash
 # 从数据集构建更大的知识库
-uv run python scripts/build_knowledge_base.py \
+uv run python scripts/ablations/build_knowledge_base.py \
     --source dataset \
     --dataset data/primevul_1percent_sample/train.txt \
     --samples-per-category 5 \
@@ -413,17 +413,17 @@ MODEL_NAME=Qwen/Qwen3-Coder-480B-A35B-Instruct
 EOF
 
 # 2. 构建知识库
-uv run python scripts/build_knowledge_base.py \
+uv run python scripts/ablations/build_knowledge_base.py \
     --source dataset \
     --dataset data/primevul_1percent_sample/train.txt \
     --samples-per-category 3 \
     --output outputs/kb.json
 
 # 3. 测试RAG检测
-uv run python scripts/demo_rag_detection.py
+uv run python scripts/ablations/demo_rag_detection.py
 
 # 4. 运行训练 (可选)
-uv run python scripts/demo_multiagent_coevolution.py
+uv run python scripts/ablations/demo_multiagent_coevolution.py
 
 # 5. 评估结果
 # 查看 outputs/ 目录中的结果文件

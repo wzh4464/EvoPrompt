@@ -10,7 +10,7 @@ It processes vulnerability detection data by:
 4. Generating Natural Language AST representations
 
 Usage:
-    uv run python scripts/preprocess_primevul_comment4vul.py \
+    uv run python scripts/ablations/preprocess_primevul_comment4vul.py \
         --primevul-path data/primevul_1percent_sample/train_sample.jsonl \
         --output outputs/primevul_nl_ast/train_nl_ast.jsonl \
         --limit 10
@@ -471,18 +471,18 @@ def main():
         epilog="""
 Examples:
     # Process 10 samples from train set
-    uv run python scripts/preprocess_primevul_comment4vul.py \\
+    uv run python scripts/ablations/preprocess_primevul_comment4vul.py \\
         --primevul-path data/primevul_1percent_sample/train_sample.jsonl \\
         --output outputs/primevul_nl_ast/train_nl_ast.jsonl \\
         --limit 10
 
     # Process full dev set
-    uv run python scripts/preprocess_primevul_comment4vul.py \\
+    uv run python scripts/ablations/preprocess_primevul_comment4vul.py \\
         --primevul-path data/primevul/primevul/dev.jsonl \\
         --output outputs/primevul_nl_ast/dev_nl_ast.jsonl
 
     # Resume from index 100
-    uv run python scripts/preprocess_primevul_comment4vul.py \\
+    uv run python scripts/ablations/preprocess_primevul_comment4vul.py \\
         --primevul-path data/primevul_1percent_sample/train_sample.jsonl \\
         --output outputs/primevul_nl_ast/train_nl_ast.jsonl \\
         --start-idx 100

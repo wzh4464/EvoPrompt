@@ -49,7 +49,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # 运行实验
-PYTHONUNBUFFERED=1 uv run python scripts/run_parallel_hierarchical_evolution.py \
+PYTHONUNBUFFERED=1 uv run python scripts/ablations/run_parallel_hierarchical_evolution.py \
     --population-size $POPULATION_SIZE \
     --max-generations $MAX_GENERATIONS \
     --eval-samples $EVAL_SAMPLES \

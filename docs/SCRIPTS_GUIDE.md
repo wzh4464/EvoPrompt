@@ -10,7 +10,7 @@
 
 **运行**:
 ```bash
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 ```
 
 **测试内容**:
@@ -39,16 +39,16 @@ uv run python scripts/test_quick.py
 
 ```bash
 # 1. 仅评估 (基线)
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 
 # 2. 评估 + RAG
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 
 # 3. 评估 + RAG + Scale
-uv run python scripts/train_three_layer.py --use-rag --use-scale --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --use-scale --eval-samples 50
 
 # 4. 完整训练 (RAG + 训练)
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --use-rag \
     --kb-from-dataset \
@@ -69,7 +69,7 @@ uv run python scripts/train_three_layer.py \
 
 **运行**:
 ```bash
-uv run python scripts/demo_three_layer_detection.py
+uv run python scripts/ablations/demo_three_layer_detection.py
 ```
 
 **功能**:
@@ -86,7 +86,7 @@ uv run python scripts/demo_three_layer_detection.py
 
 **运行**:
 ```bash
-uv run python scripts/demo_rag_detection.py
+uv run python scripts/ablations/demo_rag_detection.py
 ```
 
 **功能**:
@@ -103,7 +103,7 @@ uv run python scripts/demo_rag_detection.py
 
 **运行**:
 ```bash
-uv run python scripts/demo_multiagent_coevolution.py
+uv run python scripts/ablations/demo_multiagent_coevolution.py
 ```
 
 **功能**:
@@ -120,7 +120,7 @@ uv run python scripts/demo_multiagent_coevolution.py
 
 **运行**:
 ```bash
-uv run python scripts/demo_cwe_category_classification.py
+uv run python scripts/ablations/demo_cwe_category_classification.py
 ```
 
 **功能**:
@@ -139,12 +139,12 @@ uv run python scripts/demo_cwe_category_classification.py
 **运行**:
 ```bash
 # 从默认示例
-uv run python scripts/build_knowledge_base.py \
+uv run python scripts/ablations/build_knowledge_base.py \
     --source default \
     --output outputs/kb.json
 
 # 从数据集
-uv run python scripts/build_knowledge_base.py \
+uv run python scripts/ablations/build_knowledge_base.py \
     --source dataset \
     --dataset data/primevul_1percent_sample/train.txt \
     --samples-per-category 5 \
@@ -181,37 +181,37 @@ uv run python scripts/build_knowledge_base.py \
 
 ```bash
 # 1. 快速测试 (5分钟)
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 
 # 2. 三层检测演示 (10分钟)
-uv run python scripts/demo_three_layer_detection.py
+uv run python scripts/ablations/demo_three_layer_detection.py
 
 # 3. RAG演示 (15分钟)
-uv run python scripts/demo_rag_detection.py
+uv run python scripts/ablations/demo_rag_detection.py
 ```
 
 ### 评估不同配置 (1小时)
 
 ```bash
 # 基线
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --eval-samples 50 \
     --output-dir outputs/baseline
 
 # + RAG
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag \
     --eval-samples 50 \
     --output-dir outputs/with_rag
 
 # + Scale
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-scale \
     --eval-samples 50 \
     --output-dir outputs/with_scale
 
 # RAG + Scale
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag \
     --use-scale \
     --eval-samples 50 \
@@ -222,7 +222,7 @@ uv run python scripts/train_three_layer.py \
 
 ```bash
 # 完整训练 (RAG + 训练)
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --use-rag \
     --kb-from-dataset \
@@ -252,31 +252,31 @@ uv run python scripts/train_three_layer.py \
 
 ```bash
 # 快速测试所有功能
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 ```
 
 ### 评估
 
 ```bash
 # 基础评估
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 
 # RAG评估
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 
 # 完整评估
-uv run python scripts/train_three_layer.py --use-rag --use-scale --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --use-scale --eval-samples 50
 ```
 
 ### 训练
 
 ```bash
 # 快速训练 (测试)
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train --population-size 3 --max-generations 5 --eval-samples 30
 
 # 完整训练
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train --use-rag --kb-from-dataset \
     --population-size 5 --max-generations 20 --eval-samples 100
 ```
@@ -285,10 +285,10 @@ uv run python scripts/train_three_layer.py \
 
 ```bash
 # 构建知识库
-uv run python scripts/build_knowledge_base.py --source default
+uv run python scripts/ablations/build_knowledge_base.py --source default
 
 # 从数据集构建
-uv run python scripts/build_knowledge_base.py \
+uv run python scripts/ablations/build_knowledge_base.py \
     --source dataset --dataset data/primevul_1percent_sample/train.txt
 ```
 
@@ -321,14 +321,14 @@ outputs/
 
 **A**:
 ```bash
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 ```
 
 ### Q3: 如何进行完整训练?
 
 **A**:
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train --use-rag --kb-from-dataset \
     --population-size 5 --max-generations 20
 ```
@@ -338,10 +338,10 @@ uv run python scripts/train_three_layer.py \
 **A**: 使用 `--output-dir` 指定不同的输出目录:
 ```bash
 # 基线
-uv run python scripts/train_three_layer.py --output-dir outputs/baseline
+uv run python scripts/ablations/train_three_layer.py --output-dir outputs/baseline
 
 # RAG
-uv run python scripts/train_three_layer.py --use-rag --output-dir outputs/rag
+uv run python scripts/ablations/train_three_layer.py --use-rag --output-dir outputs/rag
 ```
 
 ### Q5: 演示脚本和训练脚本有什么区别?

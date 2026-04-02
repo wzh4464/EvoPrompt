@@ -241,7 +241,7 @@ result["natural_language_ast"] = result["choices"]  # LLM 生成的注释代码
 ## 📝 代码位置
 
 - **LLM 注释生成器**：`src/evoprompt/utils/comment_generator.py`
-- **预处理脚本**：`scripts/preprocess_primevul_comment4vul.py`
+- **预处理脚本**：`scripts/ablations/preprocess_primevul_comment4vul.py`
 - **AST 处理**：`comment4vul/SymbolicRule/process.py` (print_ast_node 函数)
 - **测试输出**：`/tmp/scale_test_output.jsonl`
 

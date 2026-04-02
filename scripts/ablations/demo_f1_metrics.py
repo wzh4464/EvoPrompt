@@ -267,7 +267,7 @@ def main():
     print("\n" + "=" * 70)
     print("✅ 演示完成!")
     print("\n下一步:")
-    print("   运行: uv run python scripts/train_three_layer.py --eval-samples 50")
+    print("   运行: uv run python scripts/ablations/train_three_layer.py --eval-samples 50")
     print("   查看实际三层检测中的Macro-F1表现")
     print("=" * 70)
 

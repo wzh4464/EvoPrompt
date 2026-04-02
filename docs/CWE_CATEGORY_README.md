@@ -35,7 +35,7 @@ Code → LLM → Memory / Injection / Logic / Input / Crypto / Benign
 ### 1. 测试CWE大类分类
 
 ```bash
-uv run python scripts/demo_cwe_category_classification.py
+uv run python scripts/ablations/demo_cwe_category_classification.py
 ```
 
 这个脚本会:
@@ -287,7 +287,7 @@ scripts/
 
 1. ✅ 测试大类分类Prompt
    ```bash
-   uv run python scripts/demo_cwe_category_classification.py
+   uv run python scripts/ablations/demo_cwe_category_classification.py
    ```
 
 2. ⏳ 集成到Multi-agent进化

@@ -4,8 +4,8 @@
 Only provides CWE categories, no examples or evidence.
 
 Usage:
-    uv run python scripts/run_baseline_zeroshot.py
-    uv run python scripts/run_baseline_zeroshot.py --samples 500
+    uv run python scripts/ablations/run_baseline_zeroshot.py
+    uv run python scripts/ablations/run_baseline_zeroshot.py --samples 500
 """
 
 import os

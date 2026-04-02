@@ -1,189 +1,111 @@
-"""Command-line interface for EvoPrompt."""
+"""Command-line interface for the two first-class EvoPrompt workflows."""
+
+from __future__ import annotations
 
 import argparse
 import sys
-import os
-from pathlib import Path
-from typing import Optional
 
-from .core.evolution import EvolutionEngine
-from .core.evaluator import Evaluator
-from .algorithms.genetic import GeneticAlgorithm
-from .algorithms.differential import DifferentialEvolution
-from .llm.client import LLMClient
+from .mainline.ablations import list_supported_ablations
+from .mainline.workflows import (
+    EvaluationWorkflowConfig,
+    EvolutionWorkflowConfig,
+    run_evaluation_workflow,
+    run_evolution_workflow,
+)
 
 
 def create_parser() -> argparse.ArgumentParser:
-    """Create command-line argument parser."""
+    """Create the top-level argument parser."""
+
     parser = argparse.ArgumentParser(
-        description="EvoPrompt: Evolutionary Prompt Optimization",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        description=(
+            "EvoPrompt mainline CLI: evolve stage prompts, then evaluate the "
+            "frozen router-detector system."
+        ),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    
-    # Dataset and task
-    parser.add_argument("--dataset", type=str, required=True,
-                       help="Dataset name")
-    parser.add_argument("--task", type=str, default="cls",
-                       choices=["cls", "sim", "sum", "vul_detection"],
-                       help="Task type")
-    
-    # Evolution settings
-    parser.add_argument("--algorithm", type=str, default="de",
-                       choices=["ga", "de"], 
-                       help="Evolution algorithm")
-    parser.add_argument("--population-size", type=int, default=20,
-                       help="Population size")
-    parser.add_argument("--generations", type=int, default=10,
-                       help="Number of generations")
-    parser.add_argument("--mutation-rate", type=float, default=0.1,
-                       help="Mutation rate")
-    
-    # LLM settings
-    parser.add_argument("--llm-type", type=str, default="kimi-k2-0711-preview",
-                       help="LLM type for evolution")
-    parser.add_argument("--evaluation-llm", type=str, default="kimi-k2-0711-preview",
-                       help="LLM for evaluation")
-    
-    # Data settings
-    parser.add_argument("--dev-file", type=str,
-                       help="Development set file")
-    parser.add_argument("--test-file", type=str,
-                       help="Test set file")
-    parser.add_argument("--sample-size", type=int,
-                       help="Sample size for evaluation")
-    
-    # Output settings
-    parser.add_argument("--output-dir", type=str, default="./outputs",
-                       help="Output directory")
-    parser.add_argument("--save-population", action="store_true",
-                       help="Save final population")
-    
-    # Legacy mode
-    parser.add_argument("--legacy", action="store_true",
-                       help="Use legacy implementation")
-    
-    # Misc
-    parser.add_argument("--seed", type=int, default=42,
-                       help="Random seed")
-    parser.add_argument("--verbose", "-v", action="store_true",
-                       help="Verbose output")
-    
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    evolve = subparsers.add_parser(
+        "evolve",
+        help="Evolve the best prompt for each router/detector stage.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    evolve.add_argument("--train-file", required=True, help="Training JSONL file.")
+    evolve.add_argument("--output-dir", default="./outputs/mainline/evolution")
+    evolve.add_argument("--kb-path", default=None, help="Optional knowledge base.")
+    evolve.add_argument("--rounds", type=int, default=3)
+    evolve.add_argument("--samples-per-class", type=int, default=50)
+    evolve.add_argument("--max-workers", type=int, default=8)
+    evolve.add_argument("--llm-type", default=None)
+
+    evaluate = subparsers.add_parser(
+        "evaluate",
+        help="Evaluate the frozen prompt bundle on vulnerability detection.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    evaluate.add_argument("--eval-file", required=True, help="Evaluation JSONL file.")
+    evaluate.add_argument(
+        "--prompts-path",
+        required=True,
+        help="Prompt artifact produced by the evolution workflow.",
+    )
+    evaluate.add_argument("--output-dir", default="./outputs/mainline/evaluation")
+    evaluate.add_argument("--kb-path", default=None, help="Optional knowledge base.")
+    evaluate.add_argument("--max-samples", type=int, default=None)
+    evaluate.add_argument("--max-workers", type=int, default=8)
+    evaluate.add_argument("--balanced", action="store_true")
+    evaluate.add_argument("--seed", type=int, default=42)
+    evaluate.add_argument("--llm-type", default=None)
+    evaluate.add_argument(
+        "--ablation",
+        action="append",
+        default=[],
+        choices=list_supported_ablations(),
+        help="Add a named ablation on top of the mainline system.",
+    )
     return parser
 
 
-def run_legacy_mode(args):
-    """Run in legacy compatibility mode."""
-    print("Running in legacy mode...")
-    
-    # Import legacy components
-    from .legacy import parse_args, ga_evo, de_evo
-    from .legacy.evaluator import Evaluator as LegacyEvaluator
-    
-    # Create legacy args object
-    legacy_args = argparse.Namespace()
-    for key, value in vars(args).items():
-        setattr(legacy_args, key, value)
-    
-    # Set legacy-specific defaults
-    if not hasattr(legacy_args, 'evo_mode'):
-        legacy_args.evo_mode = args.algorithm
-    if not hasattr(legacy_args, 'popsize'):
-        legacy_args.popsize = args.population_size
-    if not hasattr(legacy_args, 'budget'):
-        legacy_args.budget = args.generations
-        
-    # Create evaluator
-    evaluator = LegacyEvaluator(legacy_args)
-    
-    # Run evolution
-    if args.algorithm == "ga":
-        ga_evo(legacy_args, evaluator)
-    elif args.algorithm == "de":
-        de_evo(legacy_args, evaluator)
-    else:
-        raise ValueError(f"Unknown algorithm: {args.algorithm}")
+def main() -> int:
+    """CLI entry point."""
 
-
-def run_modern_mode(args):
-    """Run in modern mode with new architecture."""
-    print("Running in modern mode...")
-    
-    # Create algorithm
-    config = {
-        "population_size": args.population_size,
-        "max_generations": args.generations,
-        "mutation_rate": args.mutation_rate,
-    }
-    
-    if args.algorithm == "ga":
-        algorithm = GeneticAlgorithm(config)
-    elif args.algorithm == "de":
-        algorithm = DifferentialEvolution(config)
-    else:
-        raise ValueError(f"Unknown algorithm: {args.algorithm}")
-    
-    # Create components (simplified for now)
-    # In a full implementation, these would be properly configured
-    llm_client = LLMClient(args.llm_type)
-    
-    # Create dummy evaluator and dataset for demonstration
-    # In practice, these would be created based on args.dataset and args.task
-    class DummyDataset:
-        def get_samples(self, n=None):
-            return [type('Sample', (), {'input_text': f'Sample {i}', 'target': f'Target {i}'})() 
-                   for i in range(n or 10)]
-    
-    class DummyMetric:
-        def compute(self, predictions, targets):
-            return 0.85  # Dummy score
-    
-    evaluator = Evaluator(
-        dataset=DummyDataset(),
-        metric=DummyMetric(),
-        llm_client=llm_client
-    )
-    
-    # Create evolution engine
-    engine = EvolutionEngine(
-        algorithm=algorithm,
-        evaluator=evaluator,
-        llm_client=llm_client,
-        config=config
-    )
-    
-    # Run evolution
-    initial_prompts = [
-        "Solve this problem: {input}",
-        "Answer the question: {input}",
-        "Process this input: {input}",
-    ]
-    
-    results = engine.evolve(initial_prompts=initial_prompts)
-    
-    print(f"Best prompt: {results['best_prompt']}")
-    print(f"Best fitness: {results['best_fitness']}")
-
-
-def main():
-    """Main CLI entry point."""
     parser = create_parser()
     args = parser.parse_args()
-    
-    if args.verbose:
-        print(f"EvoPrompt CLI - Args: {args}")
-    
-    # Create output directory
-    os.makedirs(args.output_dir, exist_ok=True)
-    
+
     try:
-        if args.legacy:
-            run_legacy_mode(args)
+        if args.command == "evolve":
+            summary = run_evolution_workflow(
+                EvolutionWorkflowConfig(
+                    train_file=args.train_file,
+                    output_dir=args.output_dir,
+                    kb_path=args.kb_path,
+                    rounds=args.rounds,
+                    samples_per_class=args.samples_per_class,
+                    max_workers=args.max_workers,
+                    llm_type=args.llm_type,
+                )
+            )
         else:
-            run_modern_mode(args)
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+            summary = run_evaluation_workflow(
+                EvaluationWorkflowConfig(
+                    eval_file=args.eval_file,
+                    prompts_path=args.prompts_path,
+                    output_dir=args.output_dir,
+                    kb_path=args.kb_path,
+                    max_samples=args.max_samples,
+                    max_workers=args.max_workers,
+                    balanced=args.balanced,
+                    seed=args.seed,
+                    llm_type=args.llm_type,
+                    ablations=args.ablation,
+                )
+            )
+    except Exception as exc:
+        print(f"Error: {exc}", file=sys.stderr)
         return 1
-    
+
+    print(summary)
     return 0
 
 

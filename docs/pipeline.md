@@ -23,7 +23,7 @@ EvoPrompt Pipeline & Capabilities Overview
     - Old major categories (for binary/major classification)
     - Layer-1 root categories used by `main.py` pipeline
     - Research concepts (10-class) for CWE concept experiments
-- comment4vul integration (docs/IMPLEMENTATION_SUMMARY.md, scripts/preprocess_primevul_comment4vul.py)
+- comment4vul integration (docs/IMPLEMENTATION_SUMMARY.md, scripts/ablations/preprocess_primevul_comment4vul.py)
   - Preprocess PrimeVul to add NL AST and comment-enhanced code (`natural_language_ast`, `choices`)
   - Outputs enriched JSONL that feeds back into `PrimevulDataset` via `nl_ast` metadata
 
@@ -89,16 +89,16 @@ EvoPrompt Pipeline & Capabilities Overview
   - `CWEConceptEvaluator`: maps CWE lists to concept IDs / names and parses model responses
   - `CWEConceptWorkflow`: mirrors VulnerabilityDetectionWorkflow but for 10-class labels
     - Saves filled prompts and evolution artifacts under `outputs/cwe_research_concepts/`
-  - CLI entry: `scripts/run_cwe_evolution.py` (dataset-agnostic, dev/test file based)
+  - CLI entry: `scripts/ablations/run_cwe_evolution.py` (dataset-agnostic, dev/test file based)
 
 7. PrimeVul-Specific Pipelines
-- 1% PrimeVul evolution (scripts/run_primevul_1percent.py)
+- 1% PrimeVul evolution (scripts/ablations/run_primevul_1percent.py)
   - Checks SVEN-style API config from `.env`
   - Uses `sample_primevul_1percent` to build a balanced 1% subset (train/dev)
   - Instantiates `VulnerabilityDetectionWorkflow` with DE, custom initial prompts
   - Manually controls DE loop to log detailed steps and intermediate `generation_X_results.json`
   - Saves experiment config, initial_prompts, final results, and analysis summary
-- High-concurrency + sample-wise feedback (scripts/run_primevul_concurrent_optimized.py)
+- High-concurrency + sample-wise feedback (scripts/ablations/run_primevul_concurrent_optimized.py)
   - Same 1% sampling but optimized for
     - `max_concurrency` (default 16)
     - Sample-level feedback and per-sample logging (`sample_feedback.jsonl`, `sample_statistics.json`)
@@ -108,10 +108,10 @@ EvoPrompt Pipeline & Capabilities Overview
     - Detailed per-category and per-CWE analysis, confusion matrix, and statistics export
 - Layered PrimeVul pipeline (PRIMEVUL_LAYERED_FLOW.md)
   - Layer 1: concurrent coarse-tuning via `run_primevul_concurrent_optimized.py`, outputs `top_prompts.txt`
-  - Layer 2: refinement via `scripts/run_primevul_layer2.py` + `VulnerabilityDetectionWorkflow`
+  - Layer 2: refinement via `scripts/ablations/run_primevul_layer2.py` + `VulnerabilityDetectionWorkflow`
     - Takes Layer 1 top prompts as initial population
     - Runs lower-concurrency evolution without CWE-major constraint for fine-grained behavior
-- Demo pipeline with mock LLM (scripts/demo_primevul_1percent.py)
+- Demo pipeline with mock LLM (scripts/ablations/demo_primevul_1percent.py)
   - Creates large synthetic PrimeVul-like dataset
   - Uses `MockLLMClient` (no real API) to exercise the full loop
   - Demonstrates tracking artifacts in `outputs/demo_primevul_1percent/`
@@ -124,7 +124,7 @@ EvoPrompt Pipeline & Capabilities Overview
   - Outputs full classification reports, confusion matrix, batch_analyses.jsonl, final prompt, and checkpoints under `result/`
 
 8. Benchmark & SVEN Pipelines
-- Benchmark JSON tuning (scripts/run_benchmark_tuning.py)
+- Benchmark JSON tuning (scripts/ablations/run_benchmark_tuning.py)
   - Takes a benchmark JSON file (with vulnerability annotations)
   - Splits into dev/test, writes split JSON files
   - Runs `VulnerabilityDetectionWorkflow` with configurable DE/GA and LLM type
@@ -139,7 +139,7 @@ EvoPrompt Pipeline & Capabilities Overview
   - `AnalysisCache` deduplicates analyses across runs
   - `AnalysisResult` / `Vulnerability` provide structured outputs and summaries
   - Evaluator can append static-analysis summaries into prompts when enabled
-- comment4vul NL AST (docs/NL_AST_*.md, scripts/preprocess_primevul_comment4vul.py)
+- comment4vul NL AST (docs/NL_AST_*.md, scripts/ablations/preprocess_primevul_comment4vul.py)
   - Uses comment4vul symbolic rules and Tree-sitter via `parsertool_adapter`
   - Produces NL AST strings stored in sample metadata as `nl_ast`
   - Evaluator can:
@@ -167,15 +167,15 @@ EvoPrompt Pipeline & Capabilities Overview
 - For end-to-end PrimeVul CWE-major evolution with checkpoints and batch feedback:
   - Use `uv run python main.py` (see README_MAIN.md, CHECKPOINT_GUIDE.md, SAMPLE_FEEDBACK_GUIDE.md)
 - For fast 1% PrimeVul experiments on real APIs:
-  - Use `uv run python scripts/run_primevul_1percent.py`
+  - Use `uv run python scripts/ablations/run_primevul_1percent.py`
 - For high-concurrency + sample-wise feedback experiments:
-  - Use `uv run python scripts/run_primevul_concurrent_optimized.py`
+  - Use `uv run python scripts/ablations/run_primevul_concurrent_optimized.py`
 - For layered PrimeVul flows (coarse + fine tuning):
   - Follow PRIMEVUL_LAYERED_FLOW.md and combine `run_primevul_concurrent_optimized.py` with `run_primevul_layer2.py`
 - For demo / offline experiments without real LLM:
-  - Use `uv run python scripts/demo_primevul_1percent.py`
+  - Use `uv run python scripts/ablations/demo_primevul_1percent.py`
 - For generic benchmark datasets with JSON annotations:
-  - Use `uv run python scripts/run_benchmark_tuning.py data/benchmark.json`
+  - Use `uv run python scripts/ablations/run_benchmark_tuning.py data/benchmark.json`
 - For CWE research-concepts experiments (10-class):
-  - Use `uv run python scripts/run_cwe_evolution.py --dev_file ... --test_file ...`
+  - Use `uv run python scripts/ablations/run_cwe_evolution.py --dev_file ... --test_file ...`
 

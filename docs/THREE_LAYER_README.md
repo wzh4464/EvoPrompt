@@ -101,7 +101,7 @@ CWE:
 ### 1. 测试三层检测
 
 ```bash
-uv run python scripts/demo_three_layer_detection.py
+uv run python scripts/ablations/demo_three_layer_detection.py
 ```
 
 ### 2. 单次检测示例

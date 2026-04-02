@@ -731,19 +731,19 @@ git commit -m "feat: add CostTracker for LLM and retrieval call accounting"
 ## Task 5: Add Cost Summary Script
 
 **Files:**
-- Create: `scripts/summarize_cost.py`
+- Create: `scripts/ablations/summarize_cost.py`
 - Test: Manual verification
 
 **Step 1: Write the script**
 
-Create `scripts/summarize_cost.py`:
+Create `scripts/ablations/summarize_cost.py`:
 
 ```python
 #!/usr/bin/env python3
 """Summarize cost metrics from JSONL files.
 
 Usage:
-    uv run python scripts/summarize_cost.py outputs/cost/*.jsonl
+    uv run python scripts/ablations/summarize_cost.py outputs/cost/*.jsonl
 """
 
 import json
@@ -830,13 +830,13 @@ if __name__ == "__main__":
 **Step 2: Make executable and test manually**
 
 ```bash
-chmod +x scripts/summarize_cost.py
+chmod +x scripts/ablations/summarize_cost.py
 ```
 
 **Step 3: Commit**
 
 ```bash
-git add scripts/summarize_cost.py
+git add scripts/ablations/summarize_cost.py
 git commit -m "feat: add cost summary script for experiment analysis"
 ```
 
@@ -845,12 +845,12 @@ git commit -m "feat: add cost summary script for experiment analysis"
 ## Task 6: Add GPT-4o + RAG Single-Pass Baseline
 
 **Files:**
-- Modify: `scripts/train_three_layer.py`
+- Modify: `scripts/ablations/train_three_layer.py`
 - Test: Integration test (manual)
 
 **Step 1: Add argument parser options**
 
-Add to argparse section in `scripts/train_three_layer.py`:
+Add to argparse section in `scripts/ablations/train_three_layer.py`:
 
 ```python
 # Add after existing arguments:
@@ -1010,7 +1010,7 @@ if args.method == 'gpt4o_rag_singlepass':
 **Step 5: Commit**
 
 ```bash
-git add scripts/train_three_layer.py
+git add scripts/ablations/train_three_layer.py
 git commit -m "feat: add GPT-4o + RAG single-pass baseline method"
 ```
 
@@ -1019,7 +1019,7 @@ git commit -m "feat: add GPT-4o + RAG single-pass baseline method"
 ## Task 7: Add Single-Agent + Tool + RAG Baseline
 
 **Files:**
-- Modify: `scripts/train_three_layer.py`
+- Modify: `scripts/ablations/train_three_layer.py`
 
 **Step 1: Add agent prompt constant**
 
@@ -1148,7 +1148,7 @@ elif args.method == 'single_agent_tool_rag':
 **Step 5: Commit**
 
 ```bash
-git add scripts/train_three_layer.py
+git add scripts/ablations/train_three_layer.py
 git commit -m "feat: add Single-Agent + Tool + RAG baseline method"
 ```
 
@@ -1157,7 +1157,7 @@ git commit -m "feat: add Single-Agent + Tool + RAG baseline method"
 ## Task 8: Add Clean Pool Sensitivity Experiment
 
 **Files:**
-- Modify: `scripts/train_three_layer.py`
+- Modify: `scripts/ablations/train_three_layer.py`
 
 **Step 1: Add argument**
 
@@ -1248,7 +1248,7 @@ elif args.method == 'clean_pool_sensitivity':
 **Step 4: Commit**
 
 ```bash
-git add scripts/train_three_layer.py
+git add scripts/ablations/train_three_layer.py
 git commit -m "feat: add clean pool sensitivity experiment"
 ```
 
@@ -1257,9 +1257,9 @@ git commit -m "feat: add clean pool sensitivity experiment"
 ## Task 9: Add Cross-Model Pairing Ablation
 
 **Files:**
-- Modify: `scripts/train_three_layer.py`
+- Modify: `scripts/ablations/train_three_layer.py`
 - Create: `configs/cwe_subset_pairing.json`
-- Create: `scripts/generate_cwe_subset.py`
+- Create: `scripts/ablations/generate_cwe_subset.py`
 
 **Step 1: Add arguments**
 
@@ -1276,7 +1276,7 @@ parser.add_argument('--evo-cwe-subset', type=str, default=None,
 
 **Step 2: Create CWE subset generator**
 
-Create `scripts/generate_cwe_subset.py`:
+Create `scripts/ablations/generate_cwe_subset.py`:
 
 ```python
 #!/usr/bin/env python3
@@ -1402,7 +1402,7 @@ elif args.method == 'pairing_ablation':
 **Step 5: Commit**
 
 ```bash
-git add scripts/train_three_layer.py scripts/generate_cwe_subset.py
+git add scripts/ablations/train_three_layer.py scripts/ablations/generate_cwe_subset.py
 git commit -m "feat: add cross-model pairing ablation experiment"
 ```
 
@@ -1411,7 +1411,7 @@ git commit -m "feat: add cross-model pairing ablation experiment"
 ## Task 10: Add Rebuttal Snippet Generator
 
 **Files:**
-- Create: `scripts/generate_rebuttal_snippet.py`
+- Create: `scripts/ablations/generate_rebuttal_snippet.py`
 
 **Step 1: Create script**
 
@@ -1512,7 +1512,7 @@ if __name__ == "__main__":
 **Step 2: Commit**
 
 ```bash
-git add scripts/generate_rebuttal_snippet.py
+git add scripts/ablations/generate_rebuttal_snippet.py
 git commit -m "feat: add rebuttal snippet generator for OpenReview"
 ```
 
@@ -1532,13 +1532,13 @@ Expected: All tests PASS
 
 ```bash
 # Test with small sample
-uv run python scripts/train_three_layer.py --method gpt4o_rag_singlepass --eval-samples 5 --top-k 2
+uv run python scripts/ablations/train_three_layer.py --method gpt4o_rag_singlepass --eval-samples 5 --top-k 2
 ```
 
 **Step 3: Generate CWE subset**
 
 ```bash
-uv run python scripts/generate_cwe_subset.py
+uv run python scripts/ablations/generate_cwe_subset.py
 ```
 
 **Step 4: Final commit**
@@ -1554,21 +1554,21 @@ git commit -m "feat: complete supplementary experiments implementation"
 
 ```bash
 # Run baselines
-uv run python scripts/train_three_layer.py --method gpt4o_rag_singlepass --top-k 3
-uv run python scripts/train_three_layer.py --method single_agent_tool_rag --max-tool-calls 2
+uv run python scripts/ablations/train_three_layer.py --method gpt4o_rag_singlepass --top-k 3
+uv run python scripts/ablations/train_three_layer.py --method single_agent_tool_rag --max-tool-calls 2
 
 # Cross-model pairing ablation
-uv run python scripts/generate_cwe_subset.py
-uv run python scripts/train_three_layer.py --method pairing_ablation \
+uv run python scripts/ablations/generate_cwe_subset.py
+uv run python scripts/ablations/train_three_layer.py --method pairing_ablation \
     --evo-generator-model claude --evo-executor-model gpt4o \
     --evo-cwe-subset configs/cwe_subset_pairing.json
 
 # Clean pool sensitivity
-uv run python scripts/train_three_layer.py --method clean_pool_sensitivity
+uv run python scripts/ablations/train_three_layer.py --method clean_pool_sensitivity
 
 # Cost summary
-uv run python scripts/summarize_cost.py outputs/supplementary_experiments/cost/*.jsonl
+uv run python scripts/ablations/summarize_cost.py outputs/supplementary_experiments/cost/*.jsonl
 
 # Generate rebuttal
-uv run python scripts/generate_rebuttal_snippet.py outputs/supplementary_experiments/
+uv run python scripts/ablations/generate_rebuttal_snippet.py outputs/supplementary_experiments/
 ```

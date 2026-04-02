@@ -20,7 +20,7 @@ def test_config_generation():
     print("🔧 测试配置生成...")
     
     # 导入函数
-    from scripts.run_primevul_concurrent_optimized import create_optimized_config
+    from scripts.ablations.run_primevul_concurrent_optimized import create_optimized_config
     
     config = create_optimized_config()
     
@@ -86,7 +86,7 @@ def test_function_signatures():
     
     try:
         # 导入修改后的函数
-        from scripts.run_primevul_concurrent_optimized import (
+        from scripts.ablations.run_primevul_concurrent_optimized import (
             evaluate_on_dataset,
             sample_wise_feedback_training
         )
@@ -167,7 +167,7 @@ def test_import_and_basic_functionality():
     
     try:
         # 测试主要函数导入
-        from scripts.run_primevul_concurrent_optimized import (
+        from scripts.ablations.run_primevul_concurrent_optimized import (
             create_optimized_config,
             run_concurrent_evolution_with_feedback,
             evaluate_on_dataset,

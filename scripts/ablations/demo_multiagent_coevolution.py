@@ -128,7 +128,7 @@ def run_multiagent_demo(data_dir: str, output_dir: str):
     if not dev_file.exists():
         print(f"❌ Dataset not found: {dev_file}")
         print("   Please run data sampling first:")
-        print("   uv run python scripts/demo_primevul_1percent.py")
+        print("   uv run python scripts/ablations/demo_primevul_1percent.py")
         return
 
     dataset = PrimevulDataset(str(dev_file), split="dev")
@@ -340,7 +340,7 @@ def main():
     if not os.path.exists(data_dir):
         print("\n❌ No sample data found")
         print("   Please run data sampling first:")
-        print("   uv run python scripts/demo_primevul_1percent.py")
+        print("   uv run python scripts/ablations/demo_primevul_1percent.py")
         return 1
 
     print(f"✅ Using dataset: {data_dir}")

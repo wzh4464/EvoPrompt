@@ -9,7 +9,7 @@ POP=${5:-10}
 GEN=${6:-5}
 LLM=${7:-"gpt-3.5-turbo"}
 
-uv run python /workspace/scripts/run_cwe_evolution.py \
+uv run python /workspace/scripts/ablations/run_cwe_evolution.py \
   --dev_file "$DEV" \
   --test_file "$TEST" \
   --output_dir "$OUT" \

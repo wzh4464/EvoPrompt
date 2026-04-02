@@ -29,7 +29,7 @@ EOF
 ### 步骤2: 快速测试
 
 ```bash
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 ```
 
 **预期输出**:
@@ -50,10 +50,10 @@ uv run python scripts/test_quick.py
 
 ```bash
 # 基础评估
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 
 # RAG增强评估
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 ```
 
 **完成!** 🎉
@@ -66,17 +66,17 @@ uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
 
 ```bash
 # 快速测试所有功能 (2-3分钟) - 推荐第一步
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 ```
 
 ### 🎯 主脚本
 
 ```bash
 # 评估 (5-10分钟)
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 
 # 训练 (2-4小时)
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train --use-rag --kb-from-dataset \
     --population-size 5 --max-generations 20
 ```
@@ -116,16 +116,16 @@ uv run python scripts/train_three_layer.py \
 
 ```bash
 # 仅评估 (基线)
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 
 # 评估 + RAG
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 
 # 评估 + RAG + Scale
-uv run python scripts/train_three_layer.py --use-rag --use-scale --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --use-scale --eval-samples 50
 
 # 完整训练 (所有功能)
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train --use-rag --use-scale --kb-from-dataset \
     --population-size 5 --max-generations 20 --eval-samples 100
 ```
@@ -183,39 +183,39 @@ uv run python scripts/train_three_layer.py \
 ### 场景1: 我想快速验证系统 (5分钟)
 
 ```bash
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 ```
 
 ### 场景2: 我想评估性能 (10分钟)
 
 ```bash
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 ```
 
 ### 场景3: 我想对比不同配置 (1小时)
 
 ```bash
 # 基线
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --eval-samples 50 --output-dir outputs/baseline
 
 # + RAG
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag --eval-samples 50 --output-dir outputs/with_rag
 
 # + Scale
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-scale --eval-samples 50 --output-dir outputs/with_scale
 
 # RAG + Scale
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --use-rag --use-scale --eval-samples 50 --output-dir outputs/rag_scale
 ```
 
 ### 场景4: 我想训练优化prompt (2-4小时)
 
 ```bash
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train \
     --use-rag \
     --kb-from-dataset \
@@ -285,7 +285,7 @@ API_KEY=your_key_here
 
 **运行**:
 ```bash
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 ```
 
 **查看错误信息并参考**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
@@ -349,20 +349,20 @@ ls data/primevul_1percent_sample/
 
 ```bash
 # 测试
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 
 # 基础评估
-uv run python scripts/train_three_layer.py --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --eval-samples 50
 
 # RAG评估
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 
 # 快速训练
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train --population-size 3 --max-generations 5 --eval-samples 30
 
 # 完整训练
-uv run python scripts/train_three_layer.py \
+uv run python scripts/ablations/train_three_layer.py \
     --train --use-rag --kb-from-dataset \
     --population-size 5 --max-generations 20 --eval-samples 100
 ```
@@ -384,10 +384,10 @@ uv run python scripts/train_three_layer.py \
 
 ```bash
 # 第一步: 快速测试
-uv run python scripts/test_quick.py
+uv run python scripts/ablations/test_quick.py
 
 # 第二步: 评估性能
-uv run python scripts/train_three_layer.py --use-rag --eval-samples 50
+uv run python scripts/ablations/train_three_layer.py --use-rag --eval-samples 50
 
 # 第三步: 查看文档
 cat QUICKSTART.md
