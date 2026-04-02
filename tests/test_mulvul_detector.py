@@ -1,10 +1,5 @@
 """Tests for adaptive MulVul detector routing."""
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
 from evoprompt.agents.base import (
     BENIGN_CATEGORY,
     UNKNOWN_CATEGORY,
