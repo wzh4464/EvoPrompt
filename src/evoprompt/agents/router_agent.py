@@ -139,16 +139,15 @@ class RouterAgent:
             if json_match:
                 data = json.loads(json_match.group())
                 predictions = data.get("predictions", [])
-                parsed = []
-                seen = set()
+                best: dict[str, float] = {}
                 for prediction in predictions:
                     category = prediction.get("category", "Unknown")
-                    if category not in self.categories or category in seen:
+                    if category not in self.categories:
                         continue
-                    parsed.append(
-                        (category, float(prediction.get("confidence", 0.5)))
-                    )
-                    seen.add(category)
+                    confidence = float(prediction.get("confidence", 0.5))
+                    if category not in best or confidence > best[category]:
+                        best[category] = confidence
+                parsed = list(best.items())
 
                 if parsed:
                     return sorted(parsed, key=lambda item: item[1], reverse=True)

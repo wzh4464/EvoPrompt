@@ -86,6 +86,27 @@ def test_router_parse_response_sorts_and_filters_predictions():
     assert parsed == [("Memory", 0.81), ("Injection", 0.52)]
 
 
+def test_router_parse_response_keeps_max_confidence_for_duplicates():
+    """When the LLM emits a low-confidence duplicate before a higher one,
+    the parser should retain the maximum confidence."""
+    llm_client = StubLLMClient(
+        """
+    {
+      "predictions": [
+        {"category": "Memory", "confidence": 0.33},
+        {"category": "Injection", "confidence": 0.52},
+        {"category": "Memory", "confidence": 0.81}
+      ]
+    }
+    """
+    )
+    router = RouterAgent(llm_client=llm_client)
+
+    parsed = router.route("int main() { return 0; }").categories
+
+    assert parsed == [("Memory", 0.81), ("Injection", 0.52)]
+
+
 def test_adaptive_routing_selects_single_detector_for_confident_router():
     detectors = _build_detectors()
     detector = MulVulDetector(
