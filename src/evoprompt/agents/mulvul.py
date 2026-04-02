@@ -6,8 +6,8 @@ Implements the complete detection pipeline from method.md Algorithm 3:
 3. Stage III: Decision Aggregation
 """
 
-from typing import Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, List, Optional, Tuple
 
 from .base import DetectionResult, RoutingResult
 from .router_agent import RouterAgent
@@ -77,27 +77,14 @@ class MulVulDetector:
         Returns:
             DetectionResult with prediction, confidence, and evidence
         """
-        # Stage I: Routing
         routing_result = self.router.route(code)
-        selected_categories = self._select_detector_categories(routing_result)
-
-        if not selected_categories:
-            return self._handle_empty_selection(routing_result)
-
-        # Stage II: Detection
-        if self.parallel:
-            results = self._detect_parallel(code, selected_categories)
-        else:
-            results = self._detect_sequential(code, selected_categories)
-
-        # Stage III: Aggregation
-        final_result = self.aggregator.aggregate(results)
-
-        # Add routing info to result
-        final_result.raw_response = (
-            f"Selected detectors: {[c[0] for c in selected_categories]}\n"
-            f"Router ranking: {[c[0] for c in routing_result.categories]}\n"
-            f"{final_result.raw_response}"
+        selected_categories, _, final_result = self._run_detection(
+            code, routing_result
+        )
+        final_result.raw_response = self._format_raw_response(
+            selected_categories,
+            routing_result,
+            final_result.raw_response,
         )
 
         return final_result
@@ -108,24 +95,14 @@ class MulVulDetector:
         Returns:
             Dict with routing, detection, and aggregation details
         """
-        # Stage I: Routing
         routing_result = self.router.route(code)
-        selected_categories = self._select_detector_categories(routing_result)
-
-        # Stage II: Detection
-        if not selected_categories:
-            final_result = self._handle_empty_selection(routing_result)
-            detector_results = []
-        elif self.parallel:
-            detector_results = self._detect_parallel(code, selected_categories)
-            final_result = self.aggregator.aggregate(detector_results)
-        else:
-            detector_results = self._detect_sequential(code, selected_categories)
-            final_result = self.aggregator.aggregate(detector_results)
+        selected_categories, detector_results, final_result = self._run_detection(
+            code, routing_result
+        )
 
         return {
             "routing": {
-                "top_k": selected_categories,
+                "top_k": routing_result.get_top_k(self.max_agents),
                 "ranked": routing_result.categories,
                 "selected": selected_categories,
                 "selected_agent_count": len(selected_categories),
@@ -145,12 +122,7 @@ class MulVulDetector:
         mode is enabled, specialist detector fan-out expands only when the
         router remains uncertain about the vulnerable category.
         """
-        ranked_categories = routing_result.get_top_k()
-        vulnerable_categories = [
-            (category, confidence)
-            for category, confidence in ranked_categories
-            if category in self.detectors
-        ]
+        vulnerable_categories = self._filter_supported_categories(routing_result)
 
         if not vulnerable_categories:
             return []
@@ -158,46 +130,70 @@ class MulVulDetector:
         if not self.adaptive:
             return vulnerable_categories[:self.max_agents]
 
-        top_category = routing_result.top_category
-        top_confidence = routing_result.top_confidence
-        top_vulnerable_confidence = vulnerable_categories[0][1]
-
-        if (
-            top_category == "Benign"
-            and top_confidence >= self.benign_short_circuit_threshold
-            and top_vulnerable_confidence
-            < top_confidence * self.routing_relative_threshold
+        if self._should_short_circuit_benign(
+            routing_result, vulnerable_categories
         ):
             return []
 
+        selected = self._apply_dynamic_threshold(vulnerable_categories)
+        if not selected or len(selected) < self.min_agents:
+            return self._fallback_min_vulnerable(vulnerable_categories)
+
+        return selected
+
+    def _filter_supported_categories(
+        self,
+        routing_result: RoutingResult,
+    ) -> List[tuple]:
+        """Keep only categories backed by specialist detectors."""
+        return [
+            (category, confidence)
+            for category, confidence in routing_result.get_top_k()
+            if category in self.detectors
+        ]
+
+    def _should_short_circuit_benign(
+        self,
+        routing_result: RoutingResult,
+        vulnerable_categories: List[tuple],
+    ) -> bool:
+        """Return True when a Benign router result should skip specialists."""
+        top_vulnerable_confidence = vulnerable_categories[0][1]
+        return (
+            routing_result.top_category == "Benign"
+            and routing_result.top_confidence
+            >= self.benign_short_circuit_threshold
+            and top_vulnerable_confidence
+            < routing_result.top_confidence * self.routing_relative_threshold
+        )
+
+    def _apply_dynamic_threshold(
+        self,
+        vulnerable_categories: List[tuple],
+    ) -> List[tuple]:
+        """Select competitive vulnerable categories under the adaptive policy."""
+        top_vulnerable_confidence = vulnerable_categories[0][1]
         dynamic_threshold = max(
             self.routing_confidence_threshold,
             top_vulnerable_confidence * self.routing_relative_threshold,
         )
-
-        selected = [
+        return [
             (category, confidence)
             for category, confidence in vulnerable_categories
             if confidence >= dynamic_threshold
         ][:self.max_agents]
 
-        if not selected:
-            min_required = min(
-                len(vulnerable_categories),
-                self.max_agents,
-                self.min_agents,
-            )
-            return vulnerable_categories[:min_required]
-
-        if len(selected) < self.min_agents:
-            min_required = min(
-                len(vulnerable_categories),
-                self.max_agents,
-                self.min_agents,
-            )
-            return vulnerable_categories[:min_required]
-
-        return selected
+    def _fallback_min_vulnerable(
+        self,
+        vulnerable_categories: List[tuple],
+    ) -> List[tuple]:
+        """Fallback to the highest-ranked vulnerable categories."""
+        min_required = min(
+            len(vulnerable_categories),
+            self.max_agents,
+            self.min_agents,
+        )
+        return vulnerable_categories[:min_required]
 
     def _handle_empty_selection(
         self,
@@ -208,10 +204,7 @@ class MulVulDetector:
             return DetectionResult(
                 prediction="Benign",
                 confidence=routing_result.top_confidence,
-                evidence=(
-                    "Router predicted Benign with high confidence, so no "
-                    "specialist detector was invoked."
-                ),
+                evidence="Router predicted Benign, so no specialist detector was invoked.",
                 category="Benign",
                 agent_id="router_benign",
                 raw_response=routing_result.raw_response,
@@ -223,6 +216,37 @@ class MulVulDetector:
             evidence="Router did not return any supported detector category.",
             agent_id="router_empty",
             raw_response=routing_result.raw_response,
+        )
+
+    def _run_detection(
+        self,
+        code: str,
+        routing_result: RoutingResult,
+    ) -> Tuple[List[tuple], List[DetectionResult], DetectionResult]:
+        """Execute detector fan-out and aggregation for one routed sample."""
+        selected_categories = self._select_detector_categories(routing_result)
+        if not selected_categories:
+            return [], [], self._handle_empty_selection(routing_result)
+
+        if self.parallel:
+            detector_results = self._detect_parallel(code, selected_categories)
+        else:
+            detector_results = self._detect_sequential(code, selected_categories)
+
+        final_result = self.aggregator.aggregate(detector_results)
+        return selected_categories, detector_results, final_result
+
+    def _format_raw_response(
+        self,
+        selected_categories: List[tuple],
+        routing_result: RoutingResult,
+        raw_response: str,
+    ) -> str:
+        """Attach routing metadata to the final raw response."""
+        return (
+            f"Selected detectors: {[c[0] for c in selected_categories]}\n"
+            f"Router ranking: {[c[0] for c in routing_result.categories]}\n"
+            f"{raw_response}"
         )
 
     def _detect_parallel(

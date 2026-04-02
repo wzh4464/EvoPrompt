@@ -91,6 +91,11 @@ def test_adaptive_routing_selects_single_detector_for_confident_router():
 
     details = detector.detect_with_details("code sample")
 
+    assert details["routing"]["top_k"] == [
+        ("Memory", 0.92),
+        ("Injection", 0.40),
+        ("Input", 0.32),
+    ]
     assert details["routing"]["selected"] == [("Memory", 0.92)]
     assert detectors["Memory"].calls == 1
     assert detectors["Injection"].calls == 0
@@ -148,6 +153,46 @@ def test_benign_short_circuit_skips_specialist_detectors():
 
     assert result.prediction == "Benign"
     assert result.category == "Benign"
+    assert all(stub.calls == 0 for stub in detectors.values())
+
+
+def test_benign_high_confidence_but_competitive_vuln_does_not_short_circuit():
+    detectors = _build_detectors()
+    detector = MulVulDetector(
+        router=StubRouter([
+            ("Benign", 0.88),
+            ("Memory", 0.70),
+            ("Injection", 0.19),
+        ]),
+        detectors=detectors,
+        parallel=False,
+        max_agents=3,
+        adaptive=True,
+        routing_relative_threshold=0.6,
+        benign_short_circuit_threshold=0.8,
+    )
+
+    result = detector.detect("code sample")
+
+    assert detectors["Memory"].calls == 1
+    assert result.agent_id == "aggregator(detector_memory)"
+    assert result.category == "Memory"
+
+
+def test_unknown_when_router_has_no_supported_categories():
+    detectors = _build_detectors()
+    detector = MulVulDetector(
+        router=StubRouter([("UnsupportedCategory", 0.90)]),
+        detectors=detectors,
+        parallel=False,
+    )
+
+    result = detector.detect("code sample")
+
+    assert result.prediction == "Unknown"
+    assert result.confidence == 0.0
+    assert result.evidence == "Router did not return any supported detector category."
+    assert result.agent_id == "router_empty"
     assert all(stub.calls == 0 for stub in detectors.values())
 
 
